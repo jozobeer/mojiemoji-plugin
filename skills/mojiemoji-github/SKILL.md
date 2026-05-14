@@ -8,6 +8,7 @@ when_to_use: |
   - GitHub に投稿する日本語テキストの作成時(issue 本文、PR 説明、レビューコメント、返信、リリースノート)
   - /make-issue / /make-pr / /address-review / /triage-review / /good-morning / /cross-repo-review / /vibes-review / /copilot-review の返答時
   - 投稿系コマンド実行前: `gh issue create` / `gh pr create` / `gh pr comment` / `gh pr review` / `gh release create` / `gh api .../reviews` / `gh api .../comments` / `gh api .../issues` 等 (raw Reviews/Comments API も対象)
+  - MCP GitHub ツール経路でも同じ surface に投稿する直前: `mcp__*__github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` / `github_issue_write` / `github_update_pull_request` / `github_add_comment_to_pending_review` / `github_add_reply_to_pull_request_comment` 等。PreToolUse hook が最後の砦として block するが、ここでスキルが先に発火していれば再装飾のラウンドトリップが発生しない
   - subagent driven batch posting (cross-repo-review / triage-review / vibes-review / copilot-review の review/comment 連投) — gate は「日本語 body 提出」自体に発火するので、`gh` でも `gh api` でも MCP でも subagent 経由でも例外なく適用
   - キーワード: mojiemoji, もじえもじ, スタンプ, スタンプ画像, 絵文字, インライン絵文字, GitHub markdown stamp, LGTM stamp
   - ユーザーの発話(明示的な呼び出しのみ — 「今 mojiemoji をレンダリングしてほしい」相当): "絵文字使って", "絵文字いれて", "もじえもじ使って", "スタンプ入れて", "decorate", "emphasize this part", "もっと文中で", "もっと使って"
