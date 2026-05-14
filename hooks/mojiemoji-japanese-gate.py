@@ -1,24 +1,38 @@
 #!/usr/bin/env python3
-"""PreToolUse hook: gate `gh` commands posting Japanese GitHub bodies without properly-styled mojiemoji stamps.
+"""PreToolUse hook: gate Japanese GitHub body submissions without properly-styled mojiemoji stamps.
 
-Triggers when a Bash tool call posts a Japanese body via either:
-  - `gh (issue|pr|release) (create|comment|review)` (high-level commands), OR
-  - `gh api .../reviews|comments|issues|releases ...` (raw REST POST,
-    used by skills like cross-repo-review that batch-publish reviews).
+Fires on two posting paths:
+  1. Bash tool with `gh` posting the body:
+     - `gh (issue|pr|release) (create|comment|review)` (high-level), OR
+     - `gh api .../reviews|comments|issues|releases ...` (raw REST POST,
+       used by skills like cross-repo-review that batch-publish reviews).
+  2. MCP GitHub tools (`mcp__*__github_*`) whose `tool_input` carries
+     a Japanese `body` / `description` field — covers
+     `github_create_pull_request`, `github_add_issue_comment`,
+     `github_pull_request_review_write`, `github_issue_write`,
+     `github_update_pull_request`, `github_add_comment_to_pending_review`,
+     `github_add_reply_to_pull_request_comment`, and any future MCP
+     surface that uses the same field names. Title / commit_message /
+     file content are intentionally NOT inspected — only body-class
+     prose, matching the SKILL.md decoration policy.
 
 And EITHER:
-  1. command body has zero `mojiemoji.jozo.beer` URLs, OR
+  1. inspected text has zero `mojiemoji.jozo.beer` URLs, OR
   2. at least one mojiemoji URL is missing any of the required style
      parameters (`background=transparent`, `font=*`, `color=*`,
-     `animation=*`, `outline=darker`, `outline_width=2`).
+     `animation=*`, `outline=darker`, `outline_width=2`), OR
+  3. a URL uses a non-canonical font/animation, an invalid outline
+     value, or pairs a color-shifting animation with an outline.
 
-The body content is read from BOTH the command line (heredoc / inline
-`--body`) AND any referenced files (`--body-file PATH` / `--input PATH` /
-`-F body=@PATH`), so file-based posting paths are covered too.
+The Bash path also reads referenced body files (`--body-file PATH` /
+`--input PATH` / `-F body=@PATH`) and interpreter-invoked scripts so
+file-routed / dynamically-built bodies are covered too.
 
-When triggered, blocks the tool call (exit 2) and prints reminder to stderr so
-Claude sees it before the gh command actually fires. Bypass with
-`HOOK_DISABLE=1` prefix in the command (matches git pre-commit hook idiom).
+When triggered, blocks the tool call (exit 2) and prints reminder to
+stderr so Claude sees it before submission. Bypass: include
+`HOOK_DISABLE=1` anywhere in the inspected text — for Bash that's the
+command line (prefix idiom matches the git pre-commit hook), for MCP
+that's the body itself.
 """
 import json
 import os
@@ -59,6 +73,17 @@ SCRIPT_RE = re.compile(
     r"(?:python3?|ruby|node|bash|sh|zsh|fish)\s+(['\"]?)"
     r"([^'\"\s|;&)<>]+\.(?:py|rb|js|mjs|cjs|ts|sh|bash|zsh|fish))\1"
 )
+# MCP GitHub tool names. The 2026-05-12 series of incidents exposed
+# that the Bash matcher misses entirely when skills/agents post via
+# the MCP `github_*` tools (REST-equivalent, structured tool_input).
+# Match any MCP tool with `github` in the name — read-only tools
+# (`github_get_*`, `github_list_*`, `github_search_*`) carry no body
+# field, so body extraction returns empty and the gate exits 0.
+MCP_GH_RE = re.compile(r"^mcp__.*github", re.IGNORECASE)
+# Body-class fields across the MCP GitHub tool family. Title /
+# commit_message / file content are excluded — they are conventionally
+# undecorated per SKILL.md (titles short, commit messages plain).
+BODY_FIELDS = frozenset({"body", "description"})
 # Required style parameters on every URL. Missing any of these = unreadable
 # stamp on dark-mode GitHub (default mojiemoji is black-on-white).
 #
@@ -184,34 +209,68 @@ def read_script_files(command, cwd):
     return "\n".join(pieces)
 
 
+def collect_body_text(obj, target_keys):
+    """Walk a nested dict/list and concatenate string values whose key
+    is in `target_keys`. Used to extract body-class fields from MCP
+    `tool_input` regardless of nesting depth.
+    """
+    pieces = []
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key in target_keys and isinstance(value, str):
+                pieces.append(value)
+            else:
+                pieces.extend(collect_body_text(value, target_keys))
+    elif isinstance(obj, list):
+        for item in obj:
+            pieces.extend(collect_body_text(item, target_keys))
+    return pieces
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
     except Exception:
         return 0
 
-    if data.get("tool_name") != "Bash":
+    tool_name = data.get("tool_name", "")
+    tool_input = data.get("tool_input", {}) or {}
+
+    if tool_name == "Bash":
+        command = tool_input.get("command", "")
+        if not command:
+            return 0
+        if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
+            return 0
+        # Combine the command line with any referenced body files so
+        # file-routed posting paths (`--body-file PATH` / `--input
+        # PATH` / `-F body=@PATH`) are subject to the same regex
+        # inspection as inline `--body` heredocs. Also inspect script
+        # files invoked by interpreter (`python3 X.py` etc.) — the
+        # 2026-05-12 triage-review bypass embedded hand-crafted URLs
+        # in a Python helper that wrote the JSON body in the same
+        # bash call as the `gh api --input` POST.
+        cwd = data.get("cwd", "")
+        file_body, _ = read_body_files(command, cwd)
+        script_body = read_script_files(command, cwd)
+        extras = "\n".join(p for p in (file_body, script_body) if p)
+        inspect_text = command + ("\n" + extras if extras else "")
+    elif MCP_GH_RE.match(tool_name):
+        # MCP GitHub tools deliver structured input — extract body /
+        # description fields directly. Title / commit_message / file
+        # content are intentionally not inspected (see BODY_FIELDS
+        # docstring). Read-only MCP tools (get_*, list_*, search_*)
+        # match the regex but carry no body field, so this returns
+        # empty and the gate exits.
+        pieces = collect_body_text(tool_input, BODY_FIELDS)
+        if not pieces:
+            return 0
+        inspect_text = "\n".join(pieces)
+    else:
         return 0
 
-    command = data.get("tool_input", {}).get("command", "")
-    if not command or BYPASS_MARKER in command:
+    if BYPASS_MARKER in inspect_text:
         return 0
-
-    if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
-        return 0
-
-    # Combine the command line with any referenced body files so file-routed
-    # posting paths (`--body-file PATH` / `--input PATH` / `-F body=@PATH`)
-    # are subject to the same regex inspection as inline `--body` heredocs.
-    # Also inspect script files invoked by interpreter (`python3 X.py` etc.)
-    # — the 2026-05-12 triage-review bypass embedded hand-crafted URLs in a
-    # Python helper that wrote the JSON body in the same bash call as the
-    # `gh api --input` POST.
-    cwd = data.get("cwd", "")
-    file_body, _ = read_body_files(command, cwd)
-    script_body = read_script_files(command, cwd)
-    extras = "\n".join(p for p in (file_body, script_body) if p)
-    inspect_text = command + ("\n" + extras if extras else "")
 
     if not JP_RE.search(inspect_text):
         return 0
@@ -221,7 +280,7 @@ def main() -> int:
         sys.stderr.write(
             "🚧 mojiemoji-github skill未適用のまま日本語GitHub bodyを送ろうとしています\n"
             "\n"
-            "検出: `gh` コマンド本文に日本語があるが、`mojiemoji.jozo.beer` のstampが0個。\n"
+            "検出: 日本語 GitHub body に `mojiemoji.jozo.beer` の stamp が 0 個。\n"
             "autonomous実行 / subagent内 / skill chain漏れの典型パターン。\n"
             "\n"
             "## 対応\n"
@@ -230,11 +289,11 @@ def main() -> int:
             "3. animation 8+ distinct values, 同一値≤3×, color 4+ distinct, dark-mode-safe (Tailwind 300–500)\n"
             "4. API名 / 英識別子 / file path / version string / コードシンボル はstamp化しない\n"
             "5. shields.io badges を line 1 に置く (stampはその下)\n"
-            "6. 再render後に同じ `gh` コマンドを再実行\n"
+            "6. 再render後に同じ投稿経路 (gh / MCP) を再実行\n"
             "\n"
             "## skip 正当ケース\n"
             "English-only / apology / security / legal / compliance / acceptance criteria\n"
-            "緊急にbypassしたい時は command 先頭に `HOOK_DISABLE=1 ` を付ける\n"
+            "緊急bypass: Bash なら command 先頭、MCP なら body 内に `HOOK_DISABLE=1` を含める\n"
             "\n"
             "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
         )
@@ -302,7 +361,7 @@ def main() -> int:
             "   `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
             "4. 再投稿前に `references/verification.md` の grep #2〜#5 で全件確認\n"
             "\n"
-            "緊急bypass: command先頭に `HOOK_DISABLE=1 ` (推奨しない、ダーク不可視のまま投稿される)\n"
+            "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める (推奨しない、ダーク不可視のまま投稿される)\n"
         )
         return 2
 
@@ -333,7 +392,7 @@ def main() -> int:
             "## 違反URL\n"
             f"{preview}\n"
             "\n"
-            "緊急bypass: command先頭に `HOOK_DISABLE=1 `\n"
+            "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
         )
         return 2
 
@@ -409,7 +468,7 @@ def main() -> int:
             "   と outline_width は付けない (rainbow vs fixed halo の競合)\n"
             "4. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
             "\n"
-            "緊急bypass: command先頭に `HOOK_DISABLE=1 `\n"
+            "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
         )
         return 2
 

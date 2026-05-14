@@ -6,7 +6,8 @@ when_to_use: |
 
   自動トリガー条件:
   - GitHub に投稿する日本語テキストの作成時(issue 本文、PR 説明、レビューコメント、返信、リリースノート)
-  - /make-issue / /make-pr / /address-review / /triage-review / /good-morning の返答時、または `gh issue create` / `gh pr create` / `gh pr comment` / `gh pr review` 実行前
+  - /make-issue / /make-pr / /address-review / /triage-review / /good-morning の返答時、または `gh issue create` / `gh pr create` / `gh pr comment` / `gh pr review` / `gh api .../reviews` / `gh release create` 実行前
+  - MCP GitHub ツール経路でも同じ surface に投稿する直前: `mcp__*__github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` / `github_issue_write` / `github_update_pull_request` / `github_add_comment_to_pending_review` / `github_add_reply_to_pull_request_comment` 等。PreToolUse hook が最後の砦として block するが、ここでスキルが先に発火していれば再装飾のラウンドトリップが発生しない
   - キーワード: mojiemoji, もじえもじ, スタンプ, スタンプ画像, 絵文字, インライン絵文字, GitHub markdown stamp, LGTM stamp
   - ユーザーの発話(明示的な呼び出しのみ — 「今 mojiemoji をレンダリングしてほしい」相当): "絵文字使って", "絵文字いれて", "もじえもじ使って", "スタンプ入れて", "decorate", "emphasize this part", "もっと文中で", "もっと使って"
 

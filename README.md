@@ -37,7 +37,7 @@ mojiemoji-plugin が掛かった世界:
 |---|---|---|
 | Skill (スキル) <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B9%E3%82%AD%E3%83%AB?font=gothic-bold&color=06b6d4&animation=bane&background=transparent&outline=d406b6&outline_width=2" alt="スキル" height="24" align="absmiddle"> | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
 | Subagent (エージェント) <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%A8%E3%83%BC?font=akzk&color=ec4899&animation=kira&background=transparent" alt="エー" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88?font=akzk&color=ec4899&animation=kira&background=transparent" alt="ジェント" height="24" align="absmiddle"> | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
-| Hook (フック / PreToolUse / Bash) <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%95%E3%83%83%E3%82%AF?font=pixel&color=22c55e&animation=norinori&background=transparent&outline=5e22c5&outline_width=2" alt="フック" height="24" align="absmiddle"> | `mojiemoji-japanese-gate.py` | `gh (issue\|pr\|release) (create\|comment\|review)` や `gh api .../reviews` 等で日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック** |
+| Hook (フック / PreToolUse / Bash + MCP) <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%95%E3%83%83%E3%82%AF?font=pixel&color=22c55e&animation=norinori&background=transparent&outline=5e22c5&outline_width=2" alt="フック" height="24" align="absmiddle"> | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
 ---
 
@@ -89,8 +89,8 @@ flowchart TD
     B -.->|3つ以上 / カタログ / バリエーション が必要なとき dispatch| C
     C[<b>Subagent: mojiemoji-selector</b><br/>presets.md / flavor-guide.md を読み<br/>font / color / animation / outline<br/>4 軸で多様性確保したスニペット表を返す]
     C -.->|ready-to-paste な &lt;img&gt; 群| A
-    A -->|gh issue/pr/release/api コマンド| D
-    D{"Hook (PreToolUse / Bash)<br/>mojiemoji-japanese-gate.py"}
+    A -->|gh issue/pr/release/api コマンド &amp; MCP github_* tools| D
+    D{"Hook (PreToolUse / Bash + MCP)<br/>mojiemoji-japanese-gate.py"}
     D -->|6 必須パラメータ揃う| E([✅ GitHub に送信])
     D -->|未装飾 / パラメータ不足| F([🚧 exit 2 でブロック])
     F -.->|stderr の修正指示で Claude が再装飾| B
@@ -103,7 +103,7 @@ flowchart TD
     style A fill:#fbbf24,color:#000,stroke:#f59e0b,stroke-width:2px
 ```
 
-緊急 bypass: gh コマンドの先頭に `HOOK_DISABLE=1 ` を付けると Hook がスキップされる（推奨しない、ダークモードで不可視のまま投稿される）。
+緊急 bypass: `HOOK_DISABLE=1` を含めると Hook がスキップされる（推奨しない、ダークモードで不可視のまま投稿される）。Bash 経路はコマンドの先頭、MCP 経路は `body` 内のどこかに含めれば良い。
 
 ---
 
@@ -134,9 +134,13 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 
 ### Hook を一時無効化 <img src="https://mojiemoji.jozo.beer/emoji/%E7%84%A1%E5%8A%B9?font=dela&color=fb923c&animation=zanzo&background=transparent&outline=3cfb92&outline_width=2" alt="無効" height="24" align="absmiddle">
 
+Bash 経路はコマンドの先頭に `HOOK_DISABLE=1` を置く:
+
 ```bash
 HOOK_DISABLE=1 gh issue create --title "..." --body "..."
 ```
+
+MCP 経路は `body` の中のどこかに `HOOK_DISABLE=1` を含めれば良い (フックは `body` テキストを走査するので、コメントとして埋めても効く)。
 
 ### Hook 自体を無効化したい
 
