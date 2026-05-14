@@ -6,7 +6,9 @@ when_to_use: |
 
   自動トリガー条件:
   - GitHub に投稿する日本語テキストの作成時(issue 本文、PR 説明、レビューコメント、返信、リリースノート)
-  - /make-issue / /make-pr / /address-review / /triage-review / /good-morning の返答時、または `gh issue create` / `gh pr create` / `gh pr comment` / `gh pr review` 実行前
+  - /make-issue / /make-pr / /address-review / /triage-review / /good-morning / /cross-repo-review / /vibes-review / /copilot-review の返答時
+  - 投稿系コマンド実行前: `gh issue create` / `gh pr create` / `gh pr comment` / `gh pr review` / `gh release create` / `gh api .../reviews` / `gh api .../comments` / `gh api .../issues` 等 (raw Reviews/Comments API も対象)
+  - subagent driven batch posting (cross-repo-review / triage-review / vibes-review / copilot-review の review/comment 連投) — gate は「日本語 body 提出」自体に発火するので、`gh` でも `gh api` でも MCP でも subagent 経由でも例外なく適用
   - キーワード: mojiemoji, もじえもじ, スタンプ, スタンプ画像, 絵文字, インライン絵文字, GitHub markdown stamp, LGTM stamp
   - ユーザーの発話(明示的な呼び出しのみ — 「今 mojiemoji をレンダリングしてほしい」相当): "絵文字使って", "絵文字いれて", "もじえもじ使って", "スタンプ入れて", "decorate", "emphasize this part", "もっと文中で", "もっと使って"
 
@@ -254,6 +256,8 @@ body-class surface(issue / PR / リリース / コメント / 返信)が日本�
 
 - **issue #166**(block スタンプ + 単調): 本文中 15 スタンプを置いたが、全て `font=maru-bold color=60a5fa animation=spring speed=normal`。さらに `Promise.all` と `Green` という、そもそもスタンプすべきでない identifier まで含まれていた。多様性の無い量は失敗である。
 - **issue #157**(先頭に単発インライン): shields 行は OK だが、その後 `## ステータス: post-POC <保留>` で `保留` が本文中唯一のスタンプ。残りはすべてプレーン散文。block ではなくインラインだが、同じ密度不足の症例。
+- **2026-05-12 cross-repo-review batch**(7 PR で必須パラメータ欠落): `cross-repo-review` の Phase 6.5 で 7 PR 分のサマリー body を一括投稿した際、すべての URL が `background=transparent` だけで `font` / `color` / `animation` / `outline` / `outline_width` を欠落していた。当時の hook は `background` のみ検査していたため hook も通過、ダークモード GitHub 上で**全 7 PR 分のスタンプが黒不可視**で投稿された。以降 hook は 6 必須パラメータ全件チェックに強化されたが、行動側の原則は「**URL を手書きしない**」 — 構築は常にヘルパー / subagent 経由にすること。
+- **2026-05-12 triage-review batch**(`mj()` Python helper 経由で 8 PR 分の不可視スタンプ): `triage-review` の reply batch で、body 組み立てを Python 側に任せ、`mj(text)` という short helper を実装して `mojiemoji.jozo.beer/emoji/<text>?text=<text>&background=transparent` だけ吐かせた。**`font` / `color` / `animation` / `outline` / `outline_width` の 5 必須パラメータが全部抜けた**結果、SP-ACL#1756 含む 8 件で黒不可視スタンプを投稿。以降 hook は `python3 X.py && gh api --input out.json` 形式の連結コマンドのスクリプト本文まで読みに行く (`mojiemoji-japanese-gate.py` の `SCRIPT_RE`) ように強化された。行動側の原則は「**Python / Ruby / Node 側で mojiemoji URL を文字列構築しない**」 — § Python / cross-boundary interop 参照。
 
 飽和デフォルト下では、**本文中スタンプ ≤2 個は構成エラー**である — 出稿前に PHRASES 一覧をフルで作り直して再ディスパッチすること。
 
@@ -298,9 +302,62 @@ CONSTRAINTS:
 - Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use a Unicode emoji (🎉 💣 🔥 ✨ 🚀 etc.) instead.
 ```
 
+## Surface ごとの top/closing 装飾ヒューリスティック
+
+飽和インライン埋め込みは全 surface 共通だが、**先頭文と締めの文**(段落として独立して読まれやすい箇所)はトーンが surface タイプによって変わる。以下の表で「先頭文に埋め込みやすい語」と「締めに埋め込みやすい語」を引き当てる。装飾するのは独立行 block ではなく**その文の中の語**。
+
+### Issue 本文(`gh issue create`)
+
+| Issue タイプ | 先頭文に埋め込む語(例) | 締め文に埋め込む語(例) | トーン |
+|---|---|---|---|
+| Bug / 不具合 | `バグ` / `要対応` / `不具合` / `致命` | `修正` / `対応` / `お願い` | cautionary — 祝祭は避ける |
+| Feature / 機能追加 | `機能` / `提案` / `新規` / `導入` | `よろしく` / `お願い` / `歓迎` | anticipatory neutral |
+| Refactor / 整備 | `整備` / `整理` / `改善` / `刷新` | `お願い` / `レビュー` | neutral |
+| Chore / 雑務 | `雑務` / `整備` / `更新` | (装飾控えめ) | minimal |
+| Cosmetic / 軽微 | (装飾控えめ、1 スタンプで足る場合あり) | — | light |
+
+### PR 本文(`gh pr create`)
+
+| PR タイプ | 先頭文に埋め込む語(例) | 締め文に埋め込む語(例) | トーン |
+|---|---|---|---|
+| feat / 新機能 | `新機能` / `機能` / `実装` / `追加` | `レビュー` / `よろしく` / `歓迎` | positive momentum |
+| fix / バグ修正 | `修正` / `対応` / `バグ` / `解決` | `確認` / `よろしく` | reassuring |
+| refactor / 整備 | `整理` / `整備` / `綺麗` / `刷新` | `レビュー` / `よろしく` | clean / satisfied |
+| chore / deps | `更新` / `整備` / `同期` | (装飾控えめ) | neutral |
+| docs | `加筆` / `更新` / `整理` | `確認` | neutral / light |
+
+### Review summary body(`gh pr review` / `gh api .../reviews`)
+
+`verdict × finding-count` でトーンが決まる。**summary body(`body` フィールド)のみ装飾**し、inline `comments[]` の findings は素のままにする — findings は技術的引用なので装飾と干渉する。
+
+| verdict | findings | 先頭文に埋め込む語(例) | 締め文に埋め込む語(例) | 注意 |
+|---|---|---|---|---|
+| `approve` | 0 (clean) | `完璧` / `綺麗` / `見事` / `LGTM`(語として、※ block 画像は禁止) | `マージ` / `歓迎` / `お疲れさま` | celebratory。LGTM 画像が必要なら `make-image` 経由(§ LGTM 画像 参照) |
+| `approve` | nits のみ | `綺麗` / `良い` / `軽微` | `感謝` / `お疲れさま` | thanks 寄り、celebrate しすぎない |
+| `comment` | ≤2 | `確認` / `相談` / `提案` | `引き続き` / `よろしく` | tone-setter で軽く |
+| `comment` | 3〜5 | `確認` / `指摘` / `検討` | `ご対応` / `よろしく` | neutral, business-like |
+| `comment` | 6+ | `要点` / `観点` / `整理` | `確認` / `お願い` | matter-of-fact、スタンプ少なめでメリハリ |
+| `request-changes` | — | `相談` / `観点` / `要修正` | `引き続き` / `よろしく` | cautious、pile-on しない |
+
+`comments[]` フィールドの inline findings は**装飾しない**。findings は技術引用(コード行・対象シンボル・修正提案)であり、装飾が入ると読み手の grep 性を阻害する。
+
+### Reply / コメント返信(`gh api .../comments`)
+
+返信は短いので、**1 段落 1 個の punch-line スタンプ**で足りる。`address-review` / `triage-review` 系スキルが action バッジ(`action: fixed/by design/test added/deferred/wontfix`)を先頭に置くので、その下の説明文に inline 埋め込み。
+
+- `action: fixed` の説明 → `修正` / `対応` を埋め込む
+- `action: by design` の説明 → `意図` / `仕様` / `想定` を埋め込む
+- `action: test added` → `追加` / `検証` を埋め込む
+- `action: deferred` → `別件` / `分離` / `分割` を埋め込む
+- `action: wontfix` で純粋に技術引用(test 名 / file path / spec ref)だけならスタンプを諦める
+
+### リリースノート(`gh release create`)
+
+`feat` / `fix` の比率に応じて feat 寄りの語(`機能` / `新規` / `追加`)か fix 寄り(`修正` / `解決`)を先頭に。締めは「みなさんありがとうございました」系を inline 埋め込み(独立行の closing block 画像は禁止 — § デフォルトのトーンとインライン飽和 § 「マントラ」参照)。
+
 ## ワークフロー
 
-1. surface を特定する(issue / PR 本文 / レビューコメント / 返信 / リリースノート)。surface が **issue 本文 / PR 本文 / リリースノート**なら、まずバッジの有無を確認する(§ バッジと併用する を参照)。
+1. surface を特定する(issue / PR 本文 / レビューコメント / 返信 / リリースノート)。surface が **issue 本文 / PR 本文 / リリースノート**なら、まずバッジの有無を確認する(§ バッジと併用する を参照)。surface に応じた先頭/締め語の引き当ては § Surface ごとの top/closing 装飾ヒューリスティック を参照。
 2. モードを決める(`block` vs `inline`。混在も可)。
 3. **各スタンプを 3 字以内に切る**(inline・block 共通)。4 字以上のフレーズは左から 2 字ずつ厳密にチャンク化(末尾 1 字は許容)し、隣接する独立スタンプとしてセパレータ無しでレンダリングする。チャンクごとに font / color / animation を選ぶ。例と根拠は § "Phrase-length & line-break rules" 相当(上記の長さ上限・境界ヒューリスティック)を参照。
 4. パラメータを選ぶ:
@@ -334,6 +391,30 @@ SKILL_DIR: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github
 `SKILL_DIR` は絶対パスで渡し、subagent が推測しなくて済むようにする。subagent はコンパクトな `phrase | mode | snippet` の表を返す。それ以外はコンテキストに入らない。
 
 `model: opus` にエスカレートするのは、ユーザーが大型カタログや細かい趣味調整を求めるときだけ。多くのケースでデフォルトの `sonnet` で十分である。
+
+### Python / cross-boundary interop
+
+複数 PR / 複数 issue を batch で投稿するときに Python (or Ruby / Node) で body テンプレートを組み立てたくなる場面がある。**Python 側で mojiemoji URL を文字列構築してはいけない** — `?text=<text>&background=transparent` だけ並べた `mj(text)` ヘルパーは、6 必須パラメータを欠落して dark mode 不可視のスタンプを大量生産する(2026-05-12 triage-review の 7 PR で実例、§ 失敗パターン)。
+
+2 つの安全経路:
+
+1. **subprocess 経由でヘルパースクリプトを叩く**:
+   ```python
+   import subprocess
+   def render(text, font, color, anim):
+       return subprocess.run(
+           [HELPER, "--text", text, "--inline",
+            "--font", font, "--color", color,
+            "--animation", anim,
+            "--outline", "triadic", "--outline-width", "2"],
+           capture_output=True, text=True, check=True
+       ).stdout.strip()
+   ```
+   毎フレーズで font / color / animation を変えること(さもなくば issue #166 の単調本文と同じ轍を踏む)。
+2. **`mojiemoji-selector` に先にバッチをレンダリングさせる**:
+   subagent からスニペット表を受け取り、Python 側ではそれを*不透明な `<img>` 文字列*として変数展開のみする。Python は body 組み立ての糊にとどめ、URL 構築には触れない。
+
+PreToolUse hook は `python3 X.py && gh api --input out.json` のような連結コマンドのスクリプト本体まで読みに行く(`mojiemoji-japanese-gate.py` の `SCRIPT_RE`)。出力 JSON がまだ存在しない瞬間でも、スクリプト中の URL テンプレートは検出される。手抜きしないこと。
 
 ### 各ディスパッチ向けの Hard contract
 
