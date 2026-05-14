@@ -128,10 +128,12 @@ disco, psycho, kage_kaiten, kage_bokashi, kage_neon
 この幅広さを活かす。
 
 避けるべきよくある不正値: `rotate`、`bounce`、`shake`、`hooo`(過去
-バッチで観測されたタイポ、存在せず静止画にフォールバック)、加えて
-リネームされた古い英語名 (`spring`、`wave`、`scroll`、`blink`、
-`kanpai`、`roulette`、`strobe`、`buruburu`)。`spin` のような
-rotational animation は **`speed=step` または `slow` の時のみ可読** で、
+バッチで観測されたタイポ、存在せず静止画にフォールバック)、`poyon`
+(正: `poyoon` — 母音 2 個)、`funwari`(存在せず — 似た浮遊感が欲しい
+ときは `yurayura` / `mochimochi`)、加えてリネームされた古い英語名
+(`spring`、`wave`、`scroll`、`blink`、`kanpai`、`roulette`、`strobe`、
+`buruburu`)。`spin` のような rotational animation は **`speed=step`
+または `slow` の時のみ可読** で、
 `normal` / `fast` では回転が速すぎて読めなくなる — 現行サービスでは
 `kaiten`(回転) が正準名なのでそちらを使うのが安全。名前が現行か
 怪しいときは `scripts/verify-canonical-lists.sh`
