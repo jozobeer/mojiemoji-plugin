@@ -127,11 +127,14 @@ disco, psycho, kage_kaiten, kage_bokashi, kage_neon
 合計 34 種類 — 過去の 16 種から大きく増えた。下の多様性ルールは
 この幅広さを活かす。
 
-避けるべきよくある不正値: `spin`(実在しない、無音で静止画になる)、
-`rotate`、`bounce`、`shake`、`hooo`(過去バッチで観測されたタイポ、
-存在せず静止画にフォールバック)、加えてリネームされた古い英語名
-(`spring`、`wave`、`scroll`、`blink`、`kanpai`、`roulette`、`strobe`、
-`buruburu`)。名前が現行か怪しいときは `scripts/verify-canonical-lists.sh`
+避けるべきよくある不正値: `rotate`、`bounce`、`shake`、`hooo`(過去
+バッチで観測されたタイポ、存在せず静止画にフォールバック)、加えて
+リネームされた古い英語名 (`spring`、`wave`、`scroll`、`blink`、
+`kanpai`、`roulette`、`strobe`、`buruburu`)。`spin` のような
+rotational animation は **`speed=step` または `slow` の時のみ可読** で、
+`normal` / `fast` では回転が速すぎて読めなくなる — 現行サービスでは
+`kaiten`(回転) が正準名なのでそちらを使うのが安全。名前が現行か
+怪しいときは `scripts/verify-canonical-lists.sh`
 を走らせる — hook の allowlist とライブサービスを diff し、ドリフトが
 あれば非ゼロで終了する(§ パラメータが効かなくなったとき を参照)。
 

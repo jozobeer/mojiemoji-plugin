@@ -158,7 +158,9 @@
 - コード、パス、識別子、バージョン文字列、リンク — 絶対スタンプしない。
 - ダークモードセーフな色(Tailwind 300–500 レンジ、特に 300–400 を優先;
   SKILL.md § Dark-mode-safe color palette)。
-- animation 必須、`spin` は使わない(無効値、無音で静止画になる)。
-  `bakusan` は **block 専用** — 放射バーストが inline サイズでは
-  letterform を潰す(`parameters.md` § Valid animation values を参照)。
+- animation 必須。rotational 系 (`spin` 系 / `kaiten`) は **`speed=step`
+  または `slow` のみ可読** — `normal` / `fast` だと回転が速すぎて
+  読めない。現行サービスの正準名は `kaiten`。`bakusan` は **block 専用** —
+  放射バーストが inline サイズでは letterform を潰す
+  (`parameters.md` § Valid animation values を参照)。
   その他は `kira` も含めて inline で歓迎。
