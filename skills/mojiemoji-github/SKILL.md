@@ -275,7 +275,7 @@ body-class surface(issue / PR / リリース / コメント / 返信)が日本�
 - **装飾は独立行**: 散文の文末に装飾を付け足さない。下に `→ <stamps>` 行を置く。
 - **コード、パス、識別子、リンク**: 絶対にスタンプしない。
 - **ダークモードに耐える色**(Tailwind 300〜500 域。`references/parameters.md` § Dark-mode-safe color palette 参照)。
-- **アニメーション必須**。`spin` は使わない(無音で静止する — `references/parameters.md` § Valid animation values 参照)。
+- **アニメーション必須**。rotational 系 (`spin` / `kaiten`) は **`speed=step` または `slow` のみ可読** — `normal` / `fast` では回転が速すぎて読めなくなる。現行サービスでは `kaiten` が正準名 (`references/parameters.md` § Valid animation values 参照)。
 - **アニメーション多様性**: 同じ animation を本文中で 3 回以上使わない。標準 34 種から **12 種以上の異なる値**を使う(`references/parameters.md` § Animation diversity 参照)。
 
 ### 飽和制約ブロック(mojiemoji-selector ディスパッチに貼り付ける)
@@ -286,7 +286,7 @@ MODE: inline
 CONSTRAINTS:
 - FLAVOR GATE OVERRIDE: render factual/design terms; do not skip.
 - All inline; height=20 (matches user's observed body style)
-- Animation required; never spin (silently static); only use names from the canonical 34 in references/parameters.md
+- Animation required; only use names from the canonical 34 in references/parameters.md. Rotational animations (`kaiten`, or `spin` if present) require `speed=step` or `slow` — `normal`/`fast` is unreadably fast for rotational glyphs
 - Animation diversity: 12+ distinct values across the body; no animation more than 2× across distinct terms
 - Include at least 3 picks from the underused tier (ekken, tate_ekken, neruneru, patapata, mabataki, mozaiku, tatemoya, yokomoya, zairu, zanzo, chirichiri, kage_kaiten, kage_bokashi, kage_neon, kirari, yatta, kaiten, psycho)
 - Avoid reusing the "safe defaults" (bane, nami, mochimochi, bure) more than once each per body — they're the historical bias the user has flagged
@@ -341,7 +341,7 @@ subagent は歴史的にこれらを落としがちなので、**以下の行を
 
 ```
 - Every URL MUST include &background=transparent
-- Animation MUST come from the canonical list (see references/parameters.md § Valid animation values); never `spin`
+- Animation MUST come from the canonical list (see references/parameters.md § Valid animation values). For rotational animations (`kaiten`, `spin`) pair with `speed=step` or `slow` — they are unreadable at `normal`/`fast`
 - Font MUST come from the canonical list (see references/parameters.md § Valid font values); never `della` (correct: `dela`)
 - Color MUST be dark-mode-safe (Tailwind 300–500 range; never 600+ or near-black). See references/parameters.md § Dark-mode-safe color palette.
 - For inline mode: height=20 is the observed user default. **Confirmed block-only**: `bakusan` (radial-burst obscures letterforms at small heights). **Likely problematic inline**: `chuuou_zoom`, `mozaiku`, `kage_*` shadow effects. Substitute `gatagata` / `bure` / `tenmetsu` / `shuchusen` / `zanzo` for inline impact moods.
