@@ -1,0 +1,26 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "mojiemoji-plugin",
+  "description": "mojiemoji.jozo.beer 用 Claude Code プラグインマーケットプレイス — GitHub Markdown 向けの表情豊かな日本語スタンプを自動生成",
+  "owner": {
+    "name": "jozobeer"
+  },
+  "plugins": [
+    {
+      "name": "mojiemoji-github",
+      "description": "GitHub の issue / PR / レビュー / リプライ / リリースノートに mojiemoji 画像スタンプ (mojiemoji.jozo.beer) を埋め込むためのスキル・サブエージェント・フックを同梱。日本語本文に対するインライン強調を主目的とし、6 必須パラメータ揃わない URL を `gh` コマンド送信直前にブロックする。",
+      "source": "./",
+      "strict": false,
+      "category": "writing",
+      "keywords": [
+        "japanese",
+        "github",
+        "markdown",
+        "stamps",
+        "mojiemoji",
+        "pr-review",
+        "issue-template"
+      ]
+    }
+  ]
+}

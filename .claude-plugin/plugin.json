@@ -1,0 +1,11 @@
+{
+  "name": "mojiemoji-github",
+  "version": "0.1.0",
+  "description": "GitHub Markdown 向け mojiemoji 画像スタンプを埋め込むスキル + サブエージェント + 6 必須パラメータゲートフック",
+  "author": {
+    "name": "jozobeer"
+  },
+  "homepage": "https://mojiemoji.jozo.beer",
+  "repository": "https://github.com/jozobeer/mojiemoji-plugin",
+  "license": "MIT"
+}
