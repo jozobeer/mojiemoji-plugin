@@ -24,7 +24,30 @@ CATALOG = catalog_data.fetch("terms").transform_values { |variants|
   variants.map { |variant| deep_symbolize_keys(variant).freeze }.freeze
 }.freeze
 
-TERM_RE = Regexp.union(CATALOG.keys.sort_by { |term| [-term.length, term] })
+# Single-char catalog entries need boundary assertions or they over-match.
+# Multi-char entries are unambiguous so a plain literal alternation suffices.
+#
+# Single kanji (e.g. 月 / 火 / 後): block when preceded by another Han char,
+# which would indicate the entry is the tail of a compound (e.g. `先月`,
+# `今後`). Following Han is allowed so `火曜の昼` still stamps the `火`.
+#
+# Single ASCII digit (1-9): only stamp when embedded in Japanese flow —
+# preceded by kana/kanji AND followed by a non-ASCII-identifier char.
+# This blocks `v1.2.3` (preceded by ASCII), `100ms` (followed by digit),
+# `#1234` (preceded by `#`), and `Step 1` (preceded by space-then-ASCII).
+SINGLE_HAN_LEFT_GUARD = "(?<!\\p{Han})"
+SINGLE_DIGIT_LEFT_GUARD = "(?<=[\\p{Han}\\p{Hiragana}\\p{Katakana}])"
+SINGLE_DIGIT_RIGHT_GUARD = "(?![A-Za-z0-9_.])"
+
+multi_keys = CATALOG.keys.select { |k| k.length > 1 }.sort_by { |t| [-t.length, t] }
+kanji_keys = CATALOG.keys.select { |k| k.length == 1 && k.match?(/\p{Han}/) }
+digit_keys = CATALOG.keys.select { |k| k.length == 1 && k.match?(/\A[0-9]\z/) }
+
+multi_pattern = multi_keys.empty? ? "(?!)" : Regexp.union(multi_keys).source
+kanji_pattern = kanji_keys.empty? ? "(?!)" : "#{SINGLE_HAN_LEFT_GUARD}(?:#{Regexp.union(kanji_keys).source})"
+digit_pattern = digit_keys.empty? ? "(?!)" : "#{SINGLE_DIGIT_LEFT_GUARD}(?:#{Regexp.union(digit_keys).source})#{SINGLE_DIGIT_RIGHT_GUARD}"
+
+TERM_RE = Regexp.new("(?:#{multi_pattern})|(?:#{kanji_pattern})|(?:#{digit_pattern})")
 
 options = {
   base_url: DEFAULT_BASE_URL,
