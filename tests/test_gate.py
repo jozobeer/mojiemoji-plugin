@@ -117,18 +117,18 @@ class TestLanguageFiltering:
         assert result.returncode == 0
 
 
-# --- HOOK_DISABLE bypass ---------------------------------------------------
+# --- MOJIEMOJI_HOOK_DISABLED bypass ----------------------------------------
 
 
 class TestBypass:
-    """`HOOK_DISABLE=1` opts out, but only on the surface the caller controls."""
+    """`MOJIEMOJI_HOOK_DISABLED=1` opts out, but only on the surface the caller controls."""
 
     def test_bash_bypass_prefix(self, run_hook):
         result = run_hook(
             {
                 "tool_name": "Bash",
                 "tool_input": {
-                    "command": f'HOOK_DISABLE=1 gh pr create --title "x" --body "{JP_BODY}"'
+                    "command": f'MOJIEMOJI_HOOK_DISABLED=1 gh pr create --title "x" --body "{JP_BODY}"'
                 },
             }
         )
@@ -138,17 +138,17 @@ class TestBypass:
         result = run_hook(
             {
                 "tool_name": "mcp__github__github_create_pull_request",
-                "tool_input": {"body": f"HOOK_DISABLE=1 {JP_BODY}"},
+                "tool_input": {"body": f"MOJIEMOJI_HOOK_DISABLED=1 {JP_BODY}"},
             }
         )
         assert result.returncode == 0
 
     def test_bash_bypass_must_be_in_command_not_body_file(self, run_hook, tmp_path):
-        # HOOK_DISABLE inside a referenced file should NOT count — otherwise
-        # documentation prose or fixtures mentioning the literal would
-        # silently disable the gate.
+        # MOJIEMOJI_HOOK_DISABLED inside a referenced file should NOT count —
+        # otherwise documentation prose or fixtures mentioning the literal
+        # would silently disable the gate.
         body_file = tmp_path / "body.md"
-        body_file.write_text(f"HOOK_DISABLE=1 {JP_BODY}")
+        body_file.write_text(f"MOJIEMOJI_HOOK_DISABLED=1 {JP_BODY}")
         result = run_hook(
             {
                 "tool_name": "Bash",
@@ -157,6 +157,39 @@ class TestBypass:
             cwd=tmp_path,
         )
         assert result.returncode == 2, "bypass marker leaked from body file"
+
+    def test_legacy_hook_disable_still_works_with_deprecation_warning(self, run_hook):
+        # Legacy name `HOOK_DISABLE=1` continues to bypass (no breaking change)
+        # but emits a deprecation notice to stderr so callers can migrate.
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f'HOOK_DISABLE=1 gh pr create --title "x" --body "{JP_BODY}"'
+                },
+            }
+        )
+        assert result.returncode == 0, "legacy HOOK_DISABLE=1 must still bypass"
+        assert "HOOK_DISABLE=1" in result.stderr and "deprecated" in result.stderr, (
+            "legacy marker must emit deprecation warning"
+        )
+        assert "MOJIEMOJI_HOOK_DISABLED=1" in result.stderr, (
+            "deprecation warning must point to new name"
+        )
+
+    def test_new_marker_emits_no_deprecation_warning(self, run_hook):
+        # The new marker must NOT trigger the legacy warning — that would
+        # train callers to ignore the notice.
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f'MOJIEMOJI_HOOK_DISABLED=1 gh pr create --title "x" --body "{JP_BODY}"'
+                },
+            }
+        )
+        assert result.returncode == 0
+        assert "deprecated" not in result.stderr
 
 
 # --- Bash happy path & blocking ------------------------------------------

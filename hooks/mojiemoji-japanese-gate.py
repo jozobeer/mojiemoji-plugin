@@ -32,9 +32,11 @@ file-routed / dynamically-built bodies are covered too.
 
 When triggered, blocks the tool call (exit 2) and prints reminder to
 stderr so Claude sees it before submission. Bypass: include
-`HOOK_DISABLE=1` anywhere in the inspected text — for Bash that's the
-command line (prefix idiom matches the git pre-commit hook), for MCP
-that's the body itself.
+`MOJIEMOJI_HOOK_DISABLED=1` anywhere in the inspected text — for Bash
+that's the command line (prefix idiom matches the git pre-commit hook),
+for MCP that's the body itself. The legacy name `HOOK_DISABLE=1` is
+still honored for now but emits a deprecation notice; it will be
+removed in a future minor release.
 """
 import json
 import os
@@ -52,7 +54,26 @@ GH_API_RE = re.compile(
     r"gh\s+api\b[^\n]*?/(?:reviews|comments|issues|pulls/\d+/(?:reviews|comments)|releases)\b"
 )
 STAMP_MARKER = "mojiemoji.jozo.beer"
-BYPASS_MARKER = "HOOK_DISABLE=1"
+BYPASS_MARKER = "MOJIEMOJI_HOOK_DISABLED=1"
+# Legacy bypass marker. Honored for now but emits a deprecation notice
+# on use; will be removed in a future minor release (target: 1.0).
+LEGACY_BYPASS_MARKER = "HOOK_DISABLE=1"
+
+
+def _has_bypass(text: str) -> bool:
+    """Return True if any bypass marker is present in `text`. Prints a
+    deprecation notice to stderr when only the legacy marker is found,
+    so callers can migrate before legacy support is dropped."""
+    if BYPASS_MARKER in text:
+        return True
+    if LEGACY_BYPASS_MARKER in text:
+        sys.stderr.write(
+            "mojiemoji-japanese-gate: `HOOK_DISABLE=1` is deprecated. "
+            "Use `MOJIEMOJI_HOOK_DISABLED=1` instead — the legacy name "
+            "will be removed in a future release.\n"
+        )
+        return True
+    return False
 # Match every mojiemoji URL up to the first URL/HTML delimiter so we can
 # verify per-URL query parameters. Delimiters: whitespace, `"`, `<`, `>`, `)`.
 MOJI_URL_RE = re.compile(r"https?://mojiemoji\.jozo\.beer/[^\s\"<>)]+")
@@ -323,14 +344,14 @@ def main() -> int:
             return 0
         # Bypass marker is scoped to the command line, not the merged
         # body/script text. The original idiom (matching the git
-        # pre-commit `HOOK_DISABLE=1 git commit ...` style) is an
-        # opt-in by the *invocation*, not by something happening to
-        # appear inside a referenced file. Once file/script bodies
+        # pre-commit `MOJIEMOJI_HOOK_DISABLED=1 git commit ...` style)
+        # is an opt-in by the *invocation*, not by something happening
+        # to appear inside a referenced file. Once file/script bodies
         # were merged into `inspect_text`, documentation prose or
-        # test fixtures that mention the literal `HOOK_DISABLE=1`
-        # would silently disable the gate — accidental bypass via
-        # benign mention. Keep the bypass check on `command` only.
-        if BYPASS_MARKER in command:
+        # test fixtures that mention the literal marker would silently
+        # disable the gate — accidental bypass via benign mention.
+        # Keep the bypass check on `command` only.
+        if _has_bypass(command):
             return 0
         if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
             return 0
@@ -376,7 +397,7 @@ def main() -> int:
         # legitimately opt out is inside the body text itself. The
         # rule still parallels Bash (bypass on the surface the caller
         # directly controls), just adapted to structured input.
-        if BYPASS_MARKER in inspect_text:
+        if _has_bypass(inspect_text):
             return 0
     else:
         return 0
@@ -415,7 +436,7 @@ def main() -> int:
             "\n"
             "## skip 正当ケース\n"
             "English-only / apology / security / legal / compliance / acceptance criteria\n"
-            "緊急bypass: Bash なら command 先頭、MCP なら body 内に `HOOK_DISABLE=1` を含める\n"
+            "緊急bypass: Bash なら command 先頭、MCP なら body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
             "\n"
             "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
         )
@@ -483,7 +504,7 @@ def main() -> int:
             "   `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
             "4. 再投稿前に `references/verification.md` の grep #2〜#5 で全件確認\n"
             "\n"
-            "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める (推奨しない、ダーク不可視のまま投稿される)\n"
+            "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める (推奨しない、ダーク不可視のまま投稿される)\n"
         )
         return 2
 
@@ -514,7 +535,7 @@ def main() -> int:
             "## 違反URL\n"
             f"{preview}\n"
             "\n"
-            "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
+            "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
         )
         return 2
 
@@ -647,7 +668,7 @@ def main() -> int:
             "   (selector subagent と verification.md spotcheck #16 と同じ規約)\n"
             "4. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
             "\n"
-            "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
+            "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
         )
         return 2
 
