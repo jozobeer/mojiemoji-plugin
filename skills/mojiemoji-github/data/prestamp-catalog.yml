@@ -1,0 +1,285 @@
+# Mojiemoji pre-stamp catalog — loaded by skills/mojiemoji-github/scripts/prestamp.rb
+#
+# To add a new term:
+#   1. Append a key under `terms:` (longest match wins — see prestamp.rb).
+#   2. Provide 1+ variants; 3+ recommended so the seeded selector can spread
+#      flavors across repeated occurrences of the same word.
+#   3. Each variant overrides `defaults:` below. Allowed keys per variant:
+#        font, color, animation, speed, background, outline, outline_width
+#      Hex colors must be quoted ("3b82f6") — bare hex with no letters can
+#      misparse as a number.
+#
+# Outline convention:
+#   Each variant carries an explicit `outline:` hex chosen by rotating the
+#   fill color's bytes (R,G,B) → (B,R,G), e.g. ef4444 → 44ef44. This gives
+#   a complementary halo that differs per variant without leaning on the
+#   service's `darker` directive.
+#
+# Color-shifting animations (kira / disco / psycho) cycle hue across the
+# glyph, so a fixed outline fights the effect. Set `outline_width: "0"`
+# on those variants to suppress the halo. (The rendering helper
+# mojiemoji_markdown.rb strips outline automatically for them; prestamp.rb
+# does not, so the suppression is encoded here.)
+#
+# Canonical font / animation / color values: see
+#   skills/mojiemoji-github/references/parameters.md
+# Hard validation happens at submission time via hooks/mojiemoji-japanese-gate.py.
+
+defaults:
+  background: transparent
+  outline_width: "2"
+
+terms:
+  修正:
+    - font: gothic-bold
+      color: "ef4444"
+      outline: "44ef44"
+      animation: gatagata
+    - font: akzk
+      color: "f97316"
+      outline: "16f973"
+      animation: ekken
+    - font: kurobara
+      color: "ec4899"
+      outline: "99ec48"
+      animation: zanzo
+
+  緊急:
+    - font: dela
+      color: "ef4444"
+      outline: "44ef44"
+      animation: tenmetsu
+    - font: gothic-bold
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: shuchusen
+    - font: chikara
+      color: "dc2626"
+      outline: "26dc26"
+      animation: bure
+
+  完了:
+    - font: pixel
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: yatta
+    - font: maru-bold
+      color: "34d399"
+      outline: "9934d3"
+      animation: kirari
+    - font: zero
+      color: "10b981"
+      outline: "8110b9"
+      animation: nami
+
+  失敗:
+    - font: mincho
+      color: "dc2626"
+      outline: "26dc26"
+      animation: bure
+    - font: gothic-bold
+      color: "ef4444"
+      outline: "44ef44"
+      animation: gatagata
+    - font: akzk
+      color: "f97316"
+      outline: "16f973"
+      animation: ekken
+
+  成功:
+    # kira cycles hue; outline_width=0 suppresses the halo to avoid clash.
+    - font: maru-bold
+      color: "34d399"
+      animation: kira
+      outline_width: "0"
+    - font: gothic-bold
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: kirari
+    - font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: yatta
+
+  重要:
+    - font: mincho
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: shuchusen
+    - font: gothic-bold
+      color: "f97316"
+      outline: "16f973"
+      animation: ekken
+    - font: dela
+      color: "ef4444"
+      outline: "44ef44"
+      animation: tenmetsu
+
+  注意:
+    - font: gothic-bold
+      color: "f97316"
+      outline: "16f973"
+      animation: mabataki
+    - font: mincho
+      color: "ea580c"
+      outline: "0cea58"
+      animation: tenmetsu
+    - font: akzk
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: chirichiri
+
+  対応:
+    - font: maru-bold
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: norinori
+    - font: gothic-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: nami
+    - font: noto
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: patapata
+
+  確認:
+    - font: gothic-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: tate_scroll
+    - font: maru-bold
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: bane
+    - font: noto
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: mabataki
+
+  歓迎:
+    - font: maru
+      color: "10b981"
+      outline: "8110b9"
+      animation: poyoon
+    - font: gothic-bold
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: kirari
+    - font: noto
+      color: "34d399"
+      outline: "9934d3"
+      animation: mochimochi
+
+  警告:
+    - font: mincho
+      color: "c2410c"
+      outline: "0cc241"
+      animation: tenmetsu
+    - font: dela
+      color: "dc2626"
+      outline: "26dc26"
+      animation: ekken
+    - font: gothic-bold
+      color: "f97316"
+      outline: "16f973"
+      animation: shuchusen
+
+  必須:
+    - font: akzk
+      color: "ef4444"
+      outline: "44ef44"
+      animation: ekken
+    - font: gothic-bold
+      color: "dc2626"
+      outline: "26dc26"
+      animation: tenmetsu
+    - font: dela
+      color: "f97316"
+      outline: "16f973"
+      animation: chirichiri
+
+  任意:
+    - font: noto
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: nami
+    - font: maru-bold
+      color: "a855f7"
+      outline: "f7a855"
+      animation: poyoon
+    - font: gothic-bold
+      color: "c084fc"
+      outline: "fcc084"
+      animation: yurayura
+
+  導入:
+    - font: kurobara
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: kaiten
+      speed: slow
+    - font: maru-bold
+      color: "10b981"
+      outline: "8110b9"
+      animation: norinori
+    - font: noto
+      color: "34d399"
+      outline: "9934d3"
+      animation: nami
+
+  削除:
+    - font: toge
+      color: "dc2626"
+      outline: "26dc26"
+      animation: zanzo
+    - font: gothic-bold
+      color: "ef4444"
+      outline: "44ef44"
+      animation: bure
+    - font: dela
+      color: "f97316"
+      outline: "16f973"
+      animation: ekken
+
+  追加:
+    - font: zero
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: patapata
+    - font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: bane
+    - font: gothic-bold
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: yatta
+
+  更新:
+    - font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: chirichiri
+    - font: gothic-bold
+      color: "f97316"
+      outline: "16f973"
+      animation: gatagata
+    - font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: yurayura
+
+  PR:
+    - font: gothic-bold
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: norinori
+    - font: maru-bold
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: nami
+    - font: noto
+      color: "ec4899"
+      outline: "99ec48"
+      animation: mozaiku
