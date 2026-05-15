@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,24 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK = REPO_ROOT / "hooks" / "mojiemoji-japanese-gate.py"
+
+
+@pytest.fixture(autouse=True)
+def _coverage_subprocess_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg = REPO_ROOT / "pyproject.toml"
+    monkeypatch.setenv("COVERAGE_PROCESS_START", str(cfg))
+    monkeypatch.setenv("MOJIEMOJI_COVERAGE_HOOKS", str(REPO_ROOT / "hooks"))
+    monkeypatch.setenv(
+        "MOJIEMOJI_COVERAGE_SCRIPTS",
+        str(REPO_ROOT / "skills" / "mojiemoji-github" / "scripts"),
+    )
+    # Anchor data file to the repo root; otherwise subprocesses with cwd=tmp_path
+    # write to a dir pytest deletes at teardown, silently losing all hits.
+    monkeypatch.setenv("COVERAGE_FILE", str(REPO_ROOT / ".coverage"))
+    sitecustomize_dir = str(REPO_ROOT / "tests")
+    existing = os.environ.get("PYTHONPATH", "")
+    new_path = f"{sitecustomize_dir}{os.pathsep}{existing}" if existing else sitecustomize_dir
+    monkeypatch.setenv("PYTHONPATH", new_path)
 
 
 @pytest.fixture
@@ -24,7 +44,7 @@ def run_hook(tmp_path):
 
     def _run(payload: dict[str, Any], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["python3", str(HOOK)],
+            [sys.executable, str(HOOK)],
             input=json.dumps(payload),
             capture_output=True,
             text=True,

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.util
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -112,6 +116,29 @@ def test_coverage_blocks_when_below_threshold() -> None:
 
     assert proc.returncode == 2
     assert "coverage warning:" in proc.stderr
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("coverage") is None,
+    reason="coverage.py package not installed",
+)
+def test_sitecustomize_prefers_coverage_package_over_repo_script(tmp_path: Path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO_ROOT / "tests")
+    env["COVERAGE_PROCESS_START"] = str(REPO_ROOT / "pyproject.toml")
+    env["COVERAGE_FILE"] = str(tmp_path / ".coverage")
+
+    proc = subprocess.run(
+        [sys.executable, "-c", "import coverage; print(coverage.__file__)"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=str(COVERAGE.parent),
+        env=env,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert str(COVERAGE) not in proc.stdout
 
 
 def test_generate_catalog_emits_diverse_variants_per_term() -> None:
