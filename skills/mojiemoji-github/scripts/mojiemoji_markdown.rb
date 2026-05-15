@@ -122,10 +122,13 @@ if COLOR_SHIFTING_ANIMATIONS.include?(animation_val)
 end
 
 # Rotational animations are unreadable at the default speed. If the
-# caller picked a rotation but didn't pick a speed, inject slow — an
-# explicit choice (step/slow/normal/fast) is left alone.
+# caller picked a rotation but didn't pick a speed, inject slow. An
+# explicit choice is preserved, but warn for fast/normal because the
+# downstream hook rejects those combinations for rotational animations.
 if ROTATIONAL_ANIMATIONS.include?(animation_val) && options[:speed].to_s.empty?
   options[:speed] = "slow"
+elsif ROTATIONAL_ANIMATIONS.include?(animation_val) && %w[fast normal].include?(options[:speed].to_s.downcase)
+  warn "warning: --animation #{options[:animation]} with --speed #{options[:speed]} is rejected downstream; use --speed slow or step"
 end
 
 params = {
