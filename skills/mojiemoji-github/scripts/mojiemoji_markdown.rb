@@ -122,13 +122,30 @@ if COLOR_SHIFTING_ANIMATIONS.include?(animation_val)
 end
 
 # Rotational animations are unreadable at the default speed. If the
-# caller picked a rotation but didn't pick a speed, inject slow. An
-# explicit choice is preserved, but warn for fast/normal because the
-# downstream hook rejects those combinations for rotational animations.
-if ROTATIONAL_ANIMATIONS.include?(animation_val) && options[:speed].to_s.empty?
-  options[:speed] = "slow"
-elsif ROTATIONAL_ANIMATIONS.include?(animation_val) && %w[fast normal].include?(options[:speed].to_s.downcase)
-  warn "warning: --animation #{options[:animation]} with --speed #{options[:speed]} is rejected downstream; use --speed slow or step"
+# caller picked a rotation but didn't pick a speed, inject slow — an
+# explicit choice (step/slow/normal/fast) is left alone.
+#
+# When the explicit choice is normal/fast (or any non-canonical value),
+# the downstream hook will reject the URL. We intentionally don't
+# override the caller's selection (helper respects explicit input),
+# but emit a stderr warning so the conflict isn't silent — callers
+# piping `2>/dev/null` self-select out, callers who care see "the
+# helper made the URL you asked for, and the hook will reject it"
+# up front.
+#
+# Co-authored-by Copilot Autofix: independently arrived at the same
+# warning-without-override design (commit 268ed1d on this branch).
+# This version generalizes "fast / normal" → "anything not in
+# {step, slow}" so the warning fires on typos like `speed=fas` too.
+if ROTATIONAL_ANIMATIONS.include?(animation_val)
+  if options[:speed].to_s.empty?
+    options[:speed] = "slow"
+  elsif !%w[step slow].include?(options[:speed].to_s.downcase)
+    warn "mojiemoji_markdown.rb: --animation #{animation_val} with --speed " \
+         "#{options[:speed]} renders as an unreadable streak; the " \
+         "PreToolUse hook will reject this URL. Use --speed slow / " \
+         "--speed step, or drop --speed to auto-inject slow."
+  end
 end
 
 params = {
