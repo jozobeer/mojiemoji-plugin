@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
 
 import pytest
 
@@ -57,7 +58,7 @@ class TestToolFiltering:
         # The hook should never crash a tool call on its own bug.
         # Raw garbage that isn't JSON returns 0 (fail-open).
         result = subprocess.run(
-            ["python3", str(HOOK)],
+            [sys.executable, str(HOOK)],
             input=b"not json at all {{{",
             capture_output=True,
             cwd=str(tmp_path),

@@ -1,0 +1,26 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "tests/**"
+  - "**/__pycache__/**"
+  - "scripts/**"
+  - ".github/**"
+  - "skills/mojiemoji-github/SKILL.md"
+  - "skills/mojiemoji-github/data/**"
+  - "skills/mojiemoji-github/references/**"
+  - "agents/**"
+  - "assets/**"
