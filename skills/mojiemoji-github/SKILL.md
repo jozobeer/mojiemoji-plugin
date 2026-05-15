@@ -29,6 +29,46 @@ allowed-tools:
 
 ユーザーが GitHub surface 向けの mojiemoji スニペットを欲しているときだけ起動する。Slack のカスタム絵文字、Notion、一般的な Web ページには起動しない — ここで規定するデフォルトはすべて GitHub のサニタイザを前提にしている。
 
+## Hard pre-action gate
+
+**設計原則: gate は「投稿される *body* が日本語の GitHub markdown かどうか」で発火する — どの *コマンド* で投稿するかではない。** 失敗モードは「装飾なしで日本語を silently 投稿してしまう」こと。これを防ぐためなら、新しい投稿経路が増えてもこの原則は不変。
+
+### 発火する surface(完全列挙)
+
+以下のいずれかで日本語 body を提出する直前に、`mojiemoji-github` skill による装飾を行う:
+
+- `gh` CLI 投稿系: `gh issue create` / `gh issue comment` / `gh pr create` / `gh pr comment` / `gh pr review` / `gh release create`
+- raw GitHub REST: `gh api .../pulls/.../reviews` / `gh api .../pulls/.../comments` / `gh api .../issues/.../comments` / `gh api .../issues` 等(`--input` payload や `-F body=...` も同じ)
+- MCP GitHub ツール経路: `mcp__*__github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` / `github_issue_write` / `github_update_pull_request` / `github_add_comment_to_pending_review` / `github_add_reply_to_pull_request_comment` 等
+- subagent 駆動の一括投稿: `cross-repo-review` / `triage-review` / `vibes-review` / `copilot-review` 等が複数 PR を回って review/comment を連投する経路
+- 上記いずれでもない新経路でも、日本語 GitHub body を提出するなら例外なく対象
+
+最終 gate として PreToolUse hook (`hooks/mojiemoji-japanese-gate.py`) が submission 直前に発火し、未装飾の日本語 body を block する。Skill を先に呼んでおけば hook で再装飾のラウンドトリップが発生しない、というのが skill 側で gate を実装する意義。
+
+### UX ルール — メニューを出さず、装飾して見せる
+
+ユーザーがこの skill を起動した時点で、装飾の placement(どの単語に stamp を当てるか)の判断権限は skill に委譲されている。「block で付けますか / inline で付けますか / どこに付けますか」と選択肢を並べて聞き返してはいけない。
+
+1. **Auto-decorate** — heuristics で stamp 対象を選び、本ファイルの規約通りに装飾した draft を生成
+2. **Show the decorated draft** — ユーザーに 1 度だけ提示
+3. **Wait for yes/no** — 「これで投稿してよい?」の確認だけ取る。修正要求があれば 1 に戻る
+
+`mojiemoji-selector` subagent にデリゲートする場合も同じ — selector が返した snippet を本文に embed して draft を完成させ、その draft をユーザーに見せる(selector の生 output を user に見せて「どれにします?」と聞かない)。
+
+### 装飾しない正当ケース(skip 条件)
+
+以下のいずれかに該当する body は装飾せずに投稿してよい:
+
+- 本文が英語のみ(日本語が無い)
+- surface が GitHub ではない(Slack / Notion / 一般 Web)
+- 内容が謝罪 / セキュリティ advisory / 法務 / コンプライアンス通知 / 受け入れ基準を単独で提示するケース — 明瞭性を装飾より優先
+
+skip 判断が曖昧なら装飾する(後述「飽和モード」参照、迷ったら loud を選ぶ)。
+
+### 緊急 bypass
+
+gate 自体を一時的に黙らせたい場合は Bash command 先頭 / MCP body 内に `HOOK_DISABLE=1` を含める(PreToolUse hook がこの marker を見ると素通しする)。乱用しない — 1 投稿 1 bypass の最小スコープに留める。
+
 ## バッジと併用する(バッジが見出しの役割)
 
 mojiemoji スタンプと shields.io バッジは**相補的で交換可能ではない** — バッジはメタデータを、スタンプは雰囲気を伝える。よくある失敗パターンは、スタンプは付けたのにバッジを忘れることである。
