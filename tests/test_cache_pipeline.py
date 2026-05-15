@@ -390,12 +390,26 @@ def test_cache_record_still_requires_outline_for_static_animation(tmp_path: Path
     assert not cache.exists()
 
 
+def _yaml_parse_via_ruby(text: str) -> object:
+    """Parse YAML by shelling out to Ruby. The cache pipeline already
+    requires Ruby on the host, so this avoids forcing PyYAML on the CI
+    runner just to verify round-trip parsing."""
+    proc = subprocess.run(
+        ["ruby", "-ryaml", "-rjson", "-e",
+         "puts JSON.dump(YAML.safe_load(STDIN.read))"],
+        input=text,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert proc.returncode == 0, f"Ruby YAML parse failed: {proc.stderr}"
+    return json.loads(proc.stdout)
+
+
 def test_cache_stats_quotes_term_keys_with_yaml_special_chars(tmp_path: Path) -> None:
     """Terms containing YAML-significant characters (colon, leading dash,
     etc.) must be quoted so cache-stats output round-trips through
     YAML.safe_load. (PR #49 Codex P1.)"""
-    import yaml as pyyaml
-
     cache = tmp_path / "usage.jsonl"
     _seed_cache(
         cache,
@@ -408,8 +422,8 @@ def test_cache_stats_quotes_term_keys_with_yaml_special_chars(tmp_path: Path) ->
     )
     proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
-    parsed = pyyaml.safe_load("---\n" + proc.stdout)
-    assert parsed is not None
+    parsed = _yaml_parse_via_ruby("---\n" + proc.stdout)
+    assert isinstance(parsed, dict)
     assert "foo: bar" in parsed
     assert "- leading-dash" in parsed
 
@@ -418,8 +432,6 @@ def test_bump_catalog_apply_quotes_new_term_with_yaml_special_chars(tmp_path: Pa
     """When appending a wholly new term whose key contains YAML-significant
     characters, bump-catalog must quote it so the resulting catalog still
     parses. (PR #49 Codex P1 follow-up.)"""
-    import yaml as pyyaml
-
     cache = tmp_path / "usage.jsonl"
     _seed_cache(
         cache,
@@ -435,8 +447,8 @@ def test_bump_catalog_apply_quotes_new_term_with_yaml_special_chars(tmp_path: Pa
         "--apply",
     )
     assert proc.returncode == 0, proc.stderr
-    parsed = pyyaml.safe_load(catalog.read_text())
-    assert parsed is not None
+    parsed = _yaml_parse_via_ruby(catalog.read_text())
+    assert isinstance(parsed, dict)
     assert "foo: bar" in parsed.get("terms", {})
 
 
