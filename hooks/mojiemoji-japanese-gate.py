@@ -136,6 +136,21 @@ REQUIRED_PARAMS_OUTLINE = [
     ("outline_width=", "outline 幅 (推奨 2px、`mojiemoji_markdown.rb --outline-width 2`)"),
 ]
 COLOR_SHIFTING_ANIMATIONS = {"disco", "psycho", "kira"}
+# Rotational animations spin the letterform around its center. At the
+# service default speed (effectively `fast`), and at explicit `normal`
+# / `fast`, the spin completes faster than the eye can resolve the
+# glyph — it reads as a streak of pixels, not text. Only `step`
+# (frame-by-frame) and `slow` keep the rotation readable.
+#
+# Scope is intentionally conservative: `kaiten` (rotation) and
+# `kage_kaiten` (its shadow variant — same rotation, different render
+# layer). The translational group (`tate_scroll` / `yoko_scroll` /
+# `nami` / `tatemoya` / `yokomoya`) moves the glyph but doesn't spin
+# it; their fast-speed readability is borderline rather than clearly
+# broken, so they're excluded until visually verified (see issue #12
+# review notes).
+ROTATIONAL_ANIMATIONS = {"kaiten", "kage_kaiten"}
+ROTATIONAL_OK_SPEEDS = {"step", "slow"}
 # Canonical value allowlists. The mojiemoji service silently falls back to
 # defaults (or static rendering) when an unknown font/animation is passed
 # — no error, no visible signal. The 2026-05-12 PR #1768 incident shipped
@@ -484,6 +499,23 @@ def main() -> int:
         # keep them and look wrong. Flag the combination as invalid.
         if anim_value in COLOR_SHIFTING_ANIMATIONS and "outline=" in u:
             bads.append(("animation+outline", f"{anim_value} with outline"))
+        # Rotational animations are only readable at speed=step|slow.
+        # Missing speed (defaults to fast) and explicit normal/fast all
+        # render as an unreadable spinning streak. parameters.md § "有効な
+        # animation 値" documents this for `kaiten`; the helper script
+        # injects speed=slow when the user picks a rotation without a
+        # speed, but hand-crafted URLs trip on this regularly.
+        if anim_value in ROTATIONAL_ANIMATIONS:
+            speed_match = re.search(
+                r"(?:&amp;|&|\?)speed=([a-z]+)", u, re.IGNORECASE
+            )
+            speed = speed_match.group(1).lower() if speed_match else ""
+            if speed not in ROTATIONAL_OK_SPEEDS:
+                got = speed if speed else "(missing — defaults to fast)"
+                bads.append((
+                    "animation+speed",
+                    f"{anim_value} requires speed=step|slow, got {got}",
+                ))
         if bads:
             invalid.append((u, bads))
 
@@ -525,7 +557,11 @@ def main() -> int:
             "   `yurayura` / `mochimochi`, `fude` (存在しない) → `mincho`\n"
             "   / `noto`; `vivid-purple` (named) → `c084fc` (hex);\n"
             "   `animation=kira`/`disco`/`psycho` は色循環するので outline\n"
-            "   と outline_width は付けない (rainbow vs fixed halo の競合)\n"
+            "   と outline_width は付けない (rainbow vs fixed halo の競合);\n"
+            "   `animation=kaiten`/`kage_kaiten` は **必ず `speed=slow` か\n"
+            "   `speed=step` を付ける** (省略 / `normal` / `fast` は回転が\n"
+            "   速すぎて読めない streak になる — helper script は速度未指定時\n"
+            "   に自動で `slow` を注入する)\n"
             "4. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
             "\n"
             "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
