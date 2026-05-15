@@ -133,10 +133,15 @@ disco, psycho, kage_kaiten, kage_bokashi, kage_neon
 `kanpai`、`roulette`、`strobe`、`buruburu`)。`spin` のような
 rotational animation は **`speed=step` または `slow` の時のみ可読** で、
 `normal` / `fast` では回転が速すぎて読めなくなる — 現行サービスでは
-`kaiten`(回転) が正準名なのでそちらを使うのが安全。名前が現行か
-怪しいときは `scripts/verify-canonical-lists.sh`
-を走らせる — hook の allowlist とライブサービスを diff し、ドリフトが
-あれば非ゼロで終了する(§ パラメータが効かなくなったとき を参照)。
+`kaiten`(回転) と `kage_kaiten`(影付き回転) の 2 つが該当する正準名。
+両方とも hook (`mojiemoji-japanese-gate.py`) が `speed=step|slow` 以外
+(省略含む、デフォルトはサービス側で fast 相当) を拒否する。helper
+script (`scripts/mojiemoji_markdown.rb`) は `--animation kaiten` /
+`--animation kage_kaiten` を受け取って `--speed` 未指定なら自動で
+`speed=slow` を注入するので、helper 経由なら気にしなくて良い。名前が
+現行か怪しいときは `scripts/verify-canonical-lists.sh` を走らせる —
+hook の allowlist とライブサービスを diff し、ドリフトがあれば非ゼロで
+終了する(§ パラメータが効かなくなったとき を参照)。
 
 ほとんどの animation は inline で有効。**block 専用と確認済: `bakusan`**
 — 放射バーストの動きがデフォルト `height="20"–"24"` で内側の
