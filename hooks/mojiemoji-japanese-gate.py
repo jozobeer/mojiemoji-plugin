@@ -506,8 +506,16 @@ def main() -> int:
         # injects speed=slow when the user picks a rotation without a
         # speed, but hand-crafted URLs trip on this regularly.
         if anim_value in ROTATIONAL_ANIMATIONS:
+            # Capture the full value up to the next URL/HTML delimiter,
+            # not just the leading alphabetic prefix — otherwise typos
+            # like `speed=step2` or partially-encoded `speed=slow%20`
+            # would slice down to `step` / `slow` and pass the check
+            # while the actual service receives a non-canonical value
+            # that falls back to the unreadable default. Same delimiter
+            # set as MOJI_URL_RE so the capture stops at the URL
+            # boundary inside HTML attributes.
             speed_match = re.search(
-                r"(?:&amp;|&|\?)speed=([a-z]+)", u, re.IGNORECASE
+                r"(?:&amp;|&|\?)speed=([^&\s\"<>)]+)", u, re.IGNORECASE
             )
             speed = speed_match.group(1).lower() if speed_match else ""
             if speed not in ROTATIONAL_OK_SPEEDS:
