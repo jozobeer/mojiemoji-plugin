@@ -2,18 +2,18 @@
 name: bump-catalog
 description: "ローカル mojiemoji usage cache (`~/.local/share/mojiemoji-plugin/usage.jsonl`) から閾値を満たした variant を `prestamp-catalog.yml` に昇格させ、自動 PR を作る。selector が catalog miss 時に記録した flavor を、複利型 catalog 育成の入口にする。LLM 不要・全部 Ruby script で決定論的。"
 allowed-tools:
-  # bump-catalog.rb 本体。`--dry-run` / `--apply` / `--pr` モード全てで使用。
+  # bump_catalog.py 本体。`--dry-run` / `--apply` / `--pr` モード全てで使用。
   # `--pr` モードでは内部から `git` / `gh pr create` を `system()` で呼ぶが、
   # Ruby プロセス内 subprocess なので外側の Bash gate 1 つで通る。
-  - Bash(ruby skills/mojiemoji-github/scripts/bump-catalog.rb*)
-  - Bash(ruby */skills/mojiemoji-github/scripts/bump-catalog.rb*)
+  - Bash(python3 skills/mojiemoji-github/scripts/bump_catalog.py*)
+  - Bash(python3 */skills/mojiemoji-github/scripts/bump_catalog.py*)
 ---
 
 # Bump Catalog
 
 `mojiemoji-github` プラグインの catalog をローカル usage cache から
 自動的に育てる skill。selector subagent が catalog miss した term に
-flavor を選定したとき、`cache-record.rb` が JSONL に追記する。
+flavor を選定したとき、`cache_record.py` が JSONL に追記する。
 この skill はその cache を集計して、しきい値を満たした variant を
 `prestamp-catalog.yml` に昇格させる PR を 1 件作る。
 
@@ -31,7 +31,7 @@ flavor を選定したとき、`cache-record.rb` が JSONL に追記する。
    `--dry-run` なので破壊的操作は起きない):
 
    ```bash
-   ruby skills/mojiemoji-github/scripts/bump-catalog.rb
+   python3 skills/mojiemoji-github/scripts/bump_catalog.py
    ```
 
    出力に「would add N variant(s) ...」が出たら次へ。「no new variants
@@ -40,7 +40,7 @@ flavor を選定したとき、`cache-record.rb` が JSONL に追記する。
 2. 内容に問題なければ `--pr` を付けて本実行する:
 
    ```bash
-   ruby skills/mojiemoji-github/scripts/bump-catalog.rb --pr
+   python3 skills/mojiemoji-github/scripts/bump_catalog.py --pr
    ```
 
    `--pr` モードがやること:
@@ -62,7 +62,7 @@ flavor を選定したとき、`cache-record.rb` が JSONL に追記する。
 - catalog だけ更新したい(PR は手で出す)なら `--apply`:
 
   ```bash
-  ruby skills/mojiemoji-github/scripts/bump-catalog.rb --apply
+  python3 skills/mojiemoji-github/scripts/bump_catalog.py --apply
   ```
 
   これは `prestamp-catalog.yml` のマージのみ。`plugin.json` も触らず git

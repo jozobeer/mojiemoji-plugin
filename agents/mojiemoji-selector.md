@@ -122,7 +122,7 @@ SKILL_DIR: <絶対パス>
    - Block: デフォルトの markdown 形式。サイズ属性は付けない。
      上記の block 優先アニメーションはここで一級扱い。
 4. **描画。** 各スニペットについて helper スクリプトを呼び出す:
-   `$SKILL_DIR/scripts/mojiemoji_markdown.rb --text '<phrase>' [flags]`
+   `$SKILL_DIR/scripts/mojiemoji_markdown.py --text '<phrase>' [flags]`
    inline モードは `--inline` を渡す。それ以外はデフォルトの markdown 形式。
 5. **トーン尊重。** `calm` のときは短いフレーズ、遅い速度、低彩度の色を
    優先する。`loud` のときは速い速度と強い色を許容するが、それでも
@@ -231,7 +231,7 @@ verification.md spotcheck #16 がこれを検出する。
 
 `disco`、`psycho`、`kira` は虹色 / 明滅する塗りを循環する。
 固定色の outline(`darker` / triadic / hex)はその虹色と干渉して
-汚れたハロに見える。helper スクリプト `mojiemoji_markdown.rb` は、
+汚れたハロに見える。helper スクリプト `mojiemoji_markdown.py` は、
 これら 3 種類のアニメーションに対しては `outline` + `outline_width` を
 明示的に渡しても自動で外す。PreToolUse hook 側もこれらを outline 必須
 要件から除外している。**`disco` / `psycho` / `kira` は `--outline`
@@ -240,7 +240,7 @@ verification.md spotcheck #16 がこれを検出する。
 ### 契約を満たす方法
 
 - すべてのスニペットについて、helper スクリプト
-  `$SKILL_DIR/scripts/mojiemoji_markdown.rb` を **必ず**
+  `$SKILL_DIR/scripts/mojiemoji_markdown.py` を **必ず**
   `--font` / `--color` / `--animation` / `--outline triadic`
   / `--outline-width 2` 付きで呼び出すこと(`triadic` をデフォルトに —
   `darker` も依然有効だが塗りに溶け込みやすい)。`--background transparent`
@@ -279,13 +279,13 @@ verification.md spotcheck #16 がこれを検出する。
 
 ### Cache 記録 — catalog 育成 (Phase 1, #46)
 
-スニペットを描画したら、`$SKILL_DIR/scripts/cache-record.rb` を呼んで
+スニペットを描画したら、`$SKILL_DIR/scripts/cache_record.py` を呼んで
 選んだ flavor をローカル cache (`usage.jsonl`) に追記すること。
 このログは別 skill `bump-catalog` が読み、しきい値を満たした variant を
 `prestamp-catalog.yml` へ自動昇格 PR にする (複利型 catalog 育成)。
 
 ```bash
-ruby "$SKILL_DIR/scripts/cache-record.rb" \
+python3 "$SKILL_DIR/scripts/cache_record.py" \
   --term '<phrase>' --font '<font>' --color '<hex>' --animation '<anim>' \
   --outline '<outline>' --outline-width '<width>' [--speed '<speed>'] \
   || true

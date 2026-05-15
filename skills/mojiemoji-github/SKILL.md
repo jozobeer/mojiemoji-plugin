@@ -142,11 +142,11 @@ Closes #N.
 - ✗ **セクション末のオチ装飾**(各セクションの後ろに `→ <stamp1> <stamp2>` を独立行で置く)は**使わない**。「セクション末のブロックスタンプは不要」として明示的に拒否されている。
 - ✗ **締めの装飾**(本文末に `---` + 独立行のムードスタンプ)も**使わない**。同じ理由で拒否されている。
 - ✅ **文末・段落末・見出し末の trailing 装飾**は 2 段階優先で選ぶ:
-  1. **`data/emoji-catalog.yml` に登録のある絵文字** (162 種、🎉 / 🔥 / ✨ / 💯 / ⚠ / ❤ / 😂 / 🎊 / 🚨 / 😎 / 🤖 等) → **mojiemoji 化してアニメ付きで埋める**。catalog から該当 emoji の variant 1 つを引き、`<img src="https://mojiemoji.jozo.beer/emoji/<emoji>?font=<font>&color=<color>&animation=<anim>&background=transparent&outline=<outline>&outline_width=2" alt="<emoji>" height="24" align="absmiddle">` 形式で挿入する。動詞・名詞の inline 埋め込みと同じ URL 構造 — `mojiemoji_markdown.rb --text '<emoji>'` でも手で組んでも良い。**variant の params をそのまま使う**こと: catalog には color-shifting 系 variant (`disco` / `psycho` / `kira`) も含まれ、それらは `outline` フィールドを持たず代わりに `outline_width: "0"` を持つ。テンプレ通りに `outline=...&outline_width=2` を埋めると hook (`mojiemoji-japanese-gate.py`) で reject される。catalog 上の variant に書かれた params を字面通り写すのが安全。
+  1. **`data/emoji-catalog.yml` に登録のある絵文字** (162 種、🎉 / 🔥 / ✨ / 💯 / ⚠ / ❤ / 😂 / 🎊 / 🚨 / 😎 / 🤖 等) → **mojiemoji 化してアニメ付きで埋める**。catalog から該当 emoji の variant 1 つを引き、`<img src="https://mojiemoji.jozo.beer/emoji/<emoji>?font=<font>&color=<color>&animation=<anim>&background=transparent&outline=<outline>&outline_width=2" alt="<emoji>" height="24" align="absmiddle">` 形式で挿入する。動詞・名詞の inline 埋め込みと同じ URL 構造 — `mojiemoji_markdown.py --text '<emoji>'` でも手で組んでも良い。**variant の params をそのまま使う**こと: catalog には color-shifting 系 variant (`disco` / `psycho` / `kira`) も含まれ、それらは `outline` フィールドを持たず代わりに `outline_width: "0"` を持つ。テンプレ通りに `outline=...&outline_width=2` を埋めると hook (`mojiemoji-japanese-gate.py`) で reject される。catalog 上の variant に書かれた params を字面通り写すのが安全。
   2. **登録の無い絵文字** (例 🚀 = U+1F680、upstream `jozobeer/mojiemoji/assets/emoji` にアセット無し) → **素の Unicode** にフォールバック。例: `## デプロイ手順 🚀`、`これは未対応 🪐`。
   catalog 在否を確認する手順:
   - **VS16 を剥がす**: 入力に `❤️` (U+2764 U+FE0F) や `⚠️` (U+26A0 U+FE0F) など variation selector (U+FE0F) が混じっていたら、catalog キーは base codepoint (`❤` / `⚠`) しか持たないので、lookup 前に `tr -d $'\xef\xb8\x8f'` 等で剥がす。剥がさないと「未登録」と誤判定して素の Unicode に fallback してしまう。
-  - **YAML キーに一致** させる: 実 catalog の key 形は `  🎉:` のように 2 字インデント + bare emoji + `:` で、コメント中に同じ glyph が出てくることもある (`🚀` は upstream 未対応の例として SKILL.md / catalog header の prose にも登場する)。素朴な `grep "<emoji>"` だとコメント / prose にもヒットするので、`grep -E "^  $EMOJI:" skills/mojiemoji-github/data/emoji-catalog.yml` のように **行頭 2-space インデント + コロン** にアンカーするか、`ruby -ryaml -e "exit YAML.load_file('skills/mojiemoji-github/data/emoji-catalog.yml')['emojis'].key?('$EMOJI') ? 0 : 1"` で実 key を直接問い合わせる。
+  - **YAML キーに一致** させる: 実 catalog の key 形は `  🎉:` のように 2 字インデント + bare emoji + `:` で、コメント中に同じ glyph が出てくることもある (`🚀` は upstream 未対応の例として SKILL.md / catalog header の prose にも登場する)。素朴な `grep "<emoji>"` だとコメント / prose にもヒットするので、`grep -E "^  $EMOJI:" skills/mojiemoji-github/data/emoji-catalog.yml` のように **行頭 2-space インデント + コロン** にアンカーするか、`python3 -c "import sys, yaml; data = yaml.safe_load(open('skills/mojiemoji-github/data/emoji-catalog.yml')); sys.exit(0 if '$EMOJI' in data['emojis'] else 1)"` で実 key を直接問い合わせる。
   1 スロット 1 絵文字、連結禁止(mojiemoji 化しても同じ — 連続して並べない)。
 
 ユーザーは「独立行の block スタンプは『デカくてよくわからない文節』になって本文を壊す」と指摘している。mojiemoji = インライン埋め込み(文中の強調)、Unicode 絵文字 / mojiemoji 化された絵文字 = 末尾の装飾。2 つのスロット、2 つの道具 — 混同しないこと。**末尾装飾の絵文字を mojiemoji 化しても役割は装飾のまま** — 文中の単語置換 (`【マジで】`) と混同せず、文末のシンボル位置に留める。
@@ -288,11 +288,11 @@ mojiemoji は**単語レベルの一撃**であって、句や文の強調では
 ヘルパースクリプトは `--text` 中のリテラル `\n` を URL パス内の `%0A` にエンコードする。全ひらがな 3〜5 字の単語に対して 2 行スタンプを作るのに使う(各行 ≤3 ひらがな):
 
 ```bash
-ruby scripts/mojiemoji_markdown.rb --text $'よろ\nしく' --inline \
+python3 scripts/mojiemoji_markdown.py --text $'よろ\nしく' --inline \
   --font maru-bold --color 22c55e --animation poyoon \
   --outline triadic --outline-width 2
 
-ruby scripts/mojiemoji_markdown.rb --text $'ありが\nとう' --inline \
+python3 scripts/mojiemoji_markdown.py --text $'ありが\nとう' --inline \
   --font hachimaru --color ec4899 --animation bane \
   --outline triadic --outline-width 2
 ```
@@ -468,20 +468,20 @@ CONSTRAINTS:
 ## ワークフロー
 
 1. surface を特定する(issue / PR 本文 / レビューコメント / 返信 / リリースノート)。surface が **issue 本文 / PR 本文 / リリースノート**なら、まずバッジの有無を確認する(§ バッジと併用する を参照)。surface に応じた先頭/締め語の引き当ては § Surface ごとの top/closing 装飾ヒューリスティック を参照。
-2. draft が日本語 markdown なら、まず `scripts/prestamp.rb` を通す。高頻度語(修正/確認/対応/PR など)はここで決定論的に `<img>` 化し、code fence / inline code / `<img>` 既存タグ / mermaid / link target / shields.io badge などの safe-zone は保護される。
+2. draft が日本語 markdown なら、まず `scripts/prestamp.py` を通す。高頻度語(修正/確認/対応/PR など)はここで決定論的に `<img>` 化し、code fence / inline code / `<img>` 既存タグ / mermaid / link target / shields.io badge などの safe-zone は保護される。
 3. モードを決める(`block` vs `inline`。混在も可)。
 4. **各スタンプを 3 字以内に切る**(inline・block 共通)。4 字以上のフレーズは左から 2 字ずつ厳密にチャンク化(末尾 1 字は許容)し、隣接する独立スタンプとしてセパレータ無しでレンダリングする。チャンクごとに font / color / animation を選ぶ。例と根拠は § "Phrase-length & line-break rules" 相当(上記の長さ上限・境界ヒューリスティック)を参照。
 5. パラメータを選ぶ:
    - **単一フレーズ・単一の自明なプリセット**: まず `references/flavor-guide.md` でそのフレーズがスタンプ価値ありか確認し、次に `references/presets.md` で 1 行を引いて、スクリプトを直接呼ぶ。subagent は不要。
    - **それ以外**(2 フレーズ以上 / バリエーション / カタログ / 配置が曖昧 / トーン制約あり)は **必ず `mojiemoji-selector` subagent にデリゲート**する。references をメインスレッドに読み込まない。
-   - **強い禁止: フラグを固定して直接スクリプトをフレーズごとにループ呼び出ししない。** ファストパスは単一フレーズ専用。`mojiemoji_markdown.rb` を同じ `--font --color --animation --speed` で 2 回以上呼ぶのは、issue #166 の単調本文を生んだ仕組みそのもの(15 スタンプ全て `font=maru-bold color=60a5fa animation=spring speed=normal`)。複数フレーズの仕事は常に `mojiemoji-selector` にデリゲートし、Hard contract の多様性制約を本文全体に適用させる。
+   - **強い禁止: フラグを固定して直接スクリプトをフレーズごとにループ呼び出ししない。** ファストパスは単一フレーズ専用。`mojiemoji_markdown.py` を同じ `--font --color --animation --speed` で 2 回以上呼ぶのは、issue #166 の単調本文を生んだ仕組みそのもの(15 スタンプ全て `font=maru-bold color=60a5fa animation=spring speed=normal`)。複数フレーズの仕事は常に `mojiemoji-selector` にデリゲートし、Hard contract の多様性制約を本文全体に適用させる。
 6. 返ってきたスニペットを核に最終的なメッセージを組み立てる。周辺の散文は自然に保ち、inline ではスタンプを強調として機能させる。
 7. **本文構成(issue 本文 / PR 本文 / リリースノート、loud トーン)**:
    - **必須のデフォルト — インライン密度: 1 段落あたりスタンプ 1〜2 個。** 各段落で最も強調すべきキーワードを選ぶ。アイデアを担う箇条書き(要件 / 受け入れ条件)では、文法的に収まる名詞・動詞をすべて埋め込む。飽和は「全単語にスタンプする」という意味ではなく、「選択性を保ちつつ一貫した存在感を出す」こと。コードパス / 識別子 / リンクを含むセクション(関連ファイル、関連 PR、references)では、パス・識別子そのものはスタンプしないが、周辺の日本語散文(「差し替え対象」のような関係性記述、「変更不要の想定」のような括弧書き)は**スタンプして良いし、インライン飽和下ではすべき**。
    - ✗ **セクション末オチ装飾**(セクション後ろの独立行 `→ <stamp1>`)は**生成しない**。escape valve は、ユーザーがそのターン内で block 装飾意図(「→ つけて」 / 「盛大に」)と具体的な配置指示の両方を明示した場合のみ。
    - ✗ **締めの装飾**(本文末の `---` + 独立行ムードスタンプ)は**生成しない**。同じ escape valve のみ。
 8. **貼り付け前に必ず検証する。** スニペット受け取り後、`references/verification.md` のスポットチェックブロックを本文全体に対して実行する。失敗があればローカルで直す(または再ディスパッチ)してから貼り付ける。
-9. 本文が固まったら `scripts/coverage.rb --surface <...>` で最低密度/文ヒット率/段落偏りを測る。警告が出たら装飾を足し、hook 経路で block したい時は `--mode block` を使う。
+9. 本文が固まったら `scripts/coverage.py --surface <...>` で最低密度/文ヒット率/段落偏りを測る。警告が出たら装飾を足し、hook 経路で block したい時は `--mode block` を使う。
 10. ユーザーが実際に投稿するよう依頼してきたら、まず文面を組み上げ、その後 `gh` コマンドを実行する。
 
 ## デリゲーション
@@ -571,11 +571,11 @@ subagent は歴史的にこれらを落としがちなので、**以下の行を
 
 ```bash
 # Block
-scripts/mojiemoji_markdown.rb --text 'レビュー歓迎' \
+scripts/mojiemoji_markdown.py --text 'レビュー歓迎' \
   --font maru-bold --color 3b82f6 --animation bane --speed slow
 
 # Inline (height=24 align=absmiddle)
-scripts/mojiemoji_markdown.rb --text 'マジで' --inline \
+scripts/mojiemoji_markdown.py --text 'マジで' --inline \
   --font maru-bold --color ef4444 --animation bure --speed normal
 ```
 
