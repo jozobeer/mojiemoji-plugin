@@ -173,7 +173,59 @@ GitHub 上で **白ブロックに黒テキスト**、つまり完全に読め�
 | `outline` | `triadic`(推奨 — 120° 回転した色相で高コントラスト)/ `complement` (180°) / `darker` / `lighter` / 6 桁 hex | letterform の輪郭を提供する; `triadic` がユーザの推奨デフォルト — `--color` から自動で対比色 outline を導出し、ハロが塗りに溶け込まず立ち上がる |
 | `outline_width` | `2` | 1px は細すぎ、3+px は字形を潰す |
 
-`speed` は任意(`normal` はスクリプトデフォルトであり妥当)。
+`speed` は任意(`normal` はスクリプトデフォルトであり妥当) — **ただし
+回転アニメは例外**(下記)。
+
+### 回転アニメは `speed=slow|step` 必須
+
+`kaiten` / `kage_kaiten` は字形を 360° 回転させる。デフォルトの
+`speed=normal` だと一周が短すぎて、回転中の文字が**ほぼ読めない**まま
+通り過ぎる。これらを選んだら `--speed slow` または `--speed step`
+(ステップ送り)を helper スクリプトに **必ず** 渡すこと。
+
+直近 3 dispatch で 2 件、`speed` 欠落の `kaiten` を出してメインスレッド
+側で手当てしている(PR #33 禁止 stamp、issue #34 検出 stamp、issue #37
+反復 stamp)。verification.md spotcheck #15 がこれを検出するが、selector
+側で予防するのが本筋。
+
+### 禁止色 — Tailwind 600+ は絶対不可
+
+`color` は dark-mode-safe な Tailwind 300–500 帯から選ぶ
+(`references/parameters.md` § Dark-mode-safe color palette を参照)。
+以下の値は dark-mode GitHub 上で背景に溶けて読めなくなるため
+**明示的に絶対不可**:
+
+```
+dc2626  b91c1c  991b1b   ← red-600/700/800
+c2410c                    ← orange-700
+ca8a04                    ← yellow-600
+15803d  16a34a            ← green-700/600 (緑は 400 系から選ぶ)
+0e7490                    ← cyan-700
+1d4ed8  2563eb            ← blue-700/600
+4338ca                    ← indigo-700
+7e22ce                    ← purple-700
+be185d                    ← pink-700
+000000  111827  1f2937    ← black / gray-900/800
+```
+
+PR #33 で `dc2626` (red-600) を 6 stamps に混入させた前科がある。
+"Tailwind 300–500" のふわっとした指示だけでは self-verification が
+これを素通りした。**スニペット返却前のセルフチェックで、上記のいずれかが
+URL に含まれていたら描画し直すこと。**
+
+### 3 漢字熟語は `2+1` で 2 スタンプに分割
+
+`致命傷` / `具体策` / `緊急時` のような 3 漢字熟語を 1 スタンプに
+突っ込まない(漢字 1 スタンプあたり 2 字までの上限を超える)。
+最も自然な形態素境界で `2+1` に分割する:
+
+- `致命傷` → `致命` + `傷`
+- `具体策` → `具体` + `策`
+- `緊急時` → `緊急` + `時`
+- `本来的` → `本来` + `的`
+
+3 つの単独スタンプ(`致` + `命` + `傷`)に分けるのは過剰なので不可。
+verification.md spotcheck #16 がこれを検出する。
 
 ### 色変化アニメーションは outline 除外
 
