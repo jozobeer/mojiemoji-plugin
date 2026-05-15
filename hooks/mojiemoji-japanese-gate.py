@@ -305,6 +305,20 @@ def main() -> int:
         # docstring). Read-only MCP tools (get_*, list_*, search_*)
         # match the regex but carry no body field, so this returns
         # empty and the gate exits.
+        #
+        # Multiple body pieces (e.g., `pull_request_review_write` with
+        # a top-level `body` summary plus `comments[].body` inline
+        # findings) are joined into a single `inspect_text` *on
+        # purpose*: the SKILL.md surface policy is "summary body
+        # decorated, inline findings un-stamped". A per-piece zero-
+        # stamp check would force stamps on each finding, contradicting
+        # that policy. Aggregating means a stamped summary covers
+        # un-stamped findings (correct), and a fully un-stamped
+        # submission still trips the aggregate zero-stamp check
+        # (correct). Each URL is still validated individually for
+        # required params / canonical values, so the aggregation only
+        # relaxes the zero-stamp coarse gate, not the per-URL fine
+        # gates.
         pieces = collect_body_text(tool_input, BODY_FIELDS)
         if not pieces:
             return 0
