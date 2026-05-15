@@ -9,14 +9,34 @@ trailing decorations will be silently rejected at submission time.
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
-import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml"
+
+
+def _load_catalog_via_ruby() -> dict:
+    """Parse the catalog YAML via Ruby and re-emit as JSON. The plugin already
+    requires Ruby on the host (prestamp.rb, generate-catalog.rb), so this
+    avoids forcing PyYAML on the CI test environment — which is intentionally
+    minimal (`pip install pytest`) and was breaking on this test."""
+    proc = subprocess.run(
+        ["ruby", "-ryaml", "-rjson", "-e",
+         f"puts JSON.dump(YAML.safe_load_file(%q[{CATALOG_PATH}]))"],
+        capture_output=True, text=True, timeout=10,
+    )
+    assert proc.returncode == 0, f"Ruby YAML parse failed: {proc.stderr}"
+    return json.loads(proc.stdout)
+
+
+# Parse once at module load — pytest.mark.parametrize is evaluated at
+# collection time before any fixtures, so we cannot defer this.
+_CATALOG = _load_catalog_via_ruby()
 
 # Canonical lists must mirror parameters.md / hook constants. Kept inline so the
 # test catches drift in either direction (catalog adds value not in canon, or
@@ -56,7 +76,7 @@ HEX6_RE = re.compile(r"\A[0-9a-f]{6}\Z")
 
 @pytest.fixture(scope="module")
 def catalog():
-    return yaml.safe_load(CATALOG_PATH.read_text())
+    return _CATALOG
 
 
 def test_catalog_has_top_level_keys(catalog):
@@ -76,9 +96,7 @@ def test_catalog_covers_full_upstream_count(catalog):
     )
 
 
-@pytest.mark.parametrize("emoji,variants", [
-    (e, vs) for e, vs in yaml.safe_load(CATALOG_PATH.read_text())["emojis"].items()
-])
+@pytest.mark.parametrize("emoji,variants", list(_CATALOG["emojis"].items()))
 def test_variants_use_canonical_values(emoji, variants):
     assert 1 <= len(variants) <= 4, f"{emoji}: variant count {len(variants)} outside 1-4"
     for i, v in enumerate(variants):
@@ -117,4 +135,55 @@ def test_unsupported_emoji_not_in_catalog(catalog):
     assert "🚀" not in catalog["emojis"], (
         "🚀 (U+1F680) has no upstream asset — it must stay out of the catalog "
         "so the trailing-decoration fallback path keeps using plain Unicode"
+    )
+
+
+def test_no_bakusan_in_catalog(catalog):
+    # bakusan is canonically block-only — its radial burst obscures the
+    # glyph at inline 24px and `generate-catalog.rb` explicitly excludes it
+    # from the inline pool (`INLINE_PROBLEMATIC_ANIMATIONS`). The emoji
+    # catalog is *only* consumed for inline trailing decorations, so any
+    # bakusan variant here would generate unreadable stamps.
+    offending = [
+        (emoji, idx, v["animation"])
+        for emoji, variants in catalog["emojis"].items()
+        for idx, v in enumerate(variants)
+        if v["animation"] == "bakusan"
+    ]
+    assert not offending, f"bakusan is block-only; remove from inline catalog: {offending}"
+
+
+def test_vs16_emoji_keys_use_base_codepoint(catalog):
+    # Catalog keys are base codepoints (`❤` = U+2764, `⚠` = U+26A0) without
+    # the U+FE0F variation selector. This is the intentional convention —
+    # SKILL.md's lookup procedure must strip VS16 from inputs before
+    # querying. This test pins the convention so a future contributor
+    # doesn't accidentally mix VS16-suffixed keys into the catalog (which
+    # would create two non-mergeable lookup paths for the same emoji).
+    vs16 = "️"
+    mixed = [k for k in catalog["emojis"].keys() if vs16 in k]
+    assert not mixed, (
+        f"catalog keys must not contain U+FE0F; mix found: {mixed!r}. "
+        "SKILL.md's procedure strips VS16 before lookup — adding aliases "
+        "would split the canonical key set."
+    )
+
+
+def test_all_hex_color_values_are_strings(catalog):
+    # YAML auto-types bare hex values that happen to be all digits
+    # (e.g. "123456" parses as integer 123456 in some parsers, or as
+    # string in others depending on length/leading char). The
+    # convention in this project (per prestamp-catalog.yml header) is
+    # to always quote hex strings so the type stays predictable across
+    # YAML implementations. This test catches drift if someone adds a
+    # bare hex value to a new entry.
+    offending = []
+    for emoji, variants in catalog["emojis"].items():
+        for idx, v in enumerate(variants):
+            for field in ("color", "outline"):
+                val = v.get(field)
+                if val is not None and not isinstance(val, str):
+                    offending.append((emoji, idx, field, type(val).__name__, val))
+    assert not offending, (
+        f"hex color/outline values must be strings (quote in YAML): {offending}"
     )

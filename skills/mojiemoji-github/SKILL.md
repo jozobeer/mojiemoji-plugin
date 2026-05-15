@@ -142,9 +142,12 @@ Closes #N.
 - ✗ **セクション末のオチ装飾**(各セクションの後ろに `→ <stamp1> <stamp2>` を独立行で置く)は**使わない**。「セクション末のブロックスタンプは不要」として明示的に拒否されている。
 - ✗ **締めの装飾**(本文末に `---` + 独立行のムードスタンプ)も**使わない**。同じ理由で拒否されている。
 - ✅ **文末・段落末・見出し末の trailing 装飾**は 2 段階優先で選ぶ:
-  1. **`data/emoji-catalog.yml` に登録のある絵文字** (162 種、🎉 / 🔥 / ✨ / 💯 / ⚠ / ❤ / 😂 / 🎊 / 🚨 / 😎 / 🤖 等) → **mojiemoji 化してアニメ付きで埋める**。catalog から該当 emoji の variant 1 つを引き、`<img src="https://mojiemoji.jozo.beer/emoji/<emoji>?font=<font>&color=<color>&animation=<anim>&background=transparent&outline=<outline>&outline_width=2" alt="<emoji>" height="24" align="absmiddle">` 形式で挿入する。動詞・名詞の inline 埋め込みと同じ URL 構造 — `mojiemoji_markdown.rb --text '<emoji>'` でも手で組んでも良い。
+  1. **`data/emoji-catalog.yml` に登録のある絵文字** (162 種、🎉 / 🔥 / ✨ / 💯 / ⚠ / ❤ / 😂 / 🎊 / 🚨 / 😎 / 🤖 等) → **mojiemoji 化してアニメ付きで埋める**。catalog から該当 emoji の variant 1 つを引き、`<img src="https://mojiemoji.jozo.beer/emoji/<emoji>?font=<font>&color=<color>&animation=<anim>&background=transparent&outline=<outline>&outline_width=2" alt="<emoji>" height="24" align="absmiddle">` 形式で挿入する。動詞・名詞の inline 埋め込みと同じ URL 構造 — `mojiemoji_markdown.rb --text '<emoji>'` でも手で組んでも良い。**variant の params をそのまま使う**こと: catalog には color-shifting 系 variant (`disco` / `psycho` / `kira`) も含まれ、それらは `outline` フィールドを持たず代わりに `outline_width: "0"` を持つ。テンプレ通りに `outline=...&outline_width=2` を埋めると hook (`mojiemoji-japanese-gate.py`) で reject される。catalog 上の variant に書かれた params を字面通り写すのが安全。
   2. **登録の無い絵文字** (例 🚀 = U+1F680、upstream `jozobeer/mojiemoji/assets/emoji` にアセット無し) → **素の Unicode** にフォールバック。例: `## デプロイ手順 🚀`、`これは未対応 🪐`。
-  catalog 在否は `grep "\"$EMOJI\":" skills/mojiemoji-github/data/emoji-catalog.yml` で確認。1 スロット 1 絵文字、連結禁止(mojiemoji 化しても同じ — 連続して並べない)。
+  catalog 在否を確認する手順:
+  - **VS16 を剥がす**: 入力に `❤️` (U+2764 U+FE0F) や `⚠️` (U+26A0 U+FE0F) など variation selector (U+FE0F) が混じっていたら、catalog キーは base codepoint (`❤` / `⚠`) しか持たないので、lookup 前に `tr -d $'\xef\xb8\x8f'` 等で剥がす。剥がさないと「未登録」と誤判定して素の Unicode に fallback してしまう。
+  - **YAML キーに一致** させる: 実 catalog の key 形は `  🎉:` のように 2 字インデント + bare emoji + `:` で、コメント中に同じ glyph が出てくることもある (`🚀` は upstream 未対応の例として SKILL.md / catalog header の prose にも登場する)。素朴な `grep "<emoji>"` だとコメント / prose にもヒットするので、`grep -E "^  $EMOJI:" skills/mojiemoji-github/data/emoji-catalog.yml` のように **行頭 2-space インデント + コロン** にアンカーするか、`ruby -ryaml -e "exit YAML.load_file('skills/mojiemoji-github/data/emoji-catalog.yml')['emojis'].key?('$EMOJI') ? 0 : 1"` で実 key を直接問い合わせる。
+  1 スロット 1 絵文字、連結禁止(mojiemoji 化しても同じ — 連続して並べない)。
 
 ユーザーは「独立行の block スタンプは『デカくてよくわからない文節』になって本文を壊す」と指摘している。mojiemoji = インライン埋め込み(文中の強調)、Unicode 絵文字 / mojiemoji 化された絵文字 = 末尾の装飾。2 つのスロット、2 つの道具 — 混同しないこと。**末尾装飾の絵文字を mojiemoji 化しても役割は装飾のまま** — 文中の単語置換 (`【マジで】`) と混同せず、文末のシンボル位置に留める。
 
@@ -307,7 +310,11 @@ mojiemoji(漢字熟語 / 略語 / カタカナ語のテキストスタンプ)と
 
 - `data/emoji-catalog.yml` に登録された絵文字 (162 種) は **mojiemoji 化** された画像で出す。アニメ付きでパンチが増す。
 - 未登録(例 🚀 = U+1F680、🪐 = U+1FA90)は**素の Unicode** に fallback。
-- 判断フロー: 絵文字が catalog に居るかを `grep "<emoji>" data/emoji-catalog.yml` で確認 → 居れば mojiemoji 化、居なければ素の Unicode。
+- 判断フロー:
+  1. VS16 を剥がす — `❤️` / `⚠️` のような emoji-presentation 形式は U+FE0F が末尾に付くが、catalog キーは base codepoint (`❤` / `⚠`) しか持たない。素朴に grep すると miss する。
+  2. アンカー付きで lookup — `grep -E "^  $EMOJI:" data/emoji-catalog.yml`(行頭 2-space + key + `:`)で**実 YAML キー**にだけマッチさせる。`grep "<emoji>" data/emoji-catalog.yml` 単体は header コメント中の例 (`🚀` 等) にも当たって false positive になる。
+  3. 居れば mojiemoji 化(catalog variant の params を字面通り使う — color-shift 系は outline 無し / `outline_width: "0"` なので、手書きテンプレで `outline=...&outline_width=2` を勝手に補わない)。
+  4. 居なければ素の Unicode。
 - どちらも文末/見出し末の「シンボル位置」専用 — 文中の単語置換 mojiemoji と役割を混ぜない。
 
 ```html
