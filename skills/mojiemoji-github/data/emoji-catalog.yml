@@ -1,0 +1,1986 @@
+# Mojiemoji trailing-decoration emoji catalog — loaded by SKILL.md
+# trailing-decoration rule and helper scripts.
+#
+# Covers the 162 emoji assets present in upstream
+# https://github.com/jozobeer/mojiemoji/tree/main/assets/emoji
+# (filename pattern: emoji_u<codepoint>.png).
+#
+# Emoji NOT in this catalog (e.g. 🚀 = U+1F680) have no upstream
+# asset; the mojiemoji service falls back to a static render, so
+# use the plain Unicode emoji for those instead.
+#
+# Each entry follows the same shape as prestamp-catalog.yml:
+#
+#   "🎉":
+#     - animation: patapata
+#       font: maru-bold
+#       color: "fbbf24"
+#       outline: "24fbbf"
+#     - animation: kirari
+#       ...
+#
+# Per-variant overrides allowed: font, color, animation, speed,
+# background, outline, outline_width. Color-shifting animations
+# (disco / psycho / kira) MUST carry outline_width: "0" because
+# their hue cycles fight a fixed outline. Rotational animations
+# (kaiten / kage_kaiten) MUST carry speed: slow — at the service
+# default speed they spin too fast to read.
+#
+# Canonical font / animation / color values: see
+#   skills/mojiemoji-github/references/parameters.md
+# Submission-time validation: hooks/mojiemoji-japanese-gate.py
+
+defaults:
+  background: transparent
+  outline_width: "2"
+
+emojis:
+
+  # --- alien ---
+  👽:   # U+1F47D  EXTRATERRESTRIAL ALIEN
+    - animation: mozaiku
+      font: akzk
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: mabataki
+      font: kurobara
+      color: "4ade80"
+      outline: "804ade"
+    - animation: zanzo
+      font: zero
+      color: "10b981"
+      outline: "8110b9"
+  👾:   # U+1F47E  ALIEN MONSTER
+    - animation: mozaiku
+      font: akzk
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: mabataki
+      font: kurobara
+      color: "4ade80"
+      outline: "804ade"
+    - animation: zanzo
+      font: zero
+      color: "10b981"
+      outline: "8110b9"
+
+  # --- applause ---
+  🙌:   # U+1F64C  PERSON RAISING BOTH HANDS IN CELEBRATION
+    - animation: yatta
+      font: maru-bold
+      color: "22c55e"
+      outline: "5e22c5"
+    - animation: norinori
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: bane
+      font: chikara
+      color: "f97316"
+      outline: "16f973"
+
+  # --- apple ---
+  🍎:   # U+1F34E  RED APPLE
+    - animation: kirari
+      font: hachimaru
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: poyoon
+      font: maru-bold
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- axe ---
+  🪓:   # U+1FA93  AXE
+    - animation: tate_ekken
+      font: kurobara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: zanzo
+      font: dela
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- baby ---
+  👶:   # U+1F476  BABY
+    - animation: poyoon
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: mochimochi
+      font: maru-bold
+      color: "fb7185"
+      outline: "85fb71"
+
+  # --- beer ---
+  🍺:   # U+1F37A  BEER MUG
+    - animation: yurayura
+      font: chikara
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: norinori
+      font: dela
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: bane
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+  🍻:   # U+1F37B  CLINKING BEER MUGS
+    - animation: yurayura
+      font: chikara
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: norinori
+      font: dela
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: bane
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+
+  # --- bell ---
+  🔔:   # U+1F514  BELL
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: gatagata
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- bento ---
+  🍱:   # U+1F371  BENTO BOX
+    - animation: kirari
+      font: hachimaru
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: yurayura
+      font: maru-bold
+      color: "f97316"
+      outline: "16f973"
+
+  # --- boxing-glove ---
+  🥊:   # U+1F94A  BOXING GLOVE
+    - animation: bane
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: tate_ekken
+      font: chikara
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- brain ---
+  🧠:   # U+1F9E0  BRAIN
+    - animation: yurayura
+      font: tamanegi
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+
+  # --- broken-heart ---
+  💔:   # U+1F494  BROKEN HEART
+    - animation: zanzo
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: gothic-bold
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- bulb ---
+  💡:   # U+1F4A1  ELECTRIC LIGHT BULB
+    - animation: kirari
+      font: hachimaru
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: tenmetsu
+      font: pixel
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: kira
+      font: noto
+      color: "fcd34d"
+      outline_width: "0"
+
+  # --- camera ---
+  📸:   # U+1F4F8  CAMERA WITH FLASH
+    - animation: tenmetsu
+      font: akzk
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: kirari
+      font: kurobara
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- celebration ---
+  🎉:   # U+1F389  PARTY POPPER
+    - animation: patapata
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kirari
+      font: pixel
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: bane
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+  🎊:   # U+1F38A  CONFETTI BALL
+    - animation: patapata
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kirari
+      font: pixel
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: bane
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+
+  # --- check ---
+  ✅:   # U+2705  WHITE HEAVY CHECK MARK
+    - animation: yatta
+      font: chikara
+      color: "22c55e"
+      outline: "5e22c5"
+    - animation: bane
+      font: maru-bold
+      color: "4ade80"
+      outline: "804ade"
+
+  # --- circle ---
+  ⭕:   # U+2B55  HEAVY LARGE CIRCLE
+    - animation: kaiten
+      font: maru-bold
+      color: "ef4444"
+      outline: "44ef44"
+      speed: slow
+    - animation: kirari
+      font: chikara
+      color: "f97316"
+      outline: "16f973"
+
+  # --- clap ---
+  👏:   # U+1F44F  CLAPPING HANDS SIGN
+    - animation: patapata
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: norinori
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- cloud ---
+  🌤:   # U+1F324  WHITE SUN WITH SMALL CLOUD
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: yokomoya
+      font: hachimaru
+      color: "93c5fd"
+      outline: "fd93c5"
+  ☁:   # U+2601  CLOUD
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: yokomoya
+      font: hachimaru
+      color: "93c5fd"
+      outline: "fd93c5"
+
+  # --- crab ---
+  🦀:   # U+1F980  CRAB
+    - animation: yokomoya
+      font: maru-bold
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: yurayura
+      font: hachimaru
+      color: "f97316"
+      outline: "16f973"
+
+  # --- cross ---
+  ❌:   # U+274C  CROSS MARK
+    - animation: gatagata
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: rampart
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- danger ---
+  💥:   # U+1F4A5  COLLISION SYMBOL
+    - animation: tenmetsu
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+    - animation: shuchusen
+      font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: zanzo
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+
+  # --- eyes ---
+  👀:   # U+1F440  EYES
+    - animation: mabataki
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: yurayura
+      font: gothic-bold
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: kirari
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  👁:   # U+1F441  EYE
+    - animation: mabataki
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: yurayura
+      font: gothic-bold
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: kirari
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+
+  # --- face-angry ---
+  😠:   # U+1F620  ANGRY FACE
+    - animation: gatagata
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: chikara
+      color: "f43f5e"
+      outline: "5ef43f"
+    - animation: shuchusen
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+  😤:   # U+1F624  FACE WITH LOOK OF TRIUMPH
+    - animation: gatagata
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: chikara
+      color: "f43f5e"
+      outline: "5ef43f"
+    - animation: shuchusen
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+  🤬:   # U+1F92C  SERIOUS FACE WITH SYMBOLS COVERING MOUTH
+    - animation: gatagata
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: chikara
+      color: "f43f5e"
+      outline: "5ef43f"
+    - animation: shuchusen
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+
+  # --- face-clown ---
+  🤡:   # U+1F921  CLOWN FACE
+    - animation: yurayura
+      font: tamanegi
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: psycho
+      font: pixel
+      color: "f472b6"
+      outline_width: "0"
+  🤪:   # U+1F92A  GRINNING FACE WITH ONE LARGE AND ONE SMALL EYE
+    - animation: yurayura
+      font: tamanegi
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: psycho
+      font: pixel
+      color: "f472b6"
+      outline_width: "0"
+
+  # --- face-cold ---
+  🥶:   # U+1F976  FREEZING FACE
+    - animation: gatagata
+      font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: mincho
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- face-confused ---
+  😕:   # U+1F615  CONFUSED FACE
+    - animation: yurayura
+      font: mincho
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: bure
+      font: gothic
+      color: "a78bfa"
+      outline: "faa78b"
+  🙄:   # U+1F644  FACE WITH ROLLING EYES
+    - animation: yurayura
+      font: mincho
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: bure
+      font: gothic
+      color: "a78bfa"
+      outline: "faa78b"
+  🤦:   # U+1F926  FACE PALM
+    - animation: yurayura
+      font: mincho
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: bure
+      font: gothic
+      color: "a78bfa"
+      outline: "faa78b"
+  🤨:   # U+1F928  FACE WITH ONE EYEBROW RAISED
+    - animation: yurayura
+      font: mincho
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: bure
+      font: gothic
+      color: "a78bfa"
+      outline: "faa78b"
+
+  # --- face-cool ---
+  😈:   # U+1F608  SMILING FACE WITH HORNS
+    - animation: kirari
+      font: akzk
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mabataki
+      font: kurobara
+      color: "6366f1"
+      outline: "f16366"
+    - animation: yatta
+      font: chikara
+      color: "a855f7"
+      outline: "f7a855"
+  😎:   # U+1F60E  SMILING FACE WITH SUNGLASSES
+    - animation: kirari
+      font: akzk
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mabataki
+      font: kurobara
+      color: "6366f1"
+      outline: "f16366"
+    - animation: yatta
+      font: chikara
+      color: "a855f7"
+      outline: "f7a855"
+  😏:   # U+1F60F  SMIRKING FACE
+    - animation: kirari
+      font: akzk
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mabataki
+      font: kurobara
+      color: "6366f1"
+      outline: "f16366"
+    - animation: yatta
+      font: chikara
+      color: "a855f7"
+      outline: "f7a855"
+
+  # --- face-cry ---
+  😢:   # U+1F622  CRYING FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  😭:   # U+1F62D  LOUDLY CRYING FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+
+  # --- face-dizzy ---
+  😵:   # U+1F635  DIZZY FACE
+    - animation: kaiten
+      font: rampart
+      color: "8b5cf6"
+      outline: "f68b5c"
+      speed: slow
+    - animation: bure
+      font: tamanegi
+      color: "a78bfa"
+      outline: "faa78b"
+  🥴:   # U+1F974  FACE WITH UNEVEN EYES AND WAVY MOUTH
+    - animation: kaiten
+      font: rampart
+      color: "8b5cf6"
+      outline: "f68b5c"
+      speed: slow
+    - animation: bure
+      font: tamanegi
+      color: "a78bfa"
+      outline: "faa78b"
+
+  # --- face-explode ---
+  🤯:   # U+1F92F  SHOCKED FACE WITH EXPLODING HEAD
+    # bakusan is documented as block-only (obscures glyphs at inline 24px)
+    # and excluded from generate-catalog.rb's inline pool; use zanzo or
+    # shuchusen for inline-safe impact instead.
+    - animation: zanzo
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+    - animation: shuchusen
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- face-joy ---
+  😂:   # U+1F602  FACE WITH TEARS OF JOY
+    - animation: patapata
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: bane
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: yatta
+      font: chikara
+      color: "f97316"
+      outline: "16f973"
+  😆:   # U+1F606  SMILING FACE WITH OPEN MOUTH AND TIGHTLY-CLOSED EYES
+    - animation: patapata
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: bane
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: yatta
+      font: chikara
+      color: "f97316"
+      outline: "16f973"
+
+  # --- face-love ---
+  😍:   # U+1F60D  SMILING FACE WITH HEART-SHAPED EYES
+    - animation: poyoon
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kira
+      font: pixel
+      color: "fb7185"
+      outline_width: "0"
+  😗:   # U+1F617  KISSING FACE
+    - animation: poyoon
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kira
+      font: pixel
+      color: "fb7185"
+      outline_width: "0"
+  🤗:   # U+1F917  HUGGING FACE
+    - animation: poyoon
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kira
+      font: pixel
+      color: "fb7185"
+      outline_width: "0"
+  🥰:   # U+1F970  SMILING FACE WITH SMILING EYES AND THREE HEARTS
+    - animation: poyoon
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kira
+      font: pixel
+      color: "fb7185"
+      outline_width: "0"
+
+  # --- face-melt ---
+  🫠:   # U+1FAE0  MELTING FACE
+    - animation: yurayura
+      font: maru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: mochimochi
+      font: hachimaru
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- face-money ---
+  🤑:   # U+1F911  MONEY-MOUTH FACE
+    - animation: kirari
+      font: chikara
+      color: "22c55e"
+      outline: "5e22c5"
+    - animation: bane
+      font: hachimaru
+      color: "4ade80"
+      outline: "804ade"
+
+  # --- face-nerd ---
+  🤓:   # U+1F913  NERD FACE
+    - animation: mabataki
+      font: akzk
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: kirari
+      font: kurobara
+      color: "06b6d4"
+      outline: "d406b6"
+  🧐:   # U+1F9D0  FACE WITH MONOCLE
+    - animation: mabataki
+      font: akzk
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: kirari
+      font: kurobara
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- face-neutral ---
+  😐:   # U+1F610  NEUTRAL FACE
+    - animation: yurayura
+      font: gothic
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: mincho
+      color: "06b6d4"
+      outline: "d406b6"
+  😑:   # U+1F611  EXPRESSIONLESS FACE
+    - animation: yurayura
+      font: gothic
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: mincho
+      color: "06b6d4"
+      outline: "d406b6"
+  🤐:   # U+1F910  ZIPPER-MOUTH FACE
+    - animation: yurayura
+      font: gothic
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: mincho
+      color: "06b6d4"
+      outline: "d406b6"
+  🤫:   # U+1F92B  FACE WITH FINGER COVERING CLOSED LIPS
+    - animation: yurayura
+      font: gothic
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: mincho
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- face-ninja ---
+  🥷:   # U+1F977  NINJA
+    - animation: zanzo
+      font: kurobara
+      color: "6366f1"
+      outline: "f16366"
+    - animation: mabataki
+      font: akzk
+      color: "8b5cf6"
+      outline: "f68b5c"
+
+  # --- face-party ---
+  🥳:   # U+1F973  FACE WITH PARTY HORN AND PARTY HAT
+    - animation: patapata
+      font: maru-bold
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: kirari
+      font: pixel
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: bane
+      font: hachimaru
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- face-positive ---
+  😃:   # U+1F603  SMILING FACE WITH OPEN MOUTH
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+  😇:   # U+1F607  SMILING FACE WITH HALO
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+  😊:   # U+1F60A  SMILING FACE WITH SMILING EYES
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+  😋:   # U+1F60B  FACE SAVOURING DELICIOUS FOOD
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+  🙂:   # U+1F642  SLIGHTLY SMILING FACE
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+  🤤:   # U+1F924  DROOLING FACE
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+  ☺:   # U+263A  WHITE SMILING FACE
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: poyoon
+      font: maru
+      color: "fcd34d"
+      outline: "4dfcd3"
+
+  # --- face-robot ---
+  🤖:   # U+1F916  ROBOT FACE
+    - animation: gatagata
+      font: akzk
+      color: "6366f1"
+      outline: "f16366"
+    - animation: mozaiku
+      font: kurobara
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mabataki
+      font: zero
+      color: "60a5fa"
+      outline: "fa60a5"
+
+  # --- face-sad ---
+  😔:   # U+1F614  PENSIVE FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  😖:   # U+1F616  CONFOUNDED FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  😣:   # U+1F623  PERSEVERING FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  😥:   # U+1F625  DISAPPOINTED BUT RELIEVED FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  😩:   # U+1F629  WEARY FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  😫:   # U+1F62B  TIRED FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🥹:   # U+1F979  FACE HOLDING BACK TEARS
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🥺:   # U+1F97A  FACE WITH PLEADING EYES
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: zanzo
+      font: gothic
+      color: "6366f1"
+      outline: "f16366"
+    - animation: nami
+      font: noto
+      color: "0ea5e9"
+      outline: "e90ea5"
+
+  # --- face-salute ---
+  🫡:   # U+1FAE1  SALUTING FACE
+    - animation: tate_ekken
+      font: chikara
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: bane
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+
+  # --- face-shake ---
+  🫨:   # U+1FAE8  SHAKING FACE
+    - animation: gatagata
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+    - animation: bure
+      font: rampart
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- face-shock ---
+  😮:   # U+1F62E  FACE WITH OPEN MOUTH
+    - animation: shuchusen
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: gatagata
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: zanzo
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+  😰:   # U+1F630  FACE WITH OPEN MOUTH AND COLD SWEAT
+    - animation: shuchusen
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: gatagata
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: zanzo
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+  😱:   # U+1F631  FACE SCREAMING IN FEAR
+    - animation: shuchusen
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: gatagata
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: zanzo
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+  😳:   # U+1F633  FLUSHED FACE
+    - animation: shuchusen
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: gatagata
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: zanzo
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+
+  # --- face-sick ---
+  😷:   # U+1F637  FACE WITH MEDICAL MASK
+    - animation: yurayura
+      font: mincho
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: bure
+      font: gothic
+      color: "10b981"
+      outline: "8110b9"
+  🤒:   # U+1F912  FACE WITH THERMOMETER
+    - animation: yurayura
+      font: mincho
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: bure
+      font: gothic
+      color: "10b981"
+      outline: "8110b9"
+  🤕:   # U+1F915  FACE WITH HEAD-BANDAGE
+    - animation: yurayura
+      font: mincho
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: bure
+      font: gothic
+      color: "10b981"
+      outline: "8110b9"
+  🤧:   # U+1F927  SNEEZING FACE
+    - animation: yurayura
+      font: mincho
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: bure
+      font: gothic
+      color: "10b981"
+      outline: "8110b9"
+  🤮:   # U+1F92E  FACE WITH OPEN MOUTH VOMITING
+    - animation: yurayura
+      font: mincho
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: bure
+      font: gothic
+      color: "10b981"
+      outline: "8110b9"
+
+  # --- face-sleep ---
+  😴:   # U+1F634  SLEEPING FACE
+    - animation: yurayura
+      font: maru
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mabataki
+      font: maru-bold
+      color: "a78bfa"
+      outline: "faa78b"
+
+  # --- face-star-eyes ---
+  🤩:   # U+1F929  GRINNING FACE WITH STAR EYES
+    - animation: kirari
+      font: pixel
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kira
+      font: hachimaru
+      color: "f59e0b"
+      outline_width: "0"
+
+  # --- face-thinking ---
+  🤔:   # U+1F914  THINKING FACE
+    - animation: yurayura
+      font: mincho
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: gothic
+      color: "8b5cf6"
+      outline: "f68b5c"
+
+  # --- face-wink ---
+  😉:   # U+1F609  WINKING FACE
+    - animation: mabataki
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kirari
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- face-yawn ---
+  🥱:   # U+1F971  YAWNING FACE
+    - animation: yurayura
+      font: maru
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mochimochi
+      font: hachimaru
+      color: "a78bfa"
+      outline: "faa78b"
+  🫩:   # U+1FAE9  FACE WITH BAGS UNDER EYES
+    - animation: yurayura
+      font: maru
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mochimochi
+      font: hachimaru
+      color: "a78bfa"
+      outline: "faa78b"
+
+  # --- fire ---
+  🔥:   # U+1F525  FIRE
+    - animation: bure
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+    - animation: psycho
+      font: chikara
+      color: "f43f5e"
+      outline_width: "0"
+    - animation: kirari
+      font: rampart
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- fish ---
+  🐟:   # U+1F41F  FISH
+    - animation: yokomoya
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: nami
+      font: hachimaru
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- fist ---
+  👊:   # U+1F44A  FISTED HAND SIGN
+    - animation: bane
+      font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: tate_ekken
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+  🤛:   # U+1F91B  LEFT-FACING FIST
+    - animation: bane
+      font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: tate_ekken
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+  ✊:   # U+270A  RAISED FIST
+    - animation: bane
+      font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: tate_ekken
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+
+  # --- flower-white ---
+  💮:   # U+1F4AE  WHITE FLOWER
+    - animation: kirari
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: yurayura
+      font: noto
+      color: "ec4899"
+      outline: "99ec48"
+
+  # --- ghost ---
+  👻:   # U+1F47B  GHOST
+    - animation: yurayura
+      font: rampart
+      color: "a78bfa"
+      outline: "faa78b"
+    - animation: zanzo
+      font: kurobara
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: mabataki
+      font: akzk
+      color: "c4b5fd"
+      outline: "fdc4b5"
+
+  # --- handshake ---
+  🤝:   # U+1F91D  HANDSHAKE
+    - animation: yatta
+      font: maru-bold
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: poyoon
+      font: hachimaru
+      color: "4ade80"
+      outline: "804ade"
+
+  # --- heart ---
+  ❤:   # U+2764  HEAVY BLACK HEART
+    - animation: poyoon
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kira
+      font: pixel
+      color: "fb7185"
+      outline_width: "0"
+
+  # --- heart-organ ---
+  🫀:   # U+1FAC0  ANATOMICAL HEART
+    - animation: poyoon
+      font: hachimaru
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- hot-spring ---
+  ♨:   # U+2668  HOT SPRINGS
+    - animation: yurayura
+      font: maru-bold
+      color: "fb7185"
+      outline: "85fb71"
+    - animation: mochimochi
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+
+  # --- hourglass ---
+  ⏳:   # U+23F3  HOURGLASS WITH FLOWING SAND
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kaiten
+      font: gothic-bold
+      color: "f59e0b"
+      outline: "0bf59e"
+      speed: slow
+
+  # --- hundred ---
+  💯:   # U+1F4AF  HUNDRED POINTS SYMBOL
+    - animation: tate_ekken
+      font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bane
+      font: dela
+      color: "f43f5e"
+      outline: "5ef43f"
+    - animation: shuchusen
+      font: rampart
+      color: "f97316"
+      outline: "16f973"
+
+  # --- info-desk ---
+  💁:   # U+1F481  INFORMATION DESK PERSON
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- knife ---
+  🔪:   # U+1F52A  HOCHO
+    - animation: zanzo
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: kurobara
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- ladybug ---
+  🐞:   # U+1F41E  LADY BEETLE
+    - animation: yurayura
+      font: maru-bold
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: mabataki
+      font: hachimaru
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- lightning ---
+  ⚡:   # U+26A1  HIGH VOLTAGE SIGN
+    - animation: tenmetsu
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: bure
+      font: rampart
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: shuchusen
+      font: chikara
+      color: "facc15"
+      outline: "15facc"
+
+  # --- lion ---
+  🦁:   # U+1F981  LION FACE
+    - animation: norinori
+      font: kurobara
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: bane
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- lock ---
+  🔒:   # U+1F512  LOCK
+    - animation: gatagata
+      font: akzk
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: kirari
+      font: gothic-bold
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- love ---
+  🫶:   # U+1FAF6  HEART HANDS
+    - animation: poyoon
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kira
+      font: pixel
+      color: "fb7185"
+      outline_width: "0"
+
+  # --- megaphone ---
+  📣:   # U+1F4E3  CHEERING MEGAPHONE
+    - animation: shuchusen
+      font: chikara
+      color: "f97316"
+      outline: "16f973"
+    - animation: bane
+      font: dela
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: tate_ekken
+      font: rampart
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- money-bag ---
+  💰:   # U+1F4B0  MONEY BAG
+    - animation: bane
+      font: chikara
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: kirari
+      font: hachimaru
+      color: "22c55e"
+      outline: "5e22c5"
+
+  # --- money-wings ---
+  💸:   # U+1F4B8  MONEY WITH WINGS
+    - animation: yokomoya
+      font: maru-bold
+      color: "84cc16"
+      outline: "1684cc"
+    - animation: nami
+      font: hachimaru
+      color: "22c55e"
+      outline: "5e22c5"
+
+  # --- muscle ---
+  💪:   # U+1F4AA  FLEXED BICEPS
+    - animation: tate_ekken
+      font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bane
+      font: dela
+      color: "f97316"
+      outline: "16f973"
+    - animation: norinori
+      font: gothic-bold
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- mushroom ---
+  🍄:   # U+1F344  MUSHROOM
+    - animation: poyoon
+      font: hachimaru
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: yurayura
+      font: maru-bold
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- no-good ---
+  🖕:   # U+1F595  REVERSED HAND WITH MIDDLE FINGER EXTENDED
+    - animation: gatagata
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: gothic-bold
+      color: "f43f5e"
+      outline: "5ef43f"
+  🙅:   # U+1F645  FACE WITH NO GOOD GESTURE
+    - animation: gatagata
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: bure
+      font: gothic-bold
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- ok ---
+  👌:   # U+1F44C  OK HAND SIGN
+    - animation: kirari
+      font: maru-bold
+      color: "22c55e"
+      outline: "5e22c5"
+    - animation: yatta
+      font: hachimaru
+      color: "4ade80"
+      outline: "804ade"
+  🙆:   # U+1F646  FACE WITH OK GESTURE
+    - animation: kirari
+      font: maru-bold
+      color: "22c55e"
+      outline: "5e22c5"
+    - animation: yatta
+      font: hachimaru
+      color: "4ade80"
+      outline: "804ade"
+
+  # --- pill ---
+  💊:   # U+1F48A  PILL
+    - animation: yurayura
+      font: maru-bold
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kirari
+      font: noto
+      color: "ec4899"
+      outline: "99ec48"
+
+  # --- pointing ---
+  👆:   # U+1F446  WHITE UP POINTING BACKHAND INDEX
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  👇:   # U+1F447  WHITE DOWN POINTING BACKHAND INDEX
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  👈:   # U+1F448  WHITE LEFT POINTING BACKHAND INDEX
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  👉:   # U+1F449  WHITE RIGHT POINTING BACKHAND INDEX
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🤏:   # U+1F90F  PINCHING HAND
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🤙:   # U+1F919  CALL ME HAND
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🤞:   # U+1F91E  HAND WITH INDEX AND MIDDLE FINGERS CROSSED
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🫰:   # U+1FAF0  HAND WITH INDEX FINGER AND THUMB CROSSED
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  🫵:   # U+1FAF5  INDEX POINTING AT THE VIEWER
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  ☝:   # U+261D  WHITE UP POINTING INDEX
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+  ✌:   # U+270C  VICTORY HAND
+    - animation: yurayura
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: mabataki
+      font: noto
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: patapata
+      font: gothic-bold
+      color: "0ea5e9"
+      outline: "e90ea5"
+
+  # --- police ---
+  👮:   # U+1F46E  POLICE OFFICER
+    - animation: tenmetsu
+      font: akzk
+      color: "0ea5e9"
+      outline: "e90ea5"
+    - animation: mabataki
+      font: gothic-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+
+  # --- poop ---
+  💩:   # U+1F4A9  PILE OF POO
+    - animation: yurayura
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: mochimochi
+      font: maru-bold
+      color: "84cc16"
+      outline: "1684cc"
+
+  # --- pray ---
+  🙇:   # U+1F647  PERSON BOWING DEEPLY
+    - animation: yurayura
+      font: noto
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kirari
+      font: maru
+      color: "ec4899"
+      outline: "99ec48"
+  🙏:   # U+1F64F  PERSON WITH FOLDED HANDS
+    - animation: yurayura
+      font: noto
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+    - animation: kirari
+      font: maru
+      color: "ec4899"
+      outline: "99ec48"
+
+  # --- pushpin ---
+  📌:   # U+1F4CC  PUSHPIN
+    - animation: yurayura
+      font: maru-bold
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: mabataki
+      font: gothic
+      color: "f43f5e"
+      outline: "5ef43f"
+  📍:   # U+1F4CD  ROUND PUSHPIN
+    - animation: yurayura
+      font: maru-bold
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: mabataki
+      font: gothic
+      color: "f43f5e"
+      outline: "5ef43f"
+
+  # --- raise-hand ---
+  🖐:   # U+1F590  RAISED HAND WITH FINGERS SPLAYED
+    - animation: bane
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: tate_ekken
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+  🖖:   # U+1F596  RAISED HAND WITH PART BETWEEN MIDDLE AND RING FINGERS
+    - animation: bane
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: tate_ekken
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+  🙋:   # U+1F64B  HAPPY PERSON RAISING ONE HAND
+    - animation: bane
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: tate_ekken
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+  ✋:   # U+270B  RAISED HAND
+    - animation: bane
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: tate_ekken
+      font: chikara
+      color: "f59e0b"
+      outline: "0bf59e"
+
+  # --- rose ---
+  🌹:   # U+1F339  ROSE
+    - animation: yurayura
+      font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: kirari
+      font: noto
+      color: "f472b6"
+      outline: "b6f472"
+
+  # --- shrug ---
+  🤷:   # U+1F937  SHRUG
+    - animation: yurayura
+      font: gothic-bold
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: yokomoya
+      font: noto
+      color: "a78bfa"
+      outline: "faa78b"
+
+  # --- skull ---
+  ☠:   # U+2620  SKULL AND CROSSBONES
+    - animation: zanzo
+      font: rampart
+      color: "a78bfa"
+      outline: "faa78b"
+    - animation: bure
+      font: kurobara
+      color: "8b5cf6"
+      outline: "f68b5c"
+
+  # --- snowman ---
+  ☃:   # U+2603  SNOWMAN
+    - animation: gatagata
+      font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: yurayura
+      font: maru-bold
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- sparkles ---
+  ✨:   # U+2728  SPARKLES
+    - animation: kirari
+      font: pixel
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kira
+      font: noto
+      color: "ec4899"
+      outline_width: "0"
+    - animation: mabataki
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+
+  # --- splash ---
+  💦:   # U+1F4A6  SPLASHING SWEAT SYMBOL
+    - animation: nami
+      font: maru-bold
+      color: "60a5fa"
+      outline: "fa60a5"
+    - animation: bure
+      font: hachimaru
+      color: "06b6d4"
+      outline: "d406b6"
+
+  # --- star ---
+  ⭐:   # U+2B50  WHITE MEDIUM STAR
+    - animation: kirari
+      font: pixel
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kira
+      font: hachimaru
+      color: "f59e0b"
+      outline_width: "0"
+
+  # --- sun ---
+  ☀:   # U+2600  BLACK SUN WITH RAYS
+    - animation: kirari
+      font: hachimaru
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: kira
+      font: pixel
+      color: "f59e0b"
+      outline_width: "0"
+    - animation: yurayura
+      font: maru-bold
+      color: "facc15"
+      outline: "15facc"
+
+  # --- sushi ---
+  🍣:   # U+1F363  SUSHI
+    - animation: yurayura
+      font: maru-bold
+      color: "ec4899"
+      outline: "99ec48"
+    - animation: mochimochi
+      font: hachimaru
+      color: "f472b6"
+      outline: "b6f472"
+
+  # --- thumbs-down ---
+  👎:   # U+1F44E  THUMBS DOWN SIGN
+    - animation: yurayura
+      font: gothic-bold
+      color: "8b5cf6"
+      outline: "f68b5c"
+    - animation: zairu
+      font: mincho
+      color: "a855f7"
+      outline: "f7a855"
+
+  # --- thumbs-up ---
+  👍:   # U+1F44D  THUMBS UP SIGN
+    - animation: yatta
+      font: chikara
+      color: "22c55e"
+      outline: "5e22c5"
+    - animation: bane
+      font: maru-bold
+      color: "4ade80"
+      outline: "804ade"
+    - animation: norinori
+      font: hachimaru
+      color: "84cc16"
+      outline: "1684cc"
+
+  # --- tool ---
+  🛠:   # U+1F6E0  HAMMER AND WRENCH
+    - animation: gatagata
+      font: akzk
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: yokomoya
+      font: chikara
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- umbrella ---
+  ☔:   # U+2614  UMBRELLA WITH RAIN DROPS
+    - animation: yurayura
+      font: maru-bold
+      color: "06b6d4"
+      outline: "d406b6"
+    - animation: nami
+      font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+
+  # --- warning ---
+  🚨:   # U+1F6A8  POLICE CARS REVOLVING LIGHT
+    - animation: gatagata
+      font: gothic-bold
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: tenmetsu
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: shuchusen
+      font: chikara
+      color: "fbbf24"
+      outline: "24fbbf"
+  ⚠:   # U+26A0  WARNING SIGN
+    - animation: gatagata
+      font: gothic-bold
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: tenmetsu
+      font: dela
+      color: "ef4444"
+      outline: "44ef44"
+    - animation: shuchusen
+      font: chikara
+      color: "fbbf24"
+      outline: "24fbbf"
+
+  # --- wave ---
+  👋:   # U+1F44B  WAVING HAND SIGN
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: nami
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: yokomoya
+      font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+  🫲:   # U+1FAF2  LEFTWARDS HAND
+    - animation: yurayura
+      font: maru-bold
+      color: "fbbf24"
+      outline: "24fbbf"
+    - animation: nami
+      font: hachimaru
+      color: "f59e0b"
+      outline: "0bf59e"
+    - animation: yokomoya
+      font: noto
+      color: "60a5fa"
+      outline: "fa60a5"
+
+
