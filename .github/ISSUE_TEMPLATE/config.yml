@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: mojiemoji service questions
+    url: https://mojiemoji.jozo.beer
+    about: mojiemoji.jozo.beer 本体サービス側のスタンプ仕様 (font / color / animation の値、URL パラメータ) はサービスのドキュメントを参照してください。プラグイン側の問題のみここで起票してください。

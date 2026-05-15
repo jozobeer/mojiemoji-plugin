@@ -1,0 +1,93 @@
+name: バグ報告
+description: スタンプが想定通り表示されない、hook が誤って block / pass する、helper script の挙動がおかしい等
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます 🙏  template に沿って情報を埋めてもらえると、再現と修正が体感で 2 倍くらい早くなります。
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: 対象 surface
+      description: どのGitHub surface で問題が起きましたか
+      options:
+        - issue body
+        - PR body
+        - PR レビュー (本文)
+        - PR レビューコメント (inline)
+        - PR / Issue へのリプライ
+        - リリースノート
+        - その他 (description で記述)
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: 起動した `gh` コマンドまたは MCP ツール呼び出し
+      description: |
+        anonymize した上で貼ってください (`owner/repo` / 番号 / 本文中の機密情報など)。
+        Bash 経路なら `gh issue create ...`、MCP 経路なら `mcp__*__github_*` のツール名 + 引数の要点。
+      render: bash
+      placeholder: |
+        gh issue create --repo OWNER/REPO --title "..." --body "..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待した挙動 / レンダリング
+      placeholder: スタンプが本文中に inline で展開されるはず、など
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の挙動 / レンダリング
+      description: スクリーンショット (ダーク / ライト両方あると助かります) があれば添付してください。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: レンダリングを確認したモード
+      description: ダークモード / ライトモードどちらで確認しましたか
+      options:
+        - ダークモードのみ
+        - ライトモードのみ
+        - 両方
+        - 未確認
+    validations:
+      required: false
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: mojiemoji-plugin のバージョン / コミット
+      description: "`/plugin` の表示、または `git rev-parse HEAD`"
+      placeholder: e.g. v0.2.0 or commit abc1234
+    validations:
+      required: false
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: Claude Code のバージョン
+      description: "`claude --version` の出力"
+      placeholder: e.g. 1.0.34
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 追加の context
+      description: 関連する設定ファイル、`~/.config/claude/settings.json` の関連箇所、最近変更した hook など
+    validations:
+      required: false
