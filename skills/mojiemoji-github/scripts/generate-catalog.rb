@@ -200,6 +200,13 @@ def generate_compound_variants(term, chunks, seed:, count:)
   end
 end
 
+# YAML scalars that look numeric (`1`, `42`) parse as Integer keys when bare,
+# breaking downstream code that expects String keys (e.g. prestamp.rb's
+# `Regexp.union(CATALOG.keys)`). Quote any term whose name is purely digits.
+def yaml_safe_key(term)
+  term.match?(/\A\d+\z/) ? "\"#{term}\"" : term
+end
+
 def render_variant(variant, indent)
   lines = []
   lines << "#{indent}- font: #{variant[:font]}"
@@ -240,13 +247,13 @@ terms = terms.map { |line| line.split(/\s+/, 2).first }.compact.uniq
 terms.each do |term|
   if fits_single_stamp?(term)
     STDOUT.puts
-    STDOUT.puts "  #{term}:"
+    STDOUT.puts "  #{yaml_safe_key(term)}:"
     generate_variants(term, seed: options[:seed], count: options[:variants]).each do |variant|
       STDOUT.puts render_variant(variant, "    ")
     end
   elsif (split = split_term(term))
     STDOUT.puts
-    STDOUT.puts "  #{term}:"
+    STDOUT.puts "  #{yaml_safe_key(term)}:"
     generate_compound_variants(term, split, seed: options[:seed], count: options[:variants]).each do |variant|
       STDOUT.puts render_compound_variant(variant, "    ")
     end

@@ -404,3 +404,137 @@ def test_compound_variant_uses_rotational_speed_slow() -> None:
     )
     for animation, speed in rotational_variants:
         assert speed == "slow", f"{animation} variant must have speed: slow, got {speed}"
+
+
+# ---------------------------------------------------------------------------
+# Single-char catalog entries + boundary assertions (issue #52)
+# ---------------------------------------------------------------------------
+
+
+def _count_imgs(stdout: str) -> int:
+    return stdout.count('align="absmiddle"')
+
+
+def test_single_digit_does_not_stamp_inside_version_string() -> None:
+    # `v1.2.3` — every digit is part of a version triple, all preceded
+    # by ASCII letter or period, all followed by digit or period.
+    proc = run_ruby(PRESTAMP, "v1.2.3", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert _count_imgs(proc.stdout) == 0, proc.stdout
+
+
+def test_single_digit_does_not_stamp_inside_unit_value() -> None:
+    # `100ms` — digits are adjacent to other digits or ASCII letter.
+    proc = run_ruby(PRESTAMP, "100ms", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert _count_imgs(proc.stdout) == 0, proc.stdout
+
+
+def test_single_digit_does_not_stamp_inside_hash_reference() -> None:
+    # `#1234` — `1` preceded by `#` (not Japanese), `2`/`3`/`4` preceded
+    # by digit. None pass the lookbehind/lookahead guards.
+    proc = run_ruby(PRESTAMP, "#1234", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert _count_imgs(proc.stdout) == 0, proc.stdout
+
+
+def test_single_digit_does_not_stamp_with_only_whitespace_left_context() -> None:
+    # `Step 1` — `1` preceded by space (with ASCII to the left of space).
+    # The lookbehind requires Japanese char *immediately* before, so block.
+    proc = run_ruby(PRESTAMP, "Step 1 として実装", "--seed", "1")
+
+    assert proc.returncode == 0
+    # 実装 stamps, but not `1`.
+    assert _count_imgs(proc.stdout) == 1
+    assert 'alt="実装"' in proc.stdout
+    assert 'alt="1"' not in proc.stdout
+
+
+def test_promise_all_does_not_stamp() -> None:
+    # `Promise.all` has no catalog hits — verify nothing gets stamped
+    # (regression guard against accidental ASCII catalog additions).
+    proc = run_ruby(PRESTAMP, "Promise.all", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert _count_imgs(proc.stdout) == 0
+
+
+def test_single_digit_stamps_inside_japanese_flow() -> None:
+    # `仕様変更1件` — `1` preceded by `更` (Han), followed by `件` (Han,
+    # not in catalog). Both guards pass; `1` should stamp.
+    proc = run_ruby(PRESTAMP, "仕様変更1件", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert 'alt="1"' in proc.stdout
+    # 仕様 and 変更 are 2-kanji multi entries, should also stamp.
+    assert 'alt="仕様"' in proc.stdout
+    assert 'alt="変更"' in proc.stdout
+
+
+def test_single_kanji_blocked_when_preceded_by_han() -> None:
+    # `先月` — `月` preceded by Han `先` (not in catalog). Block.
+    proc = run_ruby(PRESTAMP, "先月", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert _count_imgs(proc.stdout) == 0
+
+
+def test_single_kanji_stamps_at_start_of_line() -> None:
+    # `火曜の昼` — `火` at SOL (no preceding Han). The rule allows
+    # Han to follow (so `火曜` still stamps the leading 火), since
+    # the issue's intent is to surface the weekday glyph.
+    proc = run_ruby(PRESTAMP, "火曜の昼", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert 'alt="火"' in proc.stdout
+
+
+def test_full_issue_acceptance_sentence() -> None:
+    # The exact verification sentence from issue #52:
+    #   "v1.2.3 で 100ms の修正を Step 1 として実装した。後で 火 にレビュー。"
+    # Expectation: only 修正 / 実装 / 後 / 火 stamp.
+    body = "v1.2.3 で 100ms の修正を Step 1 として実装した。後で 火 にレビュー。"
+    proc = run_ruby(PRESTAMP, body, "--seed", "1")
+
+    assert proc.returncode == 0
+    assert _count_imgs(proc.stdout) == 4
+    for term in ("修正", "実装", "後", "火"):
+        assert f'alt="{term}"' in proc.stdout, f"expected stamp for {term}"
+    # Negative — none of these substrings should appear as an alt.
+    for plain in ('alt="1"', 'alt="2"', 'alt="3"', 'alt="0"'):
+        assert plain not in proc.stdout, f"unexpected stamp: {plain}"
+
+
+def test_generate_catalog_quotes_numeric_keys() -> None:
+    # Bare `1:` parses as Integer in YAML, breaking prestamp.rb's
+    # Regexp.union over CATALOG.keys (expects String).
+    proc = run_ruby(GENERATE, "1\n2\n", "--seed", "42", "--variants", "1")
+
+    assert proc.returncode == 0
+    assert '"1":' in proc.stdout
+    assert '"2":' in proc.stdout
+    # Non-numeric keys remain unquoted (regression guard).
+    proc2 = run_ruby(GENERATE, "完成\n", "--seed", "42", "--variants", "1")
+    assert proc2.returncode == 0
+    assert "完成:" in proc2.stdout
+    assert '"完成":' not in proc2.stdout
+
+
+def test_catalog_loads_with_string_keys_for_digits() -> None:
+    # End-to-end: after regeneration, the live catalog's digit entries
+    # must be loadable as String keys by prestamp.rb (no Integer keys
+    # silently breaking lookups).
+    import yaml as _yaml_unused  # noqa: F401  ← only imported for clarity; we shell to ruby below
+
+    proc = subprocess.run(
+        ["ruby", "-ryaml", "-e",
+         f"d = YAML.safe_load_file(%q[{REPO_ROOT / 'skills/mojiemoji-github/data/prestamp-catalog.yml'}]);"
+         "puts d['terms'].keys.select { |k| k.is_a?(Integer) }.inspect"],
+        capture_output=True, text=True, timeout=10,
+    )
+    assert proc.returncode == 0, proc.stderr
+    # No integer keys — should be `[]`.
+    assert proc.stdout.strip() == "[]", f"integer keys leaked into catalog: {proc.stdout}"
