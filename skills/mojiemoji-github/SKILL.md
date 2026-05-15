@@ -76,6 +76,21 @@ skip 判断が曖昧なら装飾する(後述「飽和モード」参照、迷�
 
 gate 自体を一時的に黙らせたい場合は Bash command 先頭 / MCP body 内に `HOOK_DISABLE=1` を含める(PreToolUse hook がこの marker を見ると素通しする)。乱用しない — 1 投稿 1 bypass の最小スコープに留める。
 
+### Reviews API の structural distinction(`body` vs `comments[]`)
+
+`gh api repos/{owner}/{repo}/pulls/{n}/reviews` (および MCP `github_pull_request_review_write`) で POST する review payload は構造上 **2 つの surface** を持つ。装飾の対象範囲が両者で異なる:
+
+| フィールド | 用途 | 装飾 |
+|---|---|---|
+| `body` | summary text(verdict + 評価 + 締め、通常は日本語 prose) | **対象** — surface ヒューリスティック表(§ Review summary body)に沿って inline 飽和で装飾 |
+| `comments[]` | inline findings(file path + line + 技術的指摘) | **対象外** — 素のまま投稿 |
+
+`comments[]` の findings は **コード引用 / ファイルパス / シンボル名 / 行番号** が主体で、スタンプとの相性が悪い(grep 性が落ち、修正提案の可読性が下がる)。`cross-repo-review` / `triage-review` / `vibes-review` / `copilot-review` 等の subagent 駆動 batch posting で `gh api .../reviews` を経由するとき、**装飾は `body` フィールドだけに適用し、`comments[]` 配列の各 element には適用しない**。
+
+action バッジ(`action: fixed/by design/test added/deferred/wontfix`)を返信本文の先頭に置くケース(`gh api .../pulls/.../comments` 経由の reply)は別ルートで、§ Reply / コメント返信 のヒューリスティックに従う — そちらは reply 自体が日本語 prose なので装飾対象。
+
+迷ったときの判定: 「この文字列を逐語 grep したいか?」がコードレビューでの判断軸と一致する。findings は yes(コードを引用するから)、summary body は no(感情・評価・指示の prose だから)。
+
 ## バッジと併用する(バッジが見出しの役割)
 
 mojiemoji スタンプと shields.io バッジは**相補的で交換可能ではない** — バッジはメタデータを、スタンプは雰囲気を伝える。よくある失敗パターンは、スタンプは付けたのにバッジを忘れることである。
