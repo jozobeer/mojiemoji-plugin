@@ -103,13 +103,13 @@ flowchart TD
     style A fill:#fbbf24,color:#000,stroke:#f59e0b,stroke-width:2px
 ```
 
-緊急 bypass: `HOOK_DISABLE=1` を含めると Hook がスキップされる（推奨しない、ダークモードで不可視のまま投稿される）。Bash 経路はコマンドの先頭、MCP 経路は `body` 内のどこかに含めれば良い。
+緊急 bypass: `HOOK_DISABLE=1` を含めると Hook がスキップされる（推奨しない、ダークモードで <img src="https://mojiemoji.jozo.beer/emoji/%E4%B8%8D%E5%8F%AF%E8%A6%96?font=maru-bold&color=3b82f6&animation=mabataki&background=transparent&outline=f63b82&outline_width=2" alt="不可視" height="24" align="absmiddle"> のまま投稿される）。Bash 経路はコマンドの先頭、MCP 経路は `body` 内のどこかに含めれば良い。
 
 ---
 
 ## ❓ なぜこのプラグインが必要か
 
-mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode 不可視になる致命傷** + **他パラメータ欠落で読めないスタンプを量産する** という事故が起こる:
+mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode 不可視になる <img src="https://mojiemoji.jozo.beer/emoji/%E8%87%B4%E5%91%BD?font=chikara&color=ef4444&animation=shuchusen&background=transparent&outline=44ef44&outline_width=2" alt="致命" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%82%B7?font=chikara&color=f87171&animation=zanzo&background=transparent&outline=71f871&outline_width=2" alt="傷" height="24" align="absmiddle">** + **他パラメータ欠落で読めないスタンプを <img src="https://mojiemoji.jozo.beer/emoji/%E9%87%8F%E7%94%A3?font=tamanegi&color=f59e0b&animation=psycho&background=transparent" alt="量産" height="24" align="absmiddle"> する** という事故が起こる:
 
 | パラメータ | 必須値 | 欠落時の影響 | 致命度 |
 |---|---|---|:---:|
@@ -120,7 +120,7 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 | `outline` | `triadic` 推奨 / `complement` / `darker` / `lighter` / 6-hex | 字形が背景と融合してぼやける | ⚠️ 中 |
 | `outline_width` | `2` | 1px は線が細すぎ、3px+ は字形が潰れる | 💡 小 |
 
-特に `color` 欠落 → dark mode 黒不可視は **3 回ユーザにフラグされた実害事例**（直近: cross-repo-review 2026-05-12 で 7 レビュー分のスタンプが全部見えない状態で投稿された 💣）。LLM が手書きで URL を組み立てると `background=transparent` だけ付けて他を忘れる事故が頻発する。このプラグインは:
+特に `color` 欠落 → dark mode 黒不可視は **3 回ユーザにフラグされた <img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%9F%E5%AE%B3?font=zero&color=f59e0b&animation=gatagata&background=transparent&outline=0bf59e&outline_width=2" alt="実害" height="24" align="absmiddle"> 事例**（直近: cross-repo-review 2026-05-12 で 7 レビュー分のスタンプが全部見えない状態で投稿された 💣）。LLM が手書きで URL を組み立てると `background=transparent` だけ付けて他を忘れる事故が頻発する。このプラグインは:
 
 1. **Skill** で 6 必須パラメータをドキュメント化
 2. **Subagent** に丸投げして手書きを回避
@@ -136,9 +136,9 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 
 ### ✓ Plugin 単独で再現されるもの
 
-- **発火 surface の完全列挙** — `gh issue/pr/release create` / raw `gh api .../reviews` / MCP GitHub ツール / subagent 駆動の一括投稿、いずれの経路でも日本語 body 投稿前に gate が発火する(SKILL.md § Hard pre-action gate)
-- **装飾ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / LGTM は他スタンプと同等(mojiemoji 単独なら自由、他 LGTM-imagery skill 併用時のみ mojiemoji は inline 推奨) / do-not-stamp リスト(API 名 / file path / 識別子)
-- **URL canonical 仕様** — 通常は 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは追加で speed 必須、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する例外(4 パラメータ運用)、ダークモード対応 hex 帯
+- **<img src="https://mojiemoji.jozo.beer/emoji/%E7%99%BA%E7%81%AB?font=maru-bold&color=fb923c&animation=kirari&background=transparent&outline=3cfb92&outline_width=2" alt="発火" height="24" align="absmiddle"> surface の完全列挙** — `gh issue/pr/release create` / raw `gh api .../reviews` / MCP GitHub ツール / subagent 駆動の一括投稿、いずれの経路でも日本語 body 投稿前に gate が発火する(SKILL.md § Hard pre-action gate)
+- **<img src="https://mojiemoji.jozo.beer/emoji/%E8%A3%85%E9%A3%BE?font=kurobara&color=a855f7&animation=tatemoya&background=transparent&outline=f7a855&outline_width=2" alt="装飾" height="24" align="absmiddle"> ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / LGTM は他スタンプと同等(mojiemoji 単独なら自由、他 LGTM-imagery skill 併用時のみ mojiemoji は inline 推奨) / do-not-stamp リスト(API 名 / file path / 識別子)
+- **URL canonical 仕様** — 通常は 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは追加で speed 必須、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する <img src="https://mojiemoji.jozo.beer/emoji/%E4%BE%8B%E5%A4%96?font=akzk&color=f472b6&animation=mozaiku&background=transparent&outline=b6f472&outline_width=2" alt="例外" height="24" align="absmiddle">(4 パラメータ運用)、ダークモード対応 hex 帯
 - **PreToolUse hook** — 未装飾 body の submission を block(`gh` / raw `gh api` / MCP / subagent 経由すべて)
 - **mojiemoji-selector subagent** — 複数フレーズ・カタログ生成・配置判断のデリゲート先
 - **helper script** (`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.rb`) — 単一フレーズのファストパス
@@ -182,7 +182,7 @@ skills:
 
 ## ⚙️ 設定
 
-### Hook を一時無効化
+### Hook を一時 <img src="https://mojiemoji.jozo.beer/emoji/%E7%84%A1%E5%8A%B9?font=mincho&color=f87171&animation=bane&background=transparent&outline=71f871&outline_width=2" alt="無効" height="24" align="absmiddle"> 化
 
 Bash 経路はコマンドの先頭に `HOOK_DISABLE=1` を置く:
 
@@ -194,7 +194,7 @@ MCP 経路は `body` の中のどこかに `HOOK_DISABLE=1` を含めれば良�
 
 ### Hook 自体を無効化したい
 
-Claude Code の `/plugin` メニューで disable するか、`hooks/hooks.json` を編集。
+Claude Code の `/plugin` メニューで disable するか、`hooks/hooks.json` を <img src="https://mojiemoji.jozo.beer/emoji/%E7%B7%A8%E9%9B%86?font=maru-bold&color=3b82f6&animation=poyoon&background=transparent&outline=f63b82&outline_width=2" alt="編集" height="24" align="absmiddle">。
 
 ### Skill / Subagent のカスタマイズ
 
