@@ -66,6 +66,88 @@ def fits_single_stamp?(term)
   c[:kanji] <= 2 && c[:kata] <= 3 && c[:ascii] <= 3 && c[:hira] <= 4
 end
 
+# Per-character class detection for split_term. `:other` is reserved for
+# punctuation, symbols, and characters outside the four scripts we track
+# (Han / Hiragana / Katakana / ASCII alphanumerics) — full-width katakana
+# extensions such as ヴ match \p{Katakana} and ASCII digits 0-9 match the
+# /[A-Za-z0-9]/ branch, so neither falls through to `:other`.
+def char_class_of(c)
+  case c
+  when /\p{Han}/ then :kanji
+  when /\p{Hiragana}/ then :hira
+  when /\p{Katakana}/ then :kata
+  when /[A-Za-z0-9]/ then :ascii
+  else :other
+  end
+end
+
+# Common 1-char kanji prefixes that modify a 2-kanji core (negation /
+# scope / re- / mis-). When the term is exactly 3 kanji and starts
+# with one of these, split as `[prefix, 2-kanji core]` — semantically
+# correct for most 3-kanji compounds in technical Japanese.
+#
+# Suffix nominalizers (度 / 性 / 化 etc.) take priority when both match
+# the same term (e.g., `不明点` has both 不 prefix and 点 suffix; the
+# suffix split `不明 + 点` reads better).
+KANJI_PREFIX_MODIFIERS = %w[
+  不 未 誤 再 副 要 非 初 永 拡 超 最 前 後 旧 新 全 半 各 同 異 逆 反 主 準
+].freeze
+
+KANJI_SUFFIX_NOMINALIZERS = %w[
+  度 性 化 像 点 感 観 論 様 力 法 体 系 軸 値
+].freeze
+
+# Split a term into 2 adjacent-stamp chunks when it exceeds the
+# single-stamp length rule. Returns [left, right] or nil if no valid
+# split exists. Priority per SKILL.md § "境界ヒューリスティック":
+#
+#   1. Character-class boundary (katakana ↔ kanji ↔ hiragana)
+#   2. Pure-kanji morpheme heuristic (suffix > prefix > 2+1 fallback)
+#   3. Pure-katakana 3+remainder split
+def split_term(term)
+  chars = term.chars
+  return nil if chars.length < 2
+
+  classes = chars.map { |c| char_class_of(c) }
+
+  # 1. Character-class boundary. Walk through every class transition
+  # and return the first one where both sides fit a single stamp.
+  # This handles mixed-script terms like `マージ歓迎` (katakana ↔
+  # kanji), `修正お願い` (kanji ↔ hiragana), `引き続き` (kanji ↔ hira
+  # ↔ kanji ↔ hira — splits at the first valid balanced boundary).
+  (1...chars.length).each do |idx|
+    next if classes[idx] == classes[idx - 1]
+    left = chars[0...idx].join
+    right = chars[idx..].join
+    return [left, right] if fits_single_stamp?(left) && fits_single_stamp?(right)
+  end
+
+  # 2. Pure-kanji words.
+  if classes.uniq == [:kanji]
+    if chars.length == 3
+      # Suffix nominalizer wins ties — `不明点` → `不明 + 点` (suffix
+      # 点) over `不 + 明点` (prefix 不), because `不明` is a real
+      # word and `明点` isn't.
+      return [chars[0..-2].join, chars[-1]] if KANJI_SUFFIX_NOMINALIZERS.include?(chars[-1])
+      return [chars[0], chars[1..].join] if KANJI_PREFIX_MODIFIERS.include?(chars[0])
+      return [chars[0..1].join, chars[2..].join]
+    elsif chars.length == 4
+      return [chars[0..1].join, chars[2..].join]
+    end
+  end
+
+  # 3. Pure katakana ≥4: prefer 3+remainder, fall back to 2+remainder.
+  if classes.uniq == [:kata] && chars.length >= 4
+    [3, 2].each do |split_at|
+      left = chars[0...split_at].join
+      right = chars[split_at..].join
+      return [left, right] if fits_single_stamp?(left) && fits_single_stamp?(right)
+    end
+  end
+
+  nil
+end
+
 def bgr_rotate(hex)
   raise ArgumentError, "bad hex: #{hex}" unless hex.match?(/\A[0-9a-fA-F]{6}\z/)
   hex[4, 2] + hex[0, 2] + hex[2, 2]
@@ -76,23 +158,45 @@ def seeded_random(seed, term, axis)
   Random.new(raw.to_i(16) % (2**32))
 end
 
-def generate_variants(term, seed:, count:)
-  fonts = CANONICAL_FONTS.shuffle(random: seeded_random(seed, term, "font"))
-  animations = POOLED_ANIMATIONS.shuffle(random: seeded_random(seed, term, "anim"))
-  colors = TAILWIND_PALETTE.shuffle(random: seeded_random(seed, term, "color"))
+# Pre-shuffle the canonical pools once per term, then index into them for
+# each variant. Shuffling inside the per-variant loop would be O(variants *
+# pool_size) instead of O(pool_size + variants), wasteful for large
+# `--variants` counts.
+def shuffled_pools(term, seed:)
+  {
+    fonts: CANONICAL_FONTS.shuffle(random: seeded_random(seed, term, "font")),
+    animations: POOLED_ANIMATIONS.shuffle(random: seeded_random(seed, term, "anim")),
+    colors: TAILWIND_PALETTE.shuffle(random: seeded_random(seed, term, "color")),
+  }
+end
 
+def flavor_at(pools, index)
+  font = pools[:fonts][index % pools[:fonts].size]
+  animation = pools[:animations][index % pools[:animations].size]
+  color = pools[:colors][index % pools[:colors].size]
+  {
+    font: font,
+    color: color,
+    animation: animation,
+    outline: COLOR_SHIFTING_ANIMATIONS.include?(animation) ? nil : bgr_rotate(color),
+    outline_width: COLOR_SHIFTING_ANIMATIONS.include?(animation) ? "0" : nil,
+    speed: ROTATIONAL_ANIMATIONS.include?(animation) ? "slow" : nil,
+  }.compact
+end
+
+def generate_variants(term, seed:, count:)
+  pools = shuffled_pools(term, seed: seed)
+  (0...count).map { |i| flavor_at(pools, i) }
+end
+
+# Compound variants: each variant is one shared flavor split across the
+# adjacent chunks. SKILL.md prescribes matching font/color/animation across
+# the two halves so the split reads as a single cohesive word.
+def generate_compound_variants(term, chunks, seed:, count:)
+  pools = shuffled_pools(term, seed: seed)
   (0...count).map do |i|
-    font = fonts[i % fonts.size]
-    animation = animations[i % animations.size]
-    color = colors[i % colors.size]
-    {
-      font: font,
-      color: color,
-      animation: animation,
-      outline: COLOR_SHIFTING_ANIMATIONS.include?(animation) ? nil : bgr_rotate(color),
-      outline_width: COLOR_SHIFTING_ANIMATIONS.include?(animation) ? "0" : nil,
-      speed: ROTATIONAL_ANIMATIONS.include?(animation) ? "slow" : nil,
-    }.compact
+    flavor = flavor_at(pools, i)
+    { chunks: chunks.map { |chunk_text| flavor.merge(text: chunk_text) } }
   end
 end
 
@@ -104,6 +208,20 @@ def render_variant(variant, indent)
   lines << "#{indent}  outline_width: \"#{variant[:outline_width]}\"" if variant[:outline_width]
   lines << "#{indent}  animation: #{variant[:animation]}"
   lines << "#{indent}  speed: #{variant[:speed]}" if variant[:speed]
+  lines.join("\n")
+end
+
+def render_compound_variant(variant, indent)
+  lines = ["#{indent}- chunks:"]
+  variant[:chunks].each do |chunk|
+    lines << "#{indent}    - text: #{chunk[:text]}"
+    lines << "#{indent}      font: #{chunk[:font]}"
+    lines << "#{indent}      color: \"#{chunk[:color]}\""
+    lines << "#{indent}      outline: \"#{chunk[:outline]}\"" if chunk[:outline]
+    lines << "#{indent}      outline_width: \"#{chunk[:outline_width]}\"" if chunk[:outline_width]
+    lines << "#{indent}      animation: #{chunk[:animation]}"
+    lines << "#{indent}      speed: #{chunk[:speed]}" if chunk[:speed]
+  end
   lines.join("\n")
 end
 
@@ -120,18 +238,23 @@ terms = source.lines.map(&:strip).reject { |line| line.empty? || line.start_with
 terms = terms.map { |line| line.split(/\s+/, 2).first }.compact.uniq
 
 terms.each do |term|
-  unless fits_single_stamp?(term)
+  if fits_single_stamp?(term)
+    STDOUT.puts
+    STDOUT.puts "  #{term}:"
+    generate_variants(term, seed: options[:seed], count: options[:variants]).each do |variant|
+      STDOUT.puts render_variant(variant, "    ")
+    end
+  elsif (split = split_term(term))
+    STDOUT.puts
+    STDOUT.puts "  #{term}:"
+    generate_compound_variants(term, split, seed: options[:seed], count: options[:variants]).each do |variant|
+      STDOUT.puts render_compound_variant(variant, "    ")
+    end
+  else
     counts = char_classes(term)
     STDERR.puts(format(
-      "skip: %s exceeds length rule (kanji=%d kata=%d ascii=%d hira=%d; max 2/3/3/4)",
+      "skip: %s — no valid split (kanji=%d kata=%d ascii=%d hira=%d)",
       term, counts[:kanji], counts[:kata], counts[:ascii], counts[:hira],
     ))
-    next
-  end
-
-  STDOUT.puts
-  STDOUT.puts "  #{term}:"
-  generate_variants(term, seed: options[:seed], count: options[:variants]).each do |variant|
-    STDOUT.puts render_variant(variant, "    ")
   end
 end

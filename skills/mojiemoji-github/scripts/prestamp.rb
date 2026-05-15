@@ -11,9 +11,17 @@ CATALOG_PATH = File.expand_path("../data/prestamp-catalog.yml", __dir__)
 
 catalog_data = YAML.safe_load_file(CATALOG_PATH)
 
+def deep_symbolize_keys(obj)
+  case obj
+  when Hash then obj.each_with_object({}) { |(k, v), acc| acc[k.to_sym] = deep_symbolize_keys(v) }
+  when Array then obj.map { |v| deep_symbolize_keys(v) }
+  else obj
+  end
+end
+
 DEFAULT_FLAVOR = catalog_data.fetch("defaults").transform_keys(&:to_sym).freeze
 CATALOG = catalog_data.fetch("terms").transform_values { |variants|
-  variants.map { |variant| variant.transform_keys(&:to_sym).freeze }.freeze
+  variants.map { |variant| deep_symbolize_keys(variant).freeze }.freeze
 }.freeze
 
 TERM_RE = Regexp.union(CATALOG.keys.sort_by { |term| [-term.length, term] })
@@ -49,6 +57,17 @@ def render_img(base_url, text, flavor)
   alt = CGI.escapeHTML(text)
   src = CGI.escapeHTML(url)
   %(<img src="#{src}" alt="#{alt}" height="24" align="absmiddle">)
+end
+
+# Compound variants carry a `chunks:` array of per-chunk hashes (each with
+# its own `text:` and matching flavor); rendered as adjacent <img> tags so
+# 4+ char terms read as one cohesive word at body height.
+def render_variant(base_url, term, variant)
+  return render_img(base_url, term, variant) unless variant[:chunks]
+  variant[:chunks].map { |chunk|
+    flavor = chunk.reject { |k, _| k == :text }
+    render_img(base_url, chunk[:text], flavor)
+  }.join
 end
 
 def shields_badge_url?(url)
@@ -120,7 +139,7 @@ def protect_and_replace(text, base_url:, seed:, state:)
     key = "#{seed}:#{term}:#{state[:occurrence]}"
     state[:occurrence] += 1
     variant = variants[Zlib.crc32(key) % variants.length]
-    render_img(base_url, term, variant)
+    render_variant(base_url, term, variant)
   end
 
   masker.restore(protected)
