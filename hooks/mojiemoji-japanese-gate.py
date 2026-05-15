@@ -22,7 +22,9 @@ And EITHER:
      parameters (`background=transparent`, `font=*`, `color=*`,
      `animation=*`, `outline=darker`, `outline_width=2`), OR
   3. a URL uses a non-canonical font/animation, an invalid outline
-     value, or pairs a color-shifting animation with an outline.
+     value, pairs a color-shifting animation with an outline, uses a
+     Tailwind 600+ color (invisible on dark mode), or contains a
+     3-kanji single-stamp text (must split as 2+1).
 
 The Bash path also reads referenced body files (`--body-file PATH` /
 `--input PATH` / `-F body=@PATH`) and interpreter-invoked scripts so
@@ -38,6 +40,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # High-level `gh` commands that publish bodies.
@@ -187,6 +190,37 @@ OUTLINE_VALUE_RE = re.compile(r"\A(?:darker|lighter|[0-9a-f]{6})\Z")
 # The hue-rotation logic in `mojiemoji_markdown.rb` also requires hex —
 # named colors break `--outline triadic` / `complement` derivation too.
 COLOR_VALUE_RE = re.compile(r"\A#?[0-9a-f]{6}\Z")
+# Tailwind 600+ palette values that go black-on-dark in GitHub's dark
+# theme. PR #33 shipped 6 stamps with `dc2626` (red-600) and ate the
+# fill into the dark background; selector / verification.md spotcheck
+# #4 enumerate these as forbidden, but the hook accepted them until
+# this gate was added (issue #41 — 3-layer alignment).
+#
+# Lowercase, no `#` prefix — match what comes out of PARAM_VALUE_RE
+# after normalization.
+FORBIDDEN_COLORS = frozenset({
+    "dc2626", "b91c1c", "991b1b",        # red-600/700/800
+    "c2410c",                            # orange-700
+    "ca8a04",                            # yellow-600
+    "15803d", "16a34a",                  # green-700/600
+    "0e7490",                            # cyan-700
+    "1d4ed8", "2563eb",                  # blue-700/600
+    "4338ca",                            # indigo-700
+    "7e22ce",                            # purple-700
+    "be185d",                            # pink-700
+    "000000", "111827", "1f2937",        # black / gray-900/800
+})
+# Single-stamp text decoded from `/emoji/<encoded>` consisting of
+# **3+ contiguous CJK kanji**. SKILL.md § Stamp target selection caps
+# single stamps at 2 kanji because 3+ chars get visually crushed at
+# inline height (h=24). Selector contract + verification spotcheck
+# #16 already require `2+1` split (e.g., `致命傷` → `致命` + `傷`),
+# but hand-crafted URLs and selector slip-throughs reach the hook
+# untouched. CJK Unified Ideographs U+4E00–U+9FFF only — hiragana /
+# katakana / latin / digits all skip this check (the kanji crush is
+# specifically a high-stroke-count problem).
+KANJI_ONLY_RE = re.compile(r"\A[一-鿿]+\Z")
+EMOJI_PATH_RE = re.compile(r"/emoji/([^?\s\"<>)]+)")
 # Extract param values from a URL fragment. Handles both `&` and `&amp;`
 # separators (the latter when URLs sit inside HTML attribute strings),
 # trailing quotes/whitespace, and URL fragments. Stops at the next param
@@ -361,7 +395,7 @@ def main() -> int:
             "## 推奨経路 (skill access があるなら)\n"
             "1. `mojiemoji-github` スキルを `Skill` ツールで明示的に呼び出す\n"
             "2. body全体に inline-saturated でrender (1〜2 stamps/段落, grammatically natural)\n"
-            "3. animation 8+ distinct values, 同一値≤3×, color 4+ distinct, dark-mode-safe (Tailwind 300–500)\n"
+            "3. animation 12+ distinct values, 同一値≤2×, color 4+ distinct, dark-mode-safe (Tailwind 300–500 — 600+ は禁止)\n"
             "4. API名 / 英識別子 / file path / version string / コードシンボル はstamp化しない\n"
             "5. shields.io badges を line 1 に置く (stampはその下)\n"
             "6. 再render後に同じ投稿経路 (gh / MCP) を再実行\n"
@@ -505,6 +539,28 @@ def main() -> int:
                 bads.append((param_l, value))
             elif param_l == "color" and not COLOR_VALUE_RE.match(value_l):
                 bads.append((param_l, value))
+            elif param_l == "color" and value_l.lstrip("#") in FORBIDDEN_COLORS:
+                bads.append((
+                    "color-tailwind-600+",
+                    f"{value} (Tailwind 600+ — invisible on dark mode; swap to 300–500)",
+                ))
+        # 3-kanji single stamp — selector contract + verification.md
+        # spotcheck #16 require `2+1` split because 3+ kanji at inline
+        # height (h=24) get visually crushed. `urllib.parse.unquote`
+        # handles `%E…` UTF-8 byte sequences cleanly. `%0A` (newline)
+        # inside the path = 2-line stamp for hiragana; split on it and
+        # check the first segment only — kanji words don't use `%0A`
+        # per SKILL.md, so a 3+ kanji string in any segment is the
+        # single-stamp violation.
+        emoji_match = EMOJI_PATH_RE.search(u)
+        if emoji_match:
+            decoded = urllib.parse.unquote(emoji_match.group(1))
+            first_segment = decoded.split("\n", 1)[0]
+            if KANJI_ONLY_RE.match(first_segment) and len(first_segment) >= 3:
+                bads.append((
+                    "3-kanji-single",
+                    f"'{first_segment}' (split as 2+1 — e.g., 致命傷 → 致命 + 傷)",
+                ))
         # Color-shifting animations (disco/psycho/kira) cycle the fill
         # through rainbow/strobe colors. A fixed-color outline halo fights
         # the cycle and produces a dirty composite. The helper script
@@ -582,7 +638,13 @@ def main() -> int:
             "   `animation=kaiten`/`kage_kaiten` は **必ず `speed=slow` か\n"
             "   `speed=step` を付ける** (省略 / `normal` / `fast` は回転が\n"
             "   速すぎて読めない streak になる — helper script は速度未指定時\n"
-            "   に自動で `slow` を注入する)\n"
+            "   に自動で `slow` を注入する);\n"
+            "   color は **Tailwind 300–500 帯のみ** — `dc2626` (red-600) /\n"
+            "   `1d4ed8` (blue-700) / `000000` (黒) 等の 600+ や near-black は\n"
+            "   ダークモードで背景に溶けて読めなくなるため hook で reject;\n"
+            "   `/emoji/<text>` の text 部分は **漢字 2 字以下の単独 stamp** —\n"
+            "   `致命傷` のような 3 漢字単独は `致命` + `傷` の 2 stamp に分割\n"
+            "   (selector subagent と verification.md spotcheck #16 と同じ規約)\n"
             "4. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
             "\n"
             "緊急bypass: Bash command先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
