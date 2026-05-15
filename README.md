@@ -157,6 +157,27 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 
 本プラグインを採用するなら、user-global config(`~/.config/claude/CLAUDE.md` / `rules/*` / `agents/*`)から「mojiemoji」言及を削除して構わない。すべての routing は plugin の `when_to_use` トリガーと hook の発火で完結する。これで user 環境と fresh-install 環境が対称になる。
 
+### 唯一の例外: subagent frontmatter
+
+Claude Code の subagent (`~/.config/claude/agents/*.md` や同梱の `mojiemoji-selector` 以外のユーザー作成 agent) は **skill 隔離** されており、メインスレッドのように skill を auto-discover しない。subagent から `Skill` ツールで `mojiemoji-github` を呼びたい場合、subagent の frontmatter で skill を明示宣言する必要がある:
+
+```yaml
+---
+name: my-review-subagent
+model: sonnet
+skills:
+  - mojiemoji-github   # ← 明示宣言が必要
+---
+```
+
+これは harness 側の仕様で plugin から bypass できない。宣言しない場合の挙動は以下:
+
+- subagent が日本語 GH body を投稿しようとする → PreToolUse hook が block
+- hook の error message に **helper script 直接実行手順** が含まれる(`scripts/mojiemoji_markdown.rb` を直接呼ぶ recovery 経路)ので、subagent は skill access 無しでも復帰可能
+- ただし装飾品質は skill 経由より粗くなる(単一フレーズ × ファストパスの組み合わせ)
+
+つまり「品質を保ちたい subagent は frontmatter に skill 宣言」、「最低限通したいだけなら宣言不要(hook の自己完結 recovery で通る)」の 2 段構成。
+
 ---
 
 ## ⚙️ 設定 <img src="https://mojiemoji.jozo.beer/emoji/%E8%A8%AD%E5%AE%9A?font=noto&color=06b6d4&animation=mabataki&background=transparent&outline=d406b6&outline_width=2" alt="設定" height="24" align="absmiddle">
