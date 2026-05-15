@@ -1,6 +1,6 @@
 # Stampable terms — extracted from skills/mojiemoji-github/SKILL.md
 # (feat/37-verification-checks @ fcc3bb4)
-# Consumed by scripts/generate-catalog.rb to produce per-term variants.
+# Consumed by scripts/generate_catalog.py to produce per-term variants.
 # To add a term, append under the matching category; the generator filters
 # out terms exceeding the single-stamp length rule (kanji <=2, kata <=3,
 # ascii <=3, hira <=4) with a stderr notice.
@@ -510,7 +510,7 @@ POC
 関連
 
 # 単一文字 — 時系列 / 順番
-# 単一文字エントリは prestamp.rb で境界アサーション付きでマッチされる:
+# 単一文字エントリは prestamp.py で境界アサーション付きでマッチされる:
 #   - 単一漢字: 直前が漢字なら不発(`先月` の `月` を抑止)
 #   - 単一数字: 直前が日本語かつ直後が ASCII 識別子文字でないときのみ発火
 #     (`v1.2.3` / `100ms` / `#1234` / `Step 1` 全て不発)
@@ -527,7 +527,7 @@ POC
 日
 
 # 単一文字 — 列挙数字 (1-9)
-# YAML キー quote は generate-catalog.rb 側で強制(bare `1:` は integer key 化する)
+# YAML キー quote は generate_catalog.py 側で強制(bare `1:` は integer key 化する)
 1
 2
 3

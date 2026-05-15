@@ -1,26 +1,27 @@
-"""Tests for cache-record.rb, cache-stats.rb, and bump-catalog.rb."""
+"""Tests for cache_record.py, cache_stats.py, and bump_catalog.py."""
 
 from __future__ import annotations
 
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts"
-CACHE_RECORD = SCRIPTS / "cache-record.rb"
-CACHE_STATS = SCRIPTS / "cache-stats.rb"
-BUMP_CATALOG = SCRIPTS / "bump-catalog.rb"
+CACHE_RECORD = SCRIPTS / "cache_record.py"
+CACHE_STATS = SCRIPTS / "cache_stats.py"
+BUMP_CATALOG = SCRIPTS / "bump_catalog.py"
 
 
-def run_ruby(script: Path, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run_py(script: Path, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     full_env = os.environ.copy()
     if env:
         full_env.update(env)
     return subprocess.run(
-        ["ruby", str(script), *args],
+        [sys.executable, str(script), *args],
         capture_output=True,
         text=True,
         timeout=10,
@@ -28,12 +29,14 @@ def run_ruby(script: Path, *args: str, env: dict[str, str] | None = None) -> sub
     )
 
 
-# ---------- cache-record.rb ----------
+
+
+# ---------- cache_record.py ----------
 
 
 def test_cache_record_appends_jsonl_entry(tmp_path: Path) -> None:
     cache = tmp_path / "nested" / "usage.jsonl"
-    proc = run_ruby(
+    proc = run_py(
         CACHE_RECORD,
         "--term", "完成",
         "--font", "maru-bold",
@@ -61,7 +64,7 @@ def test_cache_record_appends_jsonl_entry(tmp_path: Path) -> None:
 def test_cache_record_appends_multiple_entries(tmp_path: Path) -> None:
     cache = tmp_path / "usage.jsonl"
     for color in ("22c55e", "60a5fa", "ec4899"):
-        proc = run_ruby(
+        proc = run_py(
             CACHE_RECORD,
             "--term", "歓迎",
             "--font", "hachimaru",
@@ -79,7 +82,7 @@ def test_cache_record_appends_multiple_entries(tmp_path: Path) -> None:
 
 def test_cache_record_honors_speed_flag(tmp_path: Path) -> None:
     cache = tmp_path / "usage.jsonl"
-    proc = run_ruby(
+    proc = run_py(
         CACHE_RECORD,
         "--term", "回転",
         "--font", "noto",
@@ -96,7 +99,7 @@ def test_cache_record_honors_speed_flag(tmp_path: Path) -> None:
 
 def test_cache_record_fails_on_missing_required(tmp_path: Path) -> None:
     cache = tmp_path / "usage.jsonl"
-    proc = run_ruby(
+    proc = run_py(
         CACHE_RECORD,
         "--term", "完成",
         "--file", str(cache),
@@ -108,7 +111,7 @@ def test_cache_record_fails_on_missing_required(tmp_path: Path) -> None:
 
 def test_cache_record_uses_env_override(tmp_path: Path) -> None:
     cache = tmp_path / "envpath.jsonl"
-    proc = run_ruby(
+    proc = run_py(
         CACHE_RECORD,
         "--term", "確認",
         "--font", "gothic-bold",
@@ -122,7 +125,7 @@ def test_cache_record_uses_env_override(tmp_path: Path) -> None:
 
 
 def test_cache_record_uses_xdg_data_home(tmp_path: Path) -> None:
-    proc = run_ruby(
+    proc = run_py(
         CACHE_RECORD,
         "--term", "確認",
         "--font", "gothic-bold",
@@ -137,7 +140,7 @@ def test_cache_record_uses_xdg_data_home(tmp_path: Path) -> None:
     assert proc.stdout.strip() == str(expected)
 
 
-# ---------- cache-stats.rb ----------
+# ---------- cache_stats.py ----------
 
 
 def _seed_cache(path: Path, entries: list[dict]) -> None:
@@ -165,7 +168,7 @@ def _entry(term: str, color: str, *, font: str = "gothic-bold", animation: str =
 def test_cache_stats_promotes_term_meeting_threshold(tmp_path: Path) -> None:
     cache = tmp_path / "usage.jsonl"
     _seed_cache(cache, [_entry("祝福", "ec4899"), _entry("祝福", "ec4899")])
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
     # Term keys are always quoted now to keep YAML output valid even for
     # terms containing YAML-significant characters.
@@ -176,7 +179,7 @@ def test_cache_stats_promotes_term_meeting_threshold(tmp_path: Path) -> None:
 def test_cache_stats_skips_below_threshold(tmp_path: Path) -> None:
     cache = tmp_path / "usage.jsonl"
     _seed_cache(cache, [_entry("祝福", "ec4899")])
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
     assert "祝福" not in proc.stdout
 
@@ -191,7 +194,7 @@ def test_cache_stats_deduplicates_identical_flavors(tmp_path: Path) -> None:
             _entry("祝福", "ec4899"),
         ],
     )
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
     # Only one variant should be emitted even with 3 identical entries.
     assert proc.stdout.count("- font:") == 1
@@ -208,14 +211,14 @@ def test_cache_stats_emits_multiple_variants_per_term(tmp_path: Path) -> None:
             _entry("祝福", "22c55e", animation="poyoon"),
         ],
     )
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.count("- font:") == 2
 
 
 def test_cache_stats_handles_missing_file(tmp_path: Path) -> None:
     cache = tmp_path / "nonexistent.jsonl"
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == ""
 
@@ -227,13 +230,13 @@ def test_cache_stats_skips_malformed_lines(tmp_path: Path) -> None:
         + json.dumps(_entry("祝福", "ec4899")) + "\n"
         + json.dumps(_entry("祝福", "ec4899")) + "\n",
     )
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
     assert "祝福" in proc.stdout
     assert "malformed" in proc.stderr.lower() or "skipped" in proc.stderr.lower()
 
 
-# ---------- bump-catalog.rb (dry-run) ----------
+# ---------- bump_catalog.py (dry-run) ----------
 
 
 def test_bump_catalog_dry_run_reports_new_term(tmp_path: Path) -> None:
@@ -241,7 +244,7 @@ def test_bump_catalog_dry_run_reports_new_term(tmp_path: Path) -> None:
     _seed_cache(cache, [_entry("祝福", "ec4899"), _entry("祝福", "ec4899")])
     catalog = tmp_path / "prestamp-catalog.yml"
     catalog.write_text("defaults:\n  background: transparent\n  outline_width: \"2\"\n\nterms:\n")
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(cache),
         "--catalog", str(catalog),
@@ -267,7 +270,7 @@ def test_bump_catalog_dry_run_skips_existing_exact_variant(tmp_path: Path) -> No
         "      outline: \"darker\"\n"
         "      animation: bane\n"
     )
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(cache),
         "--catalog", str(catalog),
@@ -283,7 +286,7 @@ def test_bump_catalog_dry_run_reports_when_no_candidates(tmp_path: Path) -> None
     _seed_cache(cache, [_entry("祝福", "ec4899")])  # below threshold
     catalog = tmp_path / "prestamp-catalog.yml"
     catalog.write_text("defaults:\n  background: transparent\n\nterms:\n")
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(cache),
         "--catalog", str(catalog),
@@ -299,7 +302,7 @@ def test_bump_catalog_apply_merges_new_variants(tmp_path: Path) -> None:
     _seed_cache(cache, [_entry("祝福", "ec4899"), _entry("祝福", "ec4899")])
     catalog = tmp_path / "prestamp-catalog.yml"
     catalog.write_text("defaults:\n  background: transparent\n  outline_width: \"2\"\n\nterms:\n")
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(cache),
         "--catalog", str(catalog),
@@ -328,7 +331,7 @@ def test_bump_catalog_apply_preserves_existing_variants(tmp_path: Path) -> None:
         "      outline: \"darker\"\n"
         "      animation: bane\n"
     )
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(cache),
         "--catalog", str(catalog),
@@ -355,7 +358,7 @@ def test_cache_record_allows_omitting_outline_for_color_shift_animation(tmp_path
     cache = tmp_path / "usage.jsonl"
     for animation in ("disco", "psycho", "kira"):
         cache.unlink(missing_ok=True)
-        proc = run_ruby(
+        proc = run_py(
             CACHE_RECORD,
             "--term", "祝賀",
             "--font", "maru-bold",
@@ -377,7 +380,7 @@ def test_cache_record_still_requires_outline_for_static_animation(tmp_path: Path
     """Non-color-shift animations must still require --outline. Guard
     against an over-broad opt-out from the previous test's relaxation."""
     cache = tmp_path / "usage.jsonl"
-    proc = run_ruby(
+    proc = run_py(
         CACHE_RECORD,
         "--term", "完成",
         "--font", "maru-bold",
@@ -390,20 +393,13 @@ def test_cache_record_still_requires_outline_for_static_animation(tmp_path: Path
     assert not cache.exists()
 
 
-def _yaml_parse_via_ruby(text: str) -> object:
-    """Parse YAML by shelling out to Ruby. The cache pipeline already
-    requires Ruby on the host, so this avoids forcing PyYAML on the CI
-    runner just to verify round-trip parsing."""
-    proc = subprocess.run(
-        ["ruby", "-ryaml", "-rjson", "-e",
-         "puts JSON.dump(YAML.safe_load(STDIN.read))"],
-        input=text,
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    assert proc.returncode == 0, f"Ruby YAML parse failed: {proc.stderr}"
-    return json.loads(proc.stdout)
+def _yaml_parse(text: str) -> object:
+    """Parse YAML via PyYAML (added as a declared dependency in #57)."""
+    import yaml
+
+    return yaml.safe_load(text)
+
+
 
 
 def test_cache_stats_quotes_term_keys_with_yaml_special_chars(tmp_path: Path) -> None:
@@ -420,9 +416,9 @@ def test_cache_stats_quotes_term_keys_with_yaml_special_chars(tmp_path: Path) ->
             _entry("- leading-dash", "60a5fa", animation="poyoon"),
         ],
     )
-    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    proc = run_py(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
-    parsed = _yaml_parse_via_ruby("---\n" + proc.stdout)
+    parsed = _yaml_parse("---\n" + proc.stdout)
     assert isinstance(parsed, dict)
     assert "foo: bar" in parsed
     assert "- leading-dash" in parsed
@@ -439,7 +435,7 @@ def test_bump_catalog_apply_quotes_new_term_with_yaml_special_chars(tmp_path: Pa
     )
     catalog = tmp_path / "prestamp-catalog.yml"
     catalog.write_text("defaults:\n  background: transparent\n  outline_width: \"2\"\n\nterms:\n")
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(cache),
         "--catalog", str(catalog),
@@ -447,7 +443,7 @@ def test_bump_catalog_apply_quotes_new_term_with_yaml_special_chars(tmp_path: Pa
         "--apply",
     )
     assert proc.returncode == 0, proc.stderr
-    parsed = _yaml_parse_via_ruby(catalog.read_text())
+    parsed = _yaml_parse(catalog.read_text())
     assert isinstance(parsed, dict)
     assert "foo: bar" in parsed.get("terms", {})
 
@@ -461,7 +457,7 @@ def test_bump_catalog_propagates_cache_stats_failure(tmp_path: Path) -> None:
     bad_cache_dir.mkdir()
     catalog = tmp_path / "prestamp-catalog.yml"
     catalog.write_text("defaults: {}\nterms: {}\n")
-    proc = run_ruby(
+    proc = run_py(
         BUMP_CATALOG,
         "--cache", str(bad_cache_dir),
         "--catalog", str(catalog),

@@ -1,26 +1,29 @@
-"""Tests for prestamp.rb and coverage.rb scripts."""
+"""Tests for prestamp.py and coverage.py scripts."""
 
 from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.rb"
-COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.rb"
-GENERATE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "generate-catalog.rb"
+PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.py"
+COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.py"
+GENERATE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "generate_catalog.py"
 
 
-def run_ruby(script: Path, text: str, *args: str) -> subprocess.CompletedProcess[str]:
+def run_py(script: Path, text: str, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["ruby", str(script), *args],
+        [sys.executable, str(script), *args],
         input=text,
         capture_output=True,
         text=True,
         timeout=10,
     )
+
+
 
 
 def test_prestamp_replaces_catalog_hits_and_respects_safe_zones() -> None:
@@ -43,7 +46,7 @@ A[修正] --> B[完了]
 puts '修正'
 ```
 """
-    proc = run_ruby(PRESTAMP, body, "--seed", "5")
+    proc = run_py(PRESTAMP, body, "--seed", "5")
 
     assert proc.returncode == 0
     assert proc.stdout.count('align="absmiddle"') == 1
@@ -59,7 +62,7 @@ puts '修正'
 def test_prestamp_uses_longest_match() -> None:
     # 修正版 is not its own catalog entry; the longest match is 修正, leaving
     # 版 as plain text. Both 修正 occurrences in the input get stamped.
-    proc = run_ruby(PRESTAMP, "修正版を修正しました。", "--seed", "1")
+    proc = run_py(PRESTAMP, "修正版を修正しました。", "--seed", "1")
 
     assert proc.returncode == 0
     assert proc.stdout.count("mojiemoji.jozo.beer/emoji/") == 2
@@ -70,7 +73,7 @@ def test_prestamp_uses_longest_match() -> None:
 
 
 def test_prestamp_spreads_variants_for_repeated_keyword() -> None:
-    proc = run_ruby(PRESTAMP, "確認 確認 確認 確認", "--seed", "11")
+    proc = run_py(PRESTAMP, "確認 確認 確認 確認", "--seed", "11")
 
     assert proc.returncode == 0
     srcs = re.findall(r'src="([^"]+)"', proc.stdout)
@@ -86,7 +89,7 @@ def test_prestamp_spreads_variants_for_repeated_keyword() -> None:
 
 def test_prestamp_skips_details_summary_but_stamps_details_body() -> None:
     body = "<details>\n<summary>修正方針</summary>\n本文は修正対象です。\n</details>\n"
-    proc = run_ruby(PRESTAMP, body, "--seed", "2")
+    proc = run_py(PRESTAMP, body, "--seed", "2")
 
     assert proc.returncode == 0
     assert "<summary>修正方針</summary>" in proc.stdout
@@ -98,21 +101,21 @@ def test_coverage_counts_japanese_characters_and_warn_mode() -> None:
         '<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=gothic-bold&color=3b82f6&animation=bane&background=transparent&outline=darker&outline_width=2" alt="修正">'
         "\nあア漢\n"
     )
-    proc = run_ruby(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
+    proc = run_py(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
 
     assert proc.returncode == 0
     assert "japanese_chars=5" in proc.stdout
 
 
 def test_coverage_blocks_when_below_threshold() -> None:
-    proc = run_ruby(COVERAGE, "日本語のみの本文です。", "--surface", "issue-body", "--mode", "block")
+    proc = run_py(COVERAGE, "日本語のみの本文です。", "--surface", "issue-body", "--mode", "block")
 
     assert proc.returncode == 2
     assert "coverage warning:" in proc.stderr
 
 
 def test_generate_catalog_emits_diverse_variants_per_term() -> None:
-    proc = run_ruby(GENERATE, "完成\n", "--seed", "42", "--variants", "3")
+    proc = run_py(GENERATE, "完成\n", "--seed", "42", "--variants", "3")
 
     assert proc.returncode == 0
     fonts = re.findall(r"- font: (\S+)", proc.stdout)
@@ -125,7 +128,7 @@ def test_generate_catalog_emits_diverse_variants_per_term() -> None:
 
 
 def test_generate_catalog_outline_is_bgr_rotation_of_color() -> None:
-    proc = run_ruby(GENERATE, "完成\n", "--seed", "42", "--variants", "3")
+    proc = run_py(GENERATE, "完成\n", "--seed", "42", "--variants", "3")
 
     assert proc.returncode == 0
     pairs = re.findall(r'color: "([0-9a-f]{6})"\s+outline: "([0-9a-f]{6})"', proc.stdout)
@@ -139,7 +142,7 @@ def test_generate_catalog_splits_3plus_kanji_via_compound_variant() -> None:
     # 誤検知 is 3 kanji, exceeds single-stamp rule (kanji <= 2), so
     # split_term decomposes it via the prefix-modifier heuristic
     # (誤 + 検知) and emits a compound variant with adjacent chunks.
-    proc = run_ruby(GENERATE, "誤検知\n完成\n", "--seed", "1")
+    proc = run_py(GENERATE, "誤検知\n完成\n", "--seed", "1")
 
     assert proc.returncode == 0
     assert "完成:" in proc.stdout
@@ -152,7 +155,7 @@ def test_generate_catalog_splits_3plus_kanji_via_compound_variant() -> None:
 def test_generate_catalog_skips_unsplittable_terms() -> None:
     # 4 hiragana is a single-stamp case (<=4); use something that has no
     # valid 2-stamp decomposition: a long single-script run.
-    proc = run_ruby(GENERATE, "完成\nあいうえおか\n", "--seed", "1")
+    proc = run_py(GENERATE, "完成\nあいうえおか\n", "--seed", "1")
 
     assert proc.returncode == 0
     assert "完成:" in proc.stdout
@@ -162,7 +165,7 @@ def test_generate_catalog_skips_unsplittable_terms() -> None:
 
 def test_generate_catalog_handles_color_shifting_and_rotational_animations() -> None:
     # Sweep many terms / seeds to exercise the kira/disco/psycho and kaiten paths.
-    proc = run_ruby(
+    proc = run_py(
         GENERATE,
         "\n".join(f"語{i:02d}" for i in range(50)) + "\n",
         "--seed",
@@ -196,7 +199,7 @@ def test_prestamp_handles_indented_and_tilde_fences() -> None:
         "\n"
         "修正\n"
     )
-    proc = run_ruby(PRESTAMP, body, "--seed", "3")
+    proc = run_py(PRESTAMP, body, "--seed", "3")
 
     assert proc.returncode == 0
     # Both fenced blocks preserved verbatim — neither 修正 inside fences stamped.
@@ -217,7 +220,7 @@ def test_prestamp_handles_nested_fence_markers() -> None:
         "\n"
         "修正\n"
     )
-    proc = run_ruby(PRESTAMP, body, "--seed", "4")
+    proc = run_py(PRESTAMP, body, "--seed", "4")
 
     assert proc.returncode == 0
     # 修正 inside the nested fence stays plain; only the outer 修正 stamps.
@@ -232,7 +235,7 @@ def test_coverage_ignores_bare_urls_outside_img() -> None:
         "[ドキュメント](https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3)を参照。\n"
         "確認 修正 完了 重要 緊急\n"
     )
-    proc = run_ruby(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
+    proc = run_py(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
 
     assert proc.returncode == 0
     assert "stamps=0" in proc.stdout
@@ -243,7 +246,7 @@ def test_coverage_counts_img_wrapped_stamps_only() -> None:
         '<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=gothic-bold&color=3b82f6&animation=bane&background=transparent&outline=darker&outline_width=2" alt="修正"> '
         "そして [リンク](https://mojiemoji.jozo.beer/emoji/%E9%87%8D%E8%A6%81) も。"
     )
-    proc = run_ruby(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
+    proc = run_py(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
 
     assert proc.returncode == 0
     # Only the <img> wrapped occurrence counts.
@@ -259,7 +262,7 @@ def test_coverage_detects_paragraph_bias() -> None:
 
 段落4も未装飾です。
 """
-    proc = run_ruby(COVERAGE, body, "--surface", "review-body", "--mode", "block")
+    proc = run_py(COVERAGE, body, "--surface", "review-body", "--mode", "block")
 
     assert proc.returncode == 2
     assert "consecutive_unstamped_paragraphs" in proc.stderr
@@ -272,7 +275,7 @@ def test_coverage_detects_paragraph_bias() -> None:
 
 def _gen_term_yaml(term: str, seed: str = "42", variants: int = 1) -> str:
     """Run generate-catalog on a single term and return only its yaml block."""
-    proc = run_ruby(GENERATE, term + "\n", "--seed", seed, "--variants", str(variants))
+    proc = run_py(GENERATE, term + "\n", "--seed", seed, "--variants", str(variants))
     assert proc.returncode == 0
     return proc.stdout
 
@@ -367,20 +370,9 @@ def test_prestamp_renders_compound_variant_as_adjacent_imgs(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    # Copy prestamp.rb to tmp_path and rewrite the CATALOG_PATH constant
-    # to point at the fixture catalog, so we can run it in isolation
-    # without touching the repo's real catalog.
-    import shutil
-
-    dst = tmp_path / "prestamp.rb"
-    shutil.copy(PRESTAMP, dst)
-    text = dst.read_text(encoding="utf-8").replace(
-        'CATALOG_PATH = File.expand_path("../data/prestamp-catalog.yml", __dir__)',
-        f'CATALOG_PATH = "{catalog}"',
-    )
-    dst.write_text(text, encoding="utf-8")
-
-    proc = run_ruby(dst, "未着手の対応", "--seed", "0")
+    # Point prestamp at the fixture catalog via the --catalog flag so we
+    # can run it in isolation without touching the repo's real catalog.
+    proc = run_py(PRESTAMP, "未着手の対応", "--seed", "0", "--catalog", str(catalog))
 
     assert proc.returncode == 0
     # Two adjacent <img> tags for the two chunks, with proper URL encoding.
@@ -418,7 +410,7 @@ def _count_imgs(stdout: str) -> int:
 def test_single_digit_does_not_stamp_inside_version_string() -> None:
     # `v1.2.3` — every digit is part of a version triple, all preceded
     # by ASCII letter or period, all followed by digit or period.
-    proc = run_ruby(PRESTAMP, "v1.2.3", "--seed", "1")
+    proc = run_py(PRESTAMP, "v1.2.3", "--seed", "1")
 
     assert proc.returncode == 0
     assert _count_imgs(proc.stdout) == 0, proc.stdout
@@ -426,7 +418,7 @@ def test_single_digit_does_not_stamp_inside_version_string() -> None:
 
 def test_single_digit_does_not_stamp_inside_unit_value() -> None:
     # `100ms` — digits are adjacent to other digits or ASCII letter.
-    proc = run_ruby(PRESTAMP, "100ms", "--seed", "1")
+    proc = run_py(PRESTAMP, "100ms", "--seed", "1")
 
     assert proc.returncode == 0
     assert _count_imgs(proc.stdout) == 0, proc.stdout
@@ -435,7 +427,7 @@ def test_single_digit_does_not_stamp_inside_unit_value() -> None:
 def test_single_digit_does_not_stamp_inside_hash_reference() -> None:
     # `#1234` — `1` preceded by `#` (not Japanese), `2`/`3`/`4` preceded
     # by digit. None pass the lookbehind/lookahead guards.
-    proc = run_ruby(PRESTAMP, "#1234", "--seed", "1")
+    proc = run_py(PRESTAMP, "#1234", "--seed", "1")
 
     assert proc.returncode == 0
     assert _count_imgs(proc.stdout) == 0, proc.stdout
@@ -444,7 +436,7 @@ def test_single_digit_does_not_stamp_inside_hash_reference() -> None:
 def test_single_digit_does_not_stamp_with_only_whitespace_left_context() -> None:
     # `Step 1` — `1` preceded by space (with ASCII to the left of space).
     # The lookbehind requires Japanese char *immediately* before, so block.
-    proc = run_ruby(PRESTAMP, "Step 1 として実装", "--seed", "1")
+    proc = run_py(PRESTAMP, "Step 1 として実装", "--seed", "1")
 
     assert proc.returncode == 0
     # 実装 stamps, but not `1`.
@@ -456,7 +448,7 @@ def test_single_digit_does_not_stamp_with_only_whitespace_left_context() -> None
 def test_promise_all_does_not_stamp() -> None:
     # `Promise.all` has no catalog hits — verify nothing gets stamped
     # (regression guard against accidental ASCII catalog additions).
-    proc = run_ruby(PRESTAMP, "Promise.all", "--seed", "1")
+    proc = run_py(PRESTAMP, "Promise.all", "--seed", "1")
 
     assert proc.returncode == 0
     assert _count_imgs(proc.stdout) == 0
@@ -465,7 +457,7 @@ def test_promise_all_does_not_stamp() -> None:
 def test_single_digit_stamps_inside_japanese_flow() -> None:
     # `仕様変更1件` — `1` preceded by `更` (Han), followed by `件` (Han,
     # not in catalog). Both guards pass; `1` should stamp.
-    proc = run_ruby(PRESTAMP, "仕様変更1件", "--seed", "1")
+    proc = run_py(PRESTAMP, "仕様変更1件", "--seed", "1")
 
     assert proc.returncode == 0
     assert 'alt="1"' in proc.stdout
@@ -476,7 +468,7 @@ def test_single_digit_stamps_inside_japanese_flow() -> None:
 
 def test_single_kanji_blocked_when_preceded_by_han() -> None:
     # `先月` — `月` preceded by Han `先` (not in catalog). Block.
-    proc = run_ruby(PRESTAMP, "先月", "--seed", "1")
+    proc = run_py(PRESTAMP, "先月", "--seed", "1")
 
     assert proc.returncode == 0
     assert _count_imgs(proc.stdout) == 0
@@ -486,7 +478,7 @@ def test_single_kanji_stamps_at_start_of_line() -> None:
     # `火曜の昼` — `火` at SOL (no preceding Han). The rule allows
     # Han to follow (so `火曜` still stamps the leading 火), since
     # the issue's intent is to surface the weekday glyph.
-    proc = run_ruby(PRESTAMP, "火曜の昼", "--seed", "1")
+    proc = run_py(PRESTAMP, "火曜の昼", "--seed", "1")
 
     assert proc.returncode == 0
     assert 'alt="火"' in proc.stdout
@@ -497,7 +489,7 @@ def test_full_issue_acceptance_sentence() -> None:
     #   "v1.2.3 で 100ms の修正を Step 1 として実装した。後で 火 にレビュー。"
     # Expectation: only 修正 / 実装 / 後 / 火 stamp.
     body = "v1.2.3 で 100ms の修正を Step 1 として実装した。後で 火 にレビュー。"
-    proc = run_ruby(PRESTAMP, body, "--seed", "1")
+    proc = run_py(PRESTAMP, body, "--seed", "1")
 
     assert proc.returncode == 0
     assert _count_imgs(proc.stdout) == 4
@@ -509,15 +501,15 @@ def test_full_issue_acceptance_sentence() -> None:
 
 
 def test_generate_catalog_quotes_numeric_keys() -> None:
-    # Bare `1:` parses as Integer in YAML, breaking prestamp.rb's
+    # Bare `1:` parses as Integer in YAML, breaking prestamp.py's
     # Regexp.union over CATALOG.keys (expects String).
-    proc = run_ruby(GENERATE, "1\n2\n", "--seed", "42", "--variants", "1")
+    proc = run_py(GENERATE, "1\n2\n", "--seed", "42", "--variants", "1")
 
     assert proc.returncode == 0
     assert '"1":' in proc.stdout
     assert '"2":' in proc.stdout
     # Non-numeric keys remain unquoted (regression guard).
-    proc2 = run_ruby(GENERATE, "完成\n", "--seed", "42", "--variants", "1")
+    proc2 = run_py(GENERATE, "完成\n", "--seed", "42", "--variants", "1")
     assert proc2.returncode == 0
     assert "完成:" in proc2.stdout
     assert '"完成":' not in proc2.stdout
@@ -525,15 +517,11 @@ def test_generate_catalog_quotes_numeric_keys() -> None:
 
 def test_catalog_loads_with_string_keys_for_digits() -> None:
     # End-to-end: after regeneration, the live catalog's digit entries
-    # must be loadable as String keys by prestamp.rb (no Integer keys
-    # silently breaking lookups). Use Ruby's YAML so we don't add a
-    # PyYAML dependency to the test environment.
-    proc = subprocess.run(
-        ["ruby", "-ryaml", "-e",
-         f"d = YAML.safe_load_file(%q[{REPO_ROOT / 'skills/mojiemoji-github/data/prestamp-catalog.yml'}]);"
-         "puts d['terms'].keys.select { |k| k.is_a?(Integer) }.inspect"],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert proc.returncode == 0, proc.stderr
-    # No integer keys — should be `[]`.
-    assert proc.stdout.strip() == "[]", f"integer keys leaked into catalog: {proc.stdout}"
+    # must be loadable as String keys by prestamp.py (no Integer keys
+    # silently breaking lookups).
+    import yaml
+
+    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+    data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
+    int_keys = [k for k in data["terms"].keys() if isinstance(k, int)]
+    assert int_keys == [], f"integer keys leaked into catalog: {int_keys}"

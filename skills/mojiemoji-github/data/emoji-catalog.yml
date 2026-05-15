@@ -564,7 +564,7 @@ emojis:
   # --- face-explode ---
   🤯:   # U+1F92F  SHOCKED FACE WITH EXPLODING HEAD
     # bakusan is documented as block-only (obscures glyphs at inline 24px)
-    # and excluded from generate-catalog.rb's inline pool; use zanzo or
+    # and excluded from generate_catalog.py's inline pool; use zanzo or
     # shuchusen for inline-safe impact instead.
     - animation: zanzo
       font: rampart

@@ -157,7 +157,7 @@ REQUIRED_PARAMS_ALWAYS = [
 ]
 REQUIRED_PARAMS_OUTLINE = [
     ("outline=", "letterform を縁取り (darker / lighter / 6-hex — triadic outline は補色から自動算出)"),
-    ("outline_width=", "outline 幅 (推奨 2px、`mojiemoji_markdown.rb --outline-width 2`)"),
+    ("outline_width=", "outline 幅 (推奨 2px、`mojiemoji_markdown.py --outline-width 2`)"),
 ]
 COLOR_SHIFTING_ANIMATIONS = {"disco", "psycho", "kira"}
 # Rotational animations spin the letterform around its center. At the
@@ -208,7 +208,7 @@ OUTLINE_VALUE_RE = re.compile(r"\A(?:darker|lighter|[0-9a-f]{6})\Z")
 # palettes (`vivid-purple`, `red`, etc.) silently fall back to default
 # black on the service side, producing invisible stamps on dark mode.
 # Lowercase enforced for URL canonicalization, matching OUTLINE_VALUE_RE.
-# The hue-rotation logic in `mojiemoji_markdown.rb` also requires hex —
+# The hue-rotation logic in `mojiemoji_markdown.py` also requires hex —
 # named colors break `--outline triadic` / `complement` derivation too.
 COLOR_VALUE_RE = re.compile(r"\A#?[0-9a-f]{6}\Z")
 # Tailwind 600+ palette values that go black-on-dark in GitHub's dark
@@ -425,7 +425,7 @@ def main() -> int:
             "subagent 隔離で `Skill` ツールが使えないなら、helper script を直接叩いて URL を生成し本文に embed:\n"
             "\n"
             "```bash\n"
-            "ruby \"${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.rb\" \\\n"
+            "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py\" \\\n"
             "  --text 修正 --inline \\\n"
             "  --font gothic-bold --color 22c55e --animation bane \\\n"
             "  --outline triadic --outline-width 2\n"
@@ -443,7 +443,7 @@ def main() -> int:
         return 2
 
     # Every mojiemoji URL MUST carry the full styling param set.
-    # `scripts/mojiemoji_markdown.rb` is the only sanctioned construction
+    # `scripts/mojiemoji_markdown.py` is the only sanctioned construction
     # path — hand-crafted URLs systematically miss color/font/animation/
     # outline and ship as invisible black-on-dark stamps. Block here so the
     # agent learns the lesson at submission time, not when the user opens
@@ -495,7 +495,7 @@ def main() -> int:
             "## 対応\n"
             "1. **絶対にURLを手書きしない** — `mojiemoji-github` スキル経由か\n"
             "   `mojiemoji-selector` subagent に投げて、ヘルパースクリプト\n"
-            "   `scripts/mojiemoji_markdown.rb` 経由で全パラメータ付きでレンダー\n"
+            "   `scripts/mojiemoji_markdown.py` 経由で全パラメータ付きでレンダー\n"
             "2. 既存 URL を直すなら参考形 (triadic outline 自動算出):\n"
             "   https://mojiemoji.jozo.beer/emoji/<text>?font=gothic-bold\n"
             "     &color=3b82f6&animation=bane&speed=normal\n"
@@ -648,7 +648,7 @@ def main() -> int:
             f"{preview}{more}\n"
             "\n"
             "## 対応\n"
-            "1. `mojiemoji-selector` subagent または `mojiemoji_markdown.rb`\n"
+            "1. `mojiemoji-selector` subagent または `mojiemoji_markdown.py`\n"
             "   ヘルパー経由で render し直す (推奨)\n"
             "2. URL を手で書き換える場合は上記 allowlist から選ぶ\n"
             "3. typo の典型: `poyon` → `poyoon`, `funwari` (存在しない) →\n"

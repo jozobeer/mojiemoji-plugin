@@ -37,7 +37,7 @@ mojiemoji-plugin が掛かった世界:
 |---|---|---|
 | Skill | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
 | Subagent | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
-| Scripts | `prestamp.rb` / `coverage.rb` | `prestamp.rb` は高頻度語を決定論的に先置換(variant 抽選 + safe-zone 保護)、`coverage.rb` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
+| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語を決定論的に先置換(variant 抽選 + safe-zone 保護)、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
 | Hook (PreToolUse / Bash + MCP) | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review\|edit)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
 ---
@@ -142,7 +142,7 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 - **URL canonical 仕様** — 通常は 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは追加で speed 必須、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する <img src="https://mojiemoji.jozo.beer/emoji/%E4%BE%8B%E5%A4%96?font=akzk&color=f472b6&animation=mozaiku&background=transparent&outline=b6f472&outline_width=2" alt="例外" height="24" align="absmiddle">(4 パラメータ運用)、ダークモード対応 hex 帯
 - **PreToolUse hook** — 未装飾 body の submission を block(`gh` / raw `gh api` / MCP / subagent 経由すべて)
 - **mojiemoji-selector subagent** — 複数フレーズ・カタログ生成・配置判断のデリゲート先
-- **helper script** (`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.rb`) — 単一フレーズのファストパス
+- **helper script** (`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py`) — 単一フレーズのファストパス
 
 ### ✗ Plugin 単独では再現されないもの(別 SSOT)
 
@@ -174,7 +174,7 @@ skills:
 これは harness 側の仕様で plugin から bypass できない。宣言しない場合の挙動は以下:
 
 - subagent が日本語 GH body を投稿しようとする → PreToolUse hook が block
-- hook の error message に **helper script 直接実行手順** が含まれる(`scripts/mojiemoji_markdown.rb` を直接呼ぶ recovery 経路)ので、subagent は skill access 無しでも復帰可能
+- hook の error message に **helper script 直接実行手順** が含まれる(`scripts/mojiemoji_markdown.py` を直接呼ぶ recovery 経路)ので、subagent は skill access 無しでも復帰可能
 - ただし装飾品質は skill 経由より粗くなる(単一フレーズ × ファストパスの組み合わせ)
 
 つまり「品質を保ちたい subagent は frontmatter に skill 宣言」、「最低限通したいだけなら宣言不要(hook の自己完結 recovery で通る)」の 2 段構成。
@@ -193,7 +193,7 @@ skills:
 |---|---|---|
 | `MOJIEMOJI_HOOK_DISABLED` | `1` にすると PreToolUse hook を 1 投稿分だけ素通しさせる緊急 bypass。Bash なら command 先頭、MCP なら `body` 中のどこかに含める | `MOJIEMOJI_HOOK_DISABLED=1 gh issue create ...` |
 | `MOJIEMOJI_CACHE_FILE` | 使用ログ (`usage.jsonl`) の保存先を上書き | `MOJIEMOJI_CACHE_FILE=/tmp/mojiemoji.jsonl` |
-| `MOJIEMOJI_CACHE_DISABLED` | `1` / `true` / `yes` にすると `cache-record.rb` が静かに no-op になる(オプトアウト) | `MOJIEMOJI_CACHE_DISABLED=1` |
+| `MOJIEMOJI_CACHE_DISABLED` | `1` / `true` / `yes` にすると `cache_record.py` が静かに no-op になる(オプトアウト) | `MOJIEMOJI_CACHE_DISABLED=1` |
 
 MCP 経路で `MOJIEMOJI_HOOK_DISABLED=1` を使う場合、`body` テキストならコメントや脚注に紛れさせても hook が走査するので効く。乱用は厳禁 — 1 投稿 1 bypass の最小スコープで使うこと(hook が騒いだ箇所はだいたい本物の問題である)。
 

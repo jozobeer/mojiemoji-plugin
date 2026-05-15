@@ -92,17 +92,17 @@ mojiemoji は **語レベルのパンチ** であって、文をレンダリン�
 
 ```bash
 # 単一スタンプ・単一行 (1–3 字の典型ケース):
-ruby scripts/mojiemoji_markdown.rb --text '修正' --inline ...
+python3 scripts/mojiemoji_markdown.py --text '修正' --inline ...
 
 # 2 スタンプ分割: チャンクを別々にレンダリングして inline で連結
 # (区切り無し):
-ruby scripts/mojiemoji_markdown.rb --text 'マージ' --inline ...
-ruby scripts/mojiemoji_markdown.rb --text '歓迎'   --inline ...
+python3 scripts/mojiemoji_markdown.py --text 'マージ' --inline ...
+python3 scripts/mojiemoji_markdown.py --text '歓迎'   --inline ...
 
 # ひらがな 3–5 字を %0A newline で 1 スタンプ 2 行に。
 # --text にはリテラルな \n を渡す; スクリプトが %0A に URL エンコードする:
-ruby scripts/mojiemoji_markdown.rb --text $'よろ\nしく' --inline ...
-ruby scripts/mojiemoji_markdown.rb --text $'ありが\nとう' --inline ...
+python3 scripts/mojiemoji_markdown.py --text $'よろ\nしく' --inline ...
+python3 scripts/mojiemoji_markdown.py --text $'ありが\nとう' --inline ...
 ```
 
 ## 有効な animation 値(正準リスト)
@@ -138,7 +138,7 @@ disco, psycho, kage_kaiten, kage_bokashi, kage_neon
 `kaiten`(回転) と `kage_kaiten`(影付き回転) の 2 つが該当する正準名。
 両方とも hook (`mojiemoji-japanese-gate.py`) が `speed=step|slow` 以外
 (省略含む、デフォルトはサービス側で fast 相当) を拒否する。helper
-script (`scripts/mojiemoji_markdown.rb`) は `--animation kaiten` /
+script (`scripts/mojiemoji_markdown.py`) は `--animation kaiten` /
 `--animation kage_kaiten` を受け取って `--speed` 未指定なら自動で
 `speed=slow` を注入するので、helper 経由なら気にしなくて良い。名前が
 現行か怪しいときは `scripts/verify-canonical-lists.sh` を走らせる —
@@ -300,7 +300,7 @@ outline_width=2         # 目立つが太すぎない; 1 は控えめ、3+ は�
 | `--outline lighter` | n/a (サービス側で自動 lighter) | 明るい塗りには効かないことが多い |
 | `--outline <6-hex>` | n/a (リテラル) | 全スタンプ統一フレーム |
 
-`triadic` / `complement` はクライアント側(`scripts/mojiemoji_markdown.rb`)
+`triadic` / `complement` はクライアント側(`scripts/mojiemoji_markdown.py`)
 で解決される — サービスには具体的な hex が渡る。PreToolUse hook は
 `darker` / `lighter` / 6-hex を有効な outline 値として受理する。
 
@@ -343,11 +343,11 @@ mojiemoji の公開 API は進化する — animation 名・font・クエリキ�
    (トップページにパラメータ UI と受理値が載っている; `/docs`、
    `/help`、`/about` のリンクがあれば確認)。
 2. ライブのパラメータリストを `presets.md`(font 役割、animation
-   リスト、speed 値)と `scripts/mojiemoji_markdown.rb` の `--font` /
+   リスト、speed 値)と `scripts/mojiemoji_markdown.py` の `--font` /
    `--animation` / `--speed` フラグと突き合わせる。
 3. ドリフトしている方を更新する:
    - `presets.md` — preset テーブル、animation/font/speed リスト
-   - `scripts/mojiemoji_markdown.rb` — 今は有効な値を rejection している
+   - `scripts/mojiemoji_markdown.py` — 今は有効な値を rejection している
      場合はフラグ検証を更新
    - `SKILL.md` Defaults — 推奨 preset 名が変わった場合
    - `parameters.md` (このファイル) — animation/font/color リスト
