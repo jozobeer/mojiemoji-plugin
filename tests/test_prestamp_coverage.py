@@ -526,9 +526,8 @@ def test_generate_catalog_quotes_numeric_keys() -> None:
 def test_catalog_loads_with_string_keys_for_digits() -> None:
     # End-to-end: after regeneration, the live catalog's digit entries
     # must be loadable as String keys by prestamp.rb (no Integer keys
-    # silently breaking lookups).
-    import yaml as _yaml_unused  # noqa: F401  ← only imported for clarity; we shell to ruby below
-
+    # silently breaking lookups). Use Ruby's YAML so we don't add a
+    # PyYAML dependency to the test environment.
     proc = subprocess.run(
         ["ruby", "-ryaml", "-e",
          f"d = YAML.safe_load_file(%q[{REPO_ROOT / 'skills/mojiemoji-github/data/prestamp-catalog.yml'}]);"
