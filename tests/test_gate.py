@@ -376,63 +376,38 @@ class TestFileInspection:
         assert result.returncode == 2
 
 
-# --- LGTM block-image rejection --------------------------------------------
+# --- LGTM stamp (no special-case handling) ---------------------------------
 
 
 class TestLgtmStamp:
-    """`![LGTM](mojiemoji.jozo.beer/emoji/LGTM…)` markdown block-image
-    syntax is rejected per SKILL.md § LGTM 画像 (block-style LGTM
-    mojiemoji is the wrong tool — confirmed across multiple PRs).
+    """LGTM mojiemoji is not treated specially by the hook. Both inline
+    `<img>` form and `![alt](url)` markdown block-image form are allowed
+    when they meet the same styling requirements as any other stamp.
 
-    Inline `<img ... height="24" align="absmiddle">` usage of LGTM is
-    allowed — the plugin only scopes the block-rendering pattern.
+    Editorial guidance about WHEN to prefer inline vs block (e.g., when
+    using another LGTM-imagery skill alongside) lives in SKILL.md
+    § LGTM 画像 — the hook itself doesn't have runtime context to
+    enforce that conditional, so it doesn't try.
     """
 
-    def _md_block_image_url(self, url: str) -> str:
-        # Markdown image syntax: `![alt](url)`.
-        return f"![LGTM]({url})"
-
-    def test_block_lgtm_markdown_image_blocks(self, run_hook):
-        url = stamp_url(text="LGTM")
-        body = f"{JP_PARAGRAPH}\n\n{self._md_block_image_url(url)}"
-        result = run_hook(
-            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
-        )
-        assert result.returncode == 2
-        assert "LGTM" in result.stderr
-        assert "block" in result.stderr.lower()
-
-    def test_inline_lgtm_html_img_passes(self, run_hook):
-        # Inline HTML <img> form is the allowed usage. LGTM as a word
-        # embedded mid-prose is fine, like any other inline stamp.
+    def test_inline_lgtm_passes(self, run_hook):
         body = f"{JP_PARAGRAPH} {stamp_img(text='LGTM')}"
         result = run_hook(
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
         )
         assert result.returncode == 0, result.stderr
 
-    def test_block_lgtm_lowercase_blocks(self, run_hook):
-        # Path is case-insensitive on the service side; the hook normalizes.
-        url = stamp_url(text="LGTM").replace("LGTM", "lgtm")
-        body = f"{JP_PARAGRAPH}\n\n![lgtm]({url})"
+    def test_block_lgtm_markdown_image_passes(self, run_hook):
+        url = stamp_url(text="LGTM")
+        body = f"{JP_PARAGRAPH}\n\n![LGTM]({url})"
         result = run_hook(
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
         )
-        assert result.returncode == 2
+        assert result.returncode == 0, result.stderr
 
-    def test_block_lgtm_in_mcp_body_blocks(self, run_hook):
+    def test_block_lgtm_in_mcp_body_passes(self, run_hook):
         url = stamp_url(text="LGTM")
-        body = f"{JP_PARAGRAPH}\n\n{self._md_block_image_url(url)}"
-        result = run_hook(
-            {
-                "tool_name": "mcp__github__github_pull_request_review_write",
-                "tool_input": {"body": body, "event": "APPROVE"},
-            }
-        )
-        assert result.returncode == 2
-
-    def test_inline_lgtm_in_mcp_body_passes(self, run_hook):
-        body = f"{JP_PARAGRAPH} {stamp_img(text='LGTM')}"
+        body = f"{JP_PARAGRAPH}\n\n![LGTM]({url})"
         result = run_hook(
             {
                 "tool_name": "mcp__github__github_pull_request_review_write",
@@ -440,28 +415,6 @@ class TestLgtmStamp:
             }
         )
         assert result.returncode == 0, result.stderr
-
-    def test_block_lgtms_word_passes(self, run_hook):
-        # `LGTMS` etc — the slug between /emoji/ and the next delimiter
-        # is matched as a whole word. `LGTMS` is a different emoji text
-        # and shouldn't be rejected by substring.
-        url = stamp_url(text="LGTMS")
-        body = f"{JP_PARAGRAPH}\n\n![lgtms]({url})"
-        result = run_hook(
-            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
-        )
-        assert result.returncode == 0, result.stderr
-
-    def test_block_lgtm_with_hook_disable_bypasses(self, run_hook):
-        url = stamp_url(text="LGTM")
-        body = f"{JP_PARAGRAPH}\n\n{self._md_block_image_url(url)}"
-        result = run_hook(
-            {
-                "tool_name": "Bash",
-                "tool_input": {"command": f'HOOK_DISABLE=1 gh pr create --body "{body}"'},
-            }
-        )
-        assert result.returncode == 0
 
 
 # --- MCP path --------------------------------------------------------------
