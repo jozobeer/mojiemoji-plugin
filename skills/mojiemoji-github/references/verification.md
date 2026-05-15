@@ -140,6 +140,39 @@ for m in re.finditer(r'mojiemoji\.jozo\.beer/emoji/([^?]+)', content):
     elif re.match(r'^[#v]\d', text):
         print(f'✗ issue/version-shaped stamp: {text}')
 "
+
+# 15. 回転アニメ (rotational) は speed=slow|step が必須。
+#     これが捕える失敗モード: selector が `kaiten` / `kage_kaiten` を
+#     speed なし (= デフォルト normal) で出力 — 文字が高速回転して可読性ゼロ。
+#     直近 3 dispatch で 2 件発生 (PR #33 禁止 stamp、issue #34 検出 stamp、
+#     issue #37 反復 stamp)。
+python3 -c "
+import re
+content = open('$SNIPPETS').read()
+for m in re.finditer(r'mojiemoji\.jozo\.beer/[^\"<)]+', content):
+    url = m.group(0)
+    anim_m = re.search(r'animation=(kaiten|kage_kaiten)', url)
+    if not anim_m:
+        continue
+    speed_m = re.search(r'speed=(\w+)', url)
+    speed = speed_m.group(1) if speed_m else ''
+    if speed not in ('slow', 'step'):
+        print(f'✗ rotational without speed=slow|step: {url[:120]}')
+"
+
+# 16. 3 漢字熟語の単独スタンプ禁止 — `2+1` で分割すべき。
+#     SKILL.md § Stamp target selection が「漢字 1 スタンプあたり 2 字」を
+#     要求しているが、selector が `致命傷` / `具体策` / `緊急時` のような
+#     3 漢字熟語を 1 スタンプに突っ込む失敗が反復している。
+python3 -c "
+import re, urllib.parse
+content = open('$SNIPPETS').read()
+KANJI = re.compile(r'^[一-鿿]+\$')
+for m in re.finditer(r'mojiemoji\.jozo\.beer/emoji/([^?]+)', content):
+    text = urllib.parse.unquote(m.group(1)).split('%0A')[0]
+    if KANJI.match(text) and len(text) >= 3:
+        print(f'✗ {len(text)}-kanji single stamp (must split 2+remainder): {text}')
+"
 ```
 
 どれかチェックに失敗したら、本文に貼る前にローカルで修正(または再
