@@ -6,15 +6,15 @@ Fires on two posting paths:
      - `gh (issue|pr|release) (create|comment|review)` (high-level), OR
      - `gh api .../reviews|comments|issues|releases ...` (raw REST POST,
        used by skills like cross-repo-review that batch-publish reviews).
-  2. MCP GitHub tools (`mcp__*__github_*`) whose `tool_input` carries
-     a Japanese `body` / `description` field — covers
-     `github_create_pull_request`, `github_add_issue_comment`,
-     `github_pull_request_review_write`, `github_issue_write`,
-     `github_update_pull_request`, `github_add_comment_to_pending_review`,
-     `github_add_reply_to_pull_request_comment`, and any future MCP
-     surface that uses the same field names. Title / commit_message /
-     file content are intentionally NOT inspected — only body-class
-     prose, matching the SKILL.md decoration policy.
+  2. MCP GitHub tools whose `tool_input` carries a Japanese `body`
+     field. The MCP matcher uses both server-alias signals (anything
+     with `github` in the namespace) AND known GitHub-specific tool
+     name patterns (`*pull_request*`, `*issue_write`, `add_issue_comment`,
+     `*release*`, etc.) so installations that aliased the GitHub MCP
+     server to a non-`github` name are still covered. Title /
+     commit_message / file content / description are intentionally NOT
+     inspected — only the `body` posting-prose field, matching the
+     SKILL.md decoration policy.
 
 And EITHER:
   1. inspected text has zero `mojiemoji.jozo.beer` URLs, OR
@@ -76,14 +76,46 @@ SCRIPT_RE = re.compile(
 # MCP GitHub tool names. The 2026-05-12 series of incidents exposed
 # that the Bash matcher misses entirely when skills/agents post via
 # the MCP `github_*` tools (REST-equivalent, structured tool_input).
-# Match any MCP tool with `github` in the name — read-only tools
-# (`github_get_*`, `github_list_*`, `github_search_*`) carry no body
-# field, so body extraction returns empty and the gate exits 0.
-MCP_GH_RE = re.compile(r"^mcp__.*github", re.IGNORECASE)
+#
+# Match strategy is two-pronged because the MCP namespace is
+# `mcp__<server-alias>__<tool-name>` and the alias is user-configurable.
+# Matching only on `github` in the *alias* (e.g., `mcp__github__*` or
+# `mcp__mcpm_profile_base__github_*`) misses installations that aliased
+# the GitHub server to something else (`mcp__gh__*`, `mcp__octo__*`,
+# etc.). To stay robust regardless of alias, also match on known
+# GitHub-specific *tool* name patterns — terms like `pull_request`,
+# `issue_write`, `add_issue_comment`, `release` are GitHub-specific
+# enough that a tool with that name is overwhelmingly likely to be a
+# GitHub write path. Read-only tools (get_*, list_*, search_*) match
+# the regex too but carry no body field, so body extraction returns
+# empty and the gate exits 0 — broader matching costs nothing.
+MCP_GH_RE = re.compile(
+    r"^mcp__.*?(?:"
+    r"github|"
+    r"create_pull_request|update_pull_request|merge_pull_request|"
+    r"pull_request_review|pull_request_read|pull_request_write|"
+    r"add_comment_to_pending_review|add_reply_to_pull_request_comment|"
+    r"add_issue_comment|"
+    r"issue_read|issue_write|sub_issue_write|"
+    r"create_release|update_release"
+    r")",
+    re.IGNORECASE,
+)
 # Body-class fields across the MCP GitHub tool family. Title /
 # commit_message / file content are excluded — they are conventionally
 # undecorated per SKILL.md (titles short, commit messages plain).
-BODY_FIELDS = frozenset({"body", "description"})
+#
+# `description` was previously included but is too broad: `description`
+# is also the metadata field for repository / label / pending-review
+# objects, where the value is plain-text metadata rather than a posted
+# prose body. Including it would force mojiemoji decoration on Japanese
+# repo descriptions and label descriptions — surfaces that the skill
+# explicitly does not target. `body` is the canonical posting-prose
+# field across `add_issue_comment`, `pull_request_review_write`,
+# `add_comment_to_pending_review`, `add_reply_to_pull_request_comment`,
+# `issue_write`, `create_pull_request`, `update_pull_request`,
+# `create_release`, etc., so `body` alone covers the actual targets.
+BODY_FIELDS = frozenset({"body"})
 # Required style parameters on every URL. Missing any of these = unreadable
 # stamp on dark-mode GitHub (default mojiemoji is black-on-white).
 #
@@ -240,6 +272,17 @@ def main() -> int:
         command = tool_input.get("command", "")
         if not command:
             return 0
+        # Bypass marker is scoped to the command line, not the merged
+        # body/script text. The original idiom (matching the git
+        # pre-commit `HOOK_DISABLE=1 git commit ...` style) is an
+        # opt-in by the *invocation*, not by something happening to
+        # appear inside a referenced file. Once file/script bodies
+        # were merged into `inspect_text`, documentation prose or
+        # test fixtures that mention the literal `HOOK_DISABLE=1`
+        # would silently disable the gate — accidental bypass via
+        # benign mention. Keep the bypass check on `command` only.
+        if BYPASS_MARKER in command:
+            return 0
         if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
             return 0
         # Combine the command line with any referenced body files so
@@ -256,9 +299,9 @@ def main() -> int:
         extras = "\n".join(p for p in (file_body, script_body) if p)
         inspect_text = command + ("\n" + extras if extras else "")
     elif MCP_GH_RE.match(tool_name):
-        # MCP GitHub tools deliver structured input — extract body /
-        # description fields directly. Title / commit_message / file
-        # content are intentionally not inspected (see BODY_FIELDS
+        # MCP GitHub tools deliver structured input — extract `body`
+        # fields directly. Title / commit_message / file content /
+        # description are intentionally not inspected (see BODY_FIELDS
         # docstring). Read-only MCP tools (get_*, list_*, search_*)
         # match the regex but carry no body field, so this returns
         # empty and the gate exits.
@@ -266,10 +309,13 @@ def main() -> int:
         if not pieces:
             return 0
         inspect_text = "\n".join(pieces)
+        # MCP path has no shell prefix, so the only place a caller can
+        # legitimately opt out is inside the body text itself. The
+        # rule still parallels Bash (bypass on the surface the caller
+        # directly controls), just adapted to structured input.
+        if BYPASS_MARKER in inspect_text:
+            return 0
     else:
-        return 0
-
-    if BYPASS_MARKER in inspect_text:
         return 0
 
     if not JP_RE.search(inspect_text):
