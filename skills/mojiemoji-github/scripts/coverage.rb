@@ -24,14 +24,18 @@ end.parse!
 text = STDIN.read
 threshold = SURFACE_THRESHOLDS.fetch(options[:surface])
 
-stamp_url_re = %r{https?://mojiemoji\.jozo\.beer/emoji/[^\s"')<>]+}
+# Match only actual rendered stamps (<img src="…mojiemoji…">), not bare URLs
+# in markdown links or prose. Otherwise `[ref](https://mojiemoji.jozo.beer/...)`
+# or a quoted URL in a docstring would inflate the density score without
+# producing a visible stamp on the rendered surface.
+stamp_url_re = %r{<img\s[^>]*src="https?://mojiemoji\.jozo\.beer/emoji/[^"]+"[^>]*>}
 stamp_count = text.scan(stamp_url_re).size
 japanese_char_count = text.scan(/[぀-ゟ゠-ヿ一-鿿]/).size
 
 density = japanese_char_count.zero? ? 0.0 : (stamp_count * 100.0 / japanese_char_count)
 
 sentences = text.split(/[。．！？!?\n]+/).map(&:strip).reject(&:empty?)
-sentence_hits = sentences.count { |sentence| sentence.include?("mojiemoji.jozo.beer/emoji/") }
+sentence_hits = sentences.count { |sentence| sentence.match?(stamp_url_re) }
 sentence_hit_rate = sentences.empty? ? 0.0 : sentence_hits.to_f / sentences.length
 
 paragraphs = text.split(/\n{2,}/).map(&:strip).reject(&:empty?)

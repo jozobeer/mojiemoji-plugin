@@ -30,20 +30,6 @@ defaults:
   outline_width: "2"
 
 terms:
-  修正版:
-    - font: gothic-bold
-      color: "3b82f6"
-      outline: "f63b82"
-      animation: bane
-    - font: maru-bold
-      color: "22c55e"
-      outline: "5e22c5"
-      animation: mochimochi
-    - font: noto
-      color: "8b5cf6"
-      outline: "f68b5c"
-      animation: neruneru
-
   修正:
     - font: gothic-bold
       color: "ef4444"

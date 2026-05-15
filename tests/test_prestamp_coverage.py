@@ -57,12 +57,16 @@ puts '修正'
 
 
 def test_prestamp_uses_longest_match() -> None:
+    # 修正版 is not its own catalog entry; the longest match is 修正, leaving
+    # 版 as plain text. Both 修正 occurrences in the input get stamped.
     proc = run_ruby(PRESTAMP, "修正版を修正しました。", "--seed", "1")
 
     assert proc.returncode == 0
     assert proc.stdout.count("mojiemoji.jozo.beer/emoji/") == 2
-    assert "alt=\"修正版\"" in proc.stdout
-    assert "alt=\"修正\"" in proc.stdout
+    assert proc.stdout.count('alt="修正"') == 2
+    assert 'alt="修正版"' not in proc.stdout
+    # 版 should be plain text immediately after the first stamp's </img> close.
+    assert "align=\"absmiddle\">版を" in proc.stdout
 
 
 def test_prestamp_spreads_variants_for_repeated_keyword() -> None:
@@ -162,6 +166,72 @@ def test_generate_catalog_handles_color_shifting_and_rotational_animations() -> 
             assert "outline:" not in block, f"unexpected outline for {animation}:\n{block}"
         if animation in {"kaiten", "kage_kaiten"}:
             assert "speed: slow" in block, f"missing speed: slow for {animation}:\n{block}"
+
+
+def test_prestamp_handles_indented_and_tilde_fences() -> None:
+    body = (
+        "   ```ruby\n"
+        "puts '修正'\n"
+        "   ```\n"
+        "\n"
+        "~~~text\n"
+        "修正\n"
+        "~~~\n"
+        "\n"
+        "修正\n"
+    )
+    proc = run_ruby(PRESTAMP, body, "--seed", "3")
+
+    assert proc.returncode == 0
+    # Both fenced blocks preserved verbatim — neither 修正 inside fences stamped.
+    assert "puts '修正'" in proc.stdout
+    assert "~~~text\n修正\n~~~" in proc.stdout
+    # The bare 修正 outside fences is the only stamped occurrence.
+    assert proc.stdout.count('align="absmiddle"') == 1
+
+
+def test_prestamp_handles_nested_fence_markers() -> None:
+    # A shorter ``` inside a ```` block must not close the outer fence.
+    body = (
+        "````md\n"
+        "```ruby\n"
+        "修正\n"
+        "```\n"
+        "````\n"
+        "\n"
+        "修正\n"
+    )
+    proc = run_ruby(PRESTAMP, body, "--seed", "4")
+
+    assert proc.returncode == 0
+    # 修正 inside the nested fence stays plain; only the outer 修正 stamps.
+    assert "```ruby\n修正\n```" in proc.stdout
+    assert proc.stdout.count('align="absmiddle"') == 1
+
+
+def test_coverage_ignores_bare_urls_outside_img() -> None:
+    # Bare URL inside a markdown link should NOT count as a rendered stamp —
+    # only `<img src="…">` wrappers do.
+    body = (
+        "[ドキュメント](https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3)を参照。\n"
+        "確認 修正 完了 重要 緊急\n"
+    )
+    proc = run_ruby(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
+
+    assert proc.returncode == 0
+    assert "stamps=0" in proc.stdout
+
+
+def test_coverage_counts_img_wrapped_stamps_only() -> None:
+    body = (
+        '<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=gothic-bold&color=3b82f6&animation=bane&background=transparent&outline=darker&outline_width=2" alt="修正"> '
+        "そして [リンク](https://mojiemoji.jozo.beer/emoji/%E9%87%8D%E8%A6%81) も。"
+    )
+    proc = run_ruby(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
+
+    assert proc.returncode == 0
+    # Only the <img> wrapped occurrence counts.
+    assert "stamps=1" in proc.stdout
 
 
 def test_coverage_detects_paragraph_bias() -> None:

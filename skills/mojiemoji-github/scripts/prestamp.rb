@@ -75,14 +75,23 @@ class Masker
   end
 end
 
+  # Match a markdown link target, allowing one level of nested parens
+  # (e.g. https://en.wikipedia.org/wiki/Foo_(disambiguation)).
+  LINK_TARGET_RE = /(?:[^()\s]|\([^()]*\))+/.freeze
+
 def protect_and_replace(text, base_url:, seed:, state:)
   masker = Masker.new
   protected = text.dup
 
-  protected.gsub!(/`[^`\n]*`/) { |m| masker.mask(m) }
+  # Inline code spans: try 3 → 2 → 1 backtick lengths so multi-backtick
+  # spans (e.g. ``foo`` or ```foo```) are masked before the 1-backtick
+  # pattern would chop them mid-fence.
+  protected.gsub!(/(`{3})[^`\n]+\1/) { |m| masker.mask(m) }
+  protected.gsub!(/(`{2})(?:[^`\n]|`(?!`))+\1/) { |m| masker.mask(m) }
+  protected.gsub!(/`[^`\n]+`/) { |m| masker.mask(m) }
   protected.gsub!(/<[^>]+>/) { |m| masker.mask(m) }
 
-  protected.gsub!(/!\[([^\]]*)\]\(([^)]+)\)/) do
+  protected.gsub!(/!\[([^\]]*)\]\((#{LINK_TARGET_RE.source})\)/) do
     alt = Regexp.last_match(1)
     url = Regexp.last_match(2)
     if shields_badge_url?(url)
@@ -92,7 +101,7 @@ def protect_and_replace(text, base_url:, seed:, state:)
     end
   end
 
-  protected.gsub!(/(!?\[[^\]]*\]\()([^)]+)(\))/) do
+  protected.gsub!(/(!?\[[^\]]*\]\()(#{LINK_TARGET_RE.source})(\))/) do
     target = Regexp.last_match(2)
     if target.start_with?("__MOJIEMOJI_MASK_")
       Regexp.last_match(0)
@@ -101,7 +110,10 @@ def protect_and_replace(text, base_url:, seed:, state:)
     end
   end
 
-  protected.gsub!(%r{https?://[^\s<>)"']+}) { |m| masker.mask(m) }
+  # Bare URLs: allow one level of nested parens (wikipedia-style) instead
+  # of bailing at the first `)`, which would leave the URL tail exposed
+  # for catalog replacement.
+  protected.gsub!(%r{https?://(?:[^\s<>"'()]|\([^\s<>"'()]*\))+}) { |m| masker.mask(m) }
 
   protected.gsub!(TERM_RE) do |term|
     variants = CATALOG.fetch(term)
@@ -152,12 +164,27 @@ end
 
 input = STDIN.read
 
+# Fenced code blocks: CommonMark allows up to 3 leading spaces, and either
+# ``` or ~~~ as the fence marker. The opening fence's marker and length
+# determine the closing fence, so track both to avoid a longer ``` inside
+# a ~~~ block (or vice versa) terminating the wrong fence.
+FENCE_RE = /^(\s{0,3})(`{3,}|~{3,})/
 in_fence = false
+fence_marker = nil
 state = { occurrence: 0, in_summary: false }
 lines = input.lines
 result = lines.map do |line|
-  if line =~ /^```/
-    in_fence = !in_fence
+  if (match = FENCE_RE.match(line))
+    marker = match[2]
+    if in_fence
+      if marker[0] == fence_marker[0] && marker.length >= fence_marker.length
+        in_fence = false
+        fence_marker = nil
+      end
+    else
+      in_fence = true
+      fence_marker = marker
+    end
     line
   elsif in_fence
     line
