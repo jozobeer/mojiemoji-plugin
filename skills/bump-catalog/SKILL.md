@@ -1,6 +1,12 @@
 ---
 name: bump-catalog
 description: "ローカル mojiemoji usage cache (`~/.local/share/mojiemoji-plugin/usage.jsonl`) から閾値を満たした variant を `prestamp-catalog.yml` に昇格させ、自動 PR を作る。selector が catalog miss 時に記録した flavor を、複利型 catalog 育成の入口にする。LLM 不要・全部 Ruby script で決定論的。"
+allowed-tools:
+  # bump-catalog.rb 本体。`--dry-run` / `--apply` / `--pr` モード全てで使用。
+  # `--pr` モードでは内部から `git` / `gh pr create` を `system()` で呼ぶが、
+  # Ruby プロセス内 subprocess なので外側の Bash gate 1 つで通る。
+  - Bash(ruby skills/mojiemoji-github/scripts/bump-catalog.rb*)
+  - Bash(ruby */skills/mojiemoji-github/scripts/bump-catalog.rb*)
 ---
 
 # Bump Catalog
