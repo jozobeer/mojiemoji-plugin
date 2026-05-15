@@ -277,6 +277,27 @@ verification.md spotcheck #16 がこれを検出する。
 - **Block**: デフォルトの markdown 形式 `![alt](url)`。
   上記の block 優先アニメーションはここで一級扱い。
 
+### Cache 記録 — catalog 育成 (Phase 1, #46)
+
+スニペットを描画したら、`$SKILL_DIR/scripts/cache-record.rb` を呼んで
+選んだ flavor をローカル cache (`usage.jsonl`) に追記すること。
+このログは別 skill `bump-catalog` が読み、しきい値を満たした variant を
+`prestamp-catalog.yml` へ自動昇格 PR にする (複利型 catalog 育成)。
+
+```bash
+ruby "$SKILL_DIR/scripts/cache-record.rb" \
+  --term '<phrase>' --font '<font>' --color '<hex>' --animation '<anim>' \
+  --outline '<outline>' --outline-width '<width>' [--speed '<speed>'] \
+  || true
+```
+
+- 描画した **すべて** のスニペットで実行する(catalog hit / miss は問わない —
+  bump-catalog 側で既存 variant と diff する)。
+- `skip:` で省略したフレーズには **記録しない**。
+- スクリプトの終了コードは無視する (`|| true`)。Cache 記録は best-effort で
+  あり、失敗しても スニペット返却を止めない。
+- 複数フレーズなら 1 件ごとに呼ぶ。
+
 ### LGTM 画像(approve verdict 限定)
 
 `approve` の PR レビューでは **LGTM の mojiemoji テキストスタンプを
