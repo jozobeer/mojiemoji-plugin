@@ -6,9 +6,9 @@
 
 [![License: MIT](https://img.shields.io/github/license/jozobeer/mojiemoji-plugin?color=ec4899)](LICENSE) [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-blue?logo=anthropic)](https://docs.claude.com/en/docs/claude-code/plugins) [![mojiemoji service](https://img.shields.io/badge/service-mojiemoji.jozo.beer-a855f7?logo=cloudflare&logoColor=white)](https://mojiemoji.jozo.beer) [![Version](https://img.shields.io/github/v/tag/jozobeer/mojiemoji-plugin?label=version&color=22c55e)](https://github.com/jozobeer/mojiemoji-plugin/releases) [![Last commit](https://img.shields.io/github/last-commit/jozobeer/mojiemoji-plugin?color=f59e0b)](https://github.com/jozobeer/mojiemoji-plugin/commits/main) [![Stars](https://img.shields.io/github/stars/jozobeer/mojiemoji-plugin?style=flat&color=fbbf24)](https://github.com/jozobeer/mojiemoji-plugin/stargazers) [![Made for Japanese GitHub](https://img.shields.io/badge/made%20for-日本語%20GitHub-3b82f6)](https://mojiemoji.jozo.beer)
 
-[**mojiemoji.jozo.beer**](https://mojiemoji.jozo.beer) のスタンプ画像で日本語の GitHub Markdown (issue / PR / レビュー / リプライ / リリースノート) を**表情豊か** <img src="https://mojiemoji.jozo.beer/emoji/%E8%A1%A8%E6%83%85?font=pixel&color=60a5fa&animation=kirari&background=transparent&outline=fa60a5&outline_width=2" alt="表情" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E8%B1%8A%E3%81%8B?font=maru-bold&color=4ade80&animation=mochimochi&background=transparent&outline=804ade&outline_width=2" alt="豊か" height="24" align="absmiddle"> に — `これは【マジで】やばい【バグ】ですね` のように **キーワードだけスタンプ化** する mid-sentence インライン強調を **自動で適切に埋め込む** Claude Code **プラグイン** <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=maru-bold&color=8b5cf6&animation=patapata&background=transparent&outline=f68b5c&outline_width=2" alt="プラグ" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%A4%E3%83%B3?font=maru-bold&color=8b5cf6&animation=patapata&background=transparent&outline=f68b5c&outline_width=2" alt="イン" height="24" align="absmiddle"> 🚀
+[**mojiemoji.jozo.beer**](https://mojiemoji.jozo.beer) のスタンプ画像で日本語の GitHub Markdown (issue / PR / レビュー / リプライ / リリースノート) を <img src="https://mojiemoji.jozo.beer/emoji/%E8%A1%A8%E6%83%85?font=pixel&color=60a5fa&animation=kirari&background=transparent&outline=fa60a5&outline_width=2" alt="表情" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E8%B1%8A%E3%81%8B?font=maru-bold&color=4ade80&animation=mochimochi&background=transparent&outline=804ade&outline_width=2" alt="豊か" height="24" align="absmiddle"> に — `これは【マジで】やばい【バグ】ですね` のように **キーワードだけスタンプ化** する mid-sentence インライン強調を **自動で適切に埋め込む** Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=maru-bold&color=8b5cf6&animation=patapata&background=transparent&outline=f68b5c&outline_width=2" alt="プラグ" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%A4%E3%83%B3?font=maru-bold&color=8b5cf6&animation=patapata&background=transparent&outline=f68b5c&outline_width=2" alt="イン" height="24" align="absmiddle"> 🚀
 
-**ショーケース** <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B7%E3%83%A7%E3%83%BC?font=toge&color=fbbf24&animation=tate_ekken&background=transparent&outline=24fbbf&outline_width=2" alt="ショー" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B1%E3%83%BC%E3%82%B9?font=rampart&color=f472b6&animation=kage_kaiten&speed=slow&background=transparent&outline=b6f472&outline_width=2" alt="ケース" height="24" align="absmiddle"> 的にはこの README 自体が dogfooding なので、上から下までスタンプまみれ ✨
+<img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B7%E3%83%A7%E3%83%BC?font=toge&color=fbbf24&animation=tate_ekken&background=transparent&outline=24fbbf&outline_width=2" alt="ショー" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B1%E3%83%BC%E3%82%B9?font=rampart&color=f472b6&animation=kage_kaiten&speed=slow&background=transparent&outline=b6f472&outline_width=2" alt="ケース" height="24" align="absmiddle"> 的にはこの README 自体が dogfooding なので、上から下までスタンプまみれ ✨
 
 ---
 
@@ -31,17 +31,17 @@ mojiemoji-plugin が掛かった世界:
 
 ## 📦 同梱されるもの
 
-3 層構造で **統合** <img src="https://mojiemoji.jozo.beer/emoji/%E7%B5%B1%E5%90%88?font=maru-bold&color=3b82f6&animation=tate_ekken&background=transparent&outline=f63b82&outline_width=2" alt="統合" height="24" align="absmiddle"> されています。
+3 層構造で <img src="https://mojiemoji.jozo.beer/emoji/%E7%B5%B1%E5%90%88?font=maru-bold&color=3b82f6&animation=tate_ekken&background=transparent&outline=f63b82&outline_width=2" alt="統合" height="24" align="absmiddle"> されています。
 
 | 種別 | 名前 | 役割 |
 |---|---|---|
-| Skill (スキル) <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B9%E3%82%AD%E3%83%AB?font=gothic-bold&color=06b6d4&animation=bane&background=transparent&outline=d406b6&outline_width=2" alt="スキル" height="24" align="absmiddle"> | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
-| Subagent (エージェント) <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%A8%E3%83%BC?font=akzk&color=ec4899&animation=kira&background=transparent" alt="エー" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88?font=akzk&color=ec4899&animation=kira&background=transparent" alt="ジェント" height="24" align="absmiddle"> | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
-| Hook (フック / PreToolUse / Bash + MCP) <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%95%E3%83%83%E3%82%AF?font=pixel&color=22c55e&animation=norinori&background=transparent&outline=5e22c5&outline_width=2" alt="フック" height="24" align="absmiddle"> | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
+| Skill | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
+| Subagent | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
+| Hook (PreToolUse / Bash + MCP) | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review\|edit)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
 ---
 
-## 🚀 インストール <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%A4%E3%83%B3%E3%82%B9?font=chikara&color=86efac&animation=chirichiri&background=transparent&outline=ac86ef&outline_width=2" alt="インス" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%83%88%E3%83%BC%E3%83%AB?font=tamanegi&color=fca5a5&animation=ekken&background=transparent&outline=a5fca5&outline_width=2" alt="トール" height="24" align="absmiddle">
+## 🚀 インストール
 
 ### マーケットプレイス追加 + インストール (推奨)
 
@@ -52,7 +52,7 @@ Claude Code 内で:
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
 
-これで **完成** <img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E6%88%90?font=hachimaru&color=10b981&animation=disco&background=transparent" alt="完成" height="24" align="absmiddle"> 🎉
+これで <img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E6%88%90?font=hachimaru&color=10b981&animation=disco&background=transparent" alt="完成" height="24" align="absmiddle"> 🎉
 
 ### ローカルチェックアウトから
 
@@ -67,7 +67,7 @@ Claude Code 内で:
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
 
-### 動作確認 <img src="https://mojiemoji.jozo.beer/emoji/%E5%8B%95%E4%BD%9C?font=gothic-bold&color=3b82f6&animation=tenmetsu&background=transparent&outline=f63b82&outline_width=2" alt="動作" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=maru-bold&color=f59e0b&animation=poyoon&background=transparent&outline=0bf59e&outline_width=2" alt="確認" height="24" align="absmiddle">
+### 動作確認
 
 インストール後、Claude Code に日本語 issue を作るよう依頼してみてください。フック (`mojiemoji-japanese-gate.py`) が `gh issue create` を一旦止めて、本文を mojiemoji 装飾した上で送信し直すはずです。
 
@@ -75,11 +75,11 @@ Claude Code 内で:
 /plugin
 ```
 
-で `mojiemoji-github` が `enabled` になっていれば **導入完了** <img src="https://mojiemoji.jozo.beer/emoji/%E5%B0%8E%E5%85%A5?font=chikara&color=a855f7&animation=zanzo&background=transparent&outline=f7a855&outline_width=2" alt="導入" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E4%BA%86?font=hachimaru&color=10b981&animation=yatta&background=transparent&outline=8110b9&outline_width=2" alt="完了" height="24" align="absmiddle"> 🎊
+で `mojiemoji-github` が `enabled` になっていれば <img src="https://mojiemoji.jozo.beer/emoji/%E5%B0%8E%E5%85%A5?font=chikara&color=a855f7&animation=zanzo&background=transparent&outline=f7a855&outline_width=2" alt="導入" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E4%BA%86?font=hachimaru&color=10b981&animation=yatta&background=transparent&outline=8110b9&outline_width=2" alt="完了" height="24" align="absmiddle"> 🎊
 
 ---
 
-## 🏗️ 仕組み — 3 層構造 <img src="https://mojiemoji.jozo.beer/emoji/%E4%BB%95%E7%B5%84%E3%81%BF?font=akzk&color=a855f7&animation=kaiten&background=transparent&outline=f7a855&outline_width=2&speed=slow" alt="仕組み" height="24" align="absmiddle">
+## 🏗️ 仕組み — 3 層構造
 
 ```mermaid
 flowchart TD
@@ -107,7 +107,7 @@ flowchart TD
 
 ---
 
-## ❓ なぜこのプラグインが必要か <img src="https://mojiemoji.jozo.beer/emoji/%E5%BF%85%E8%A6%81?font=mincho&color=ef4444&animation=shuchusen&background=transparent&outline=44ef44&outline_width=2" alt="必要" height="24" align="absmiddle">
+## ❓ なぜこのプラグインが必要か
 
 mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode 不可視になる致命傷** + **他パラメータ欠落で読めないスタンプを量産する** という事故が起こる:
 
@@ -180,9 +180,9 @@ skills:
 
 ---
 
-## ⚙️ 設定 <img src="https://mojiemoji.jozo.beer/emoji/%E8%A8%AD%E5%AE%9A?font=noto&color=06b6d4&animation=mabataki&background=transparent&outline=d406b6&outline_width=2" alt="設定" height="24" align="absmiddle">
+## ⚙️ 設定
 
-### Hook を一時無効化 <img src="https://mojiemoji.jozo.beer/emoji/%E7%84%A1%E5%8A%B9?font=dela&color=fb923c&animation=zanzo&background=transparent&outline=3cfb92&outline_width=2" alt="無効" height="24" align="absmiddle">
+### Hook を一時無効化
 
 Bash 経路はコマンドの先頭に `HOOK_DISABLE=1` を置く:
 
@@ -196,13 +196,13 @@ MCP 経路は `body` の中のどこかに `HOOK_DISABLE=1` を含めれば良�
 
 Claude Code の `/plugin` メニューで disable するか、`hooks/hooks.json` を編集。
 
-### Skill / Subagent のカスタマイズ <img src="https://mojiemoji.jozo.beer/emoji/%E3%82%AB%E3%82%B9%E3%82%BF?font=zero&color=10b981&animation=patapata&background=transparent&outline=8110b9&outline_width=2" alt="カスタ" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%83%9E%E3%82%A4%E3%82%BA?font=hachimaru&color=d8b4fe&animation=neruneru&background=transparent&outline=fed8b4&outline_width=2" alt="マイズ" height="24" align="absmiddle">
+### Skill / Subagent のカスタマイズ
 
 `skills/mojiemoji-github/references/presets.md` でフォント / 色 / アニメの preset 群を編集できます。
 
 ---
 
-## 🔗 関連リンク <img src="https://mojiemoji.jozo.beer/emoji/%E9%96%A2%E9%80%A3?font=kurobara&color=67e8f9&animation=tate_scroll&background=transparent&outline=f967e8&outline_width=2" alt="関連" height="24" align="absmiddle">
+## 🔗 関連リンク
 
 - mojiemoji 本体サービス: https://mojiemoji.jozo.beer
 - Claude Code プラグインドキュメント: https://docs.claude.com/en/docs/claude-code/plugins
