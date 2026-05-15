@@ -146,6 +146,10 @@ def render_img(base_url, text, flavor)
   %(<img src="#{src}" alt="#{alt}" height="24" align="absmiddle">)
 end
 
+def shields_badge_url?(url)
+  url.match?(%r{\Ahttps?://img\.shields\.io(?:/|\z)}i)
+end
+
 class Masker
   def initialize
     @tokens = []
@@ -176,7 +180,7 @@ def protect_and_replace(text, base_url:, seed:, state:)
   protected.gsub!(/!\[([^\]]*)\]\(([^)]+)\)/) do
     alt = Regexp.last_match(1)
     url = Regexp.last_match(2)
-    if url.include?("img.shields.io")
+    if shields_badge_url?(url)
       "![#{masker.mask(alt)}](#{masker.mask(url)})"
     else
       "![#{alt}](#{masker.mask(url)})"

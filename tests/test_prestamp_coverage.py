@@ -71,10 +71,11 @@ def test_prestamp_spreads_variants_for_repeated_keyword() -> None:
     srcs = re.findall(r'src="([^"]+)"', proc.stdout)
     assert len(srcs) == 4
 
-    animations = {
-        re.search(r"(?:[?&]animation=)([^&]+)", src.replace("&amp;", "&")).group(1)
-        for src in srcs
-    }
+    animations = set()
+    for src in srcs:
+        match = re.search(r"(?:[?&]animation=)([^&]+)", src.replace("&amp;", "&"))
+        assert match is not None
+        animations.add(match.group(1))
     assert len(animations) >= 2
 
 
