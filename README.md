@@ -137,11 +137,11 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 ### ✓ Plugin 単独で再現されるもの
 
 - **発火 surface の完全列挙** — `gh issue/pr/release create` / raw `gh api .../reviews` / MCP GitHub ツール / subagent 駆動の一括投稿、いずれの経路でも日本語 body 投稿前に gate が発火する(SKILL.md § Hard pre-action gate)
-- **装飾ポリシー** — inline-saturation default / surface 別の bagde + stamp ルール / LGTM 画像は make-image 経由 / do-not-stamp リスト(API 名 / file path / 識別子)
-- **URL canonical 仕様** — 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは speed 必須、color-shifting アニメは outline 不可、ダークモード対応 hex 帯
+- **装飾ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / LGTM 画像は make-image 経由 / do-not-stamp リスト(API 名 / file path / 識別子)
+- **URL canonical 仕様** — 通常は 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは追加で speed 必須、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する例外(4 パラメータ運用)、ダークモード対応 hex 帯
 - **PreToolUse hook** — 未装飾 body の submission を block(`gh` / raw `gh api` / MCP / subagent 経由すべて)
 - **mojiemoji-selector subagent** — 複数フレーズ・カタログ生成・配置判断のデリゲート先
-- **helper script** (`scripts/mojiemoji_markdown.rb`) — 単一フレーズのファストパス
+- **helper script** (`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.rb`) — 単一フレーズのファストパス
 
 ### ✗ Plugin 単独では再現されないもの(別 SSOT)
 
