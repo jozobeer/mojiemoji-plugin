@@ -10,6 +10,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.rb"
 COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.rb"
+GENERATE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "generate-catalog.rb"
 
 
 def run_ruby(script: Path, text: str, *args: str) -> subprocess.CompletedProcess[str]:
@@ -104,6 +105,63 @@ def test_coverage_blocks_when_below_threshold() -> None:
 
     assert proc.returncode == 2
     assert "coverage warning:" in proc.stderr
+
+
+def test_generate_catalog_emits_diverse_variants_per_term() -> None:
+    proc = run_ruby(GENERATE, "完成\n", "--seed", "42", "--variants", "3")
+
+    assert proc.returncode == 0
+    fonts = re.findall(r"- font: (\S+)", proc.stdout)
+    animations = re.findall(r"animation: (\S+)", proc.stdout)
+    colors = re.findall(r'color: "([^"]+)"', proc.stdout)
+    assert len(fonts) == 3
+    assert len(set(fonts)) == 3
+    assert len(set(animations)) == 3
+    assert len(set(colors)) == 3
+
+
+def test_generate_catalog_outline_is_bgr_rotation_of_color() -> None:
+    proc = run_ruby(GENERATE, "完成\n", "--seed", "42", "--variants", "3")
+
+    assert proc.returncode == 0
+    pairs = re.findall(r'color: "([0-9a-f]{6})"\s+outline: "([0-9a-f]{6})"', proc.stdout)
+    assert pairs, f"no color+outline pairs found in:\n{proc.stdout}"
+    for color, outline in pairs:
+        expected = color[4:6] + color[0:2] + color[2:4]
+        assert outline == expected, f"{color} -> outline {outline} (expected {expected})"
+
+
+def test_generate_catalog_skips_terms_exceeding_length_rule() -> None:
+    proc = run_ruby(GENERATE, "誤検知\n完成\n", "--seed", "1")
+
+    assert proc.returncode == 0
+    assert "完成:" in proc.stdout
+    assert "誤検知" not in proc.stdout
+    assert "誤検知" in proc.stderr
+
+
+def test_generate_catalog_handles_color_shifting_and_rotational_animations() -> None:
+    # Sweep many terms / seeds to exercise the kira/disco/psycho and kaiten paths.
+    proc = run_ruby(
+        GENERATE,
+        "\n".join(f"語{i:02d}" for i in range(50)) + "\n",
+        "--seed",
+        "7",
+    )
+
+    assert proc.returncode == 0
+    # Whenever a color-shifting animation appears, the variant must suppress
+    # the halo via outline_width: "0" and must NOT carry an outline color.
+    for match in re.finditer(
+        r"(?ms)^    - font:.*?(?=^    - font:|^  \S|\Z)", proc.stdout
+    ):
+        block = match.group(0)
+        animation = re.search(r"animation: (\S+)", block).group(1)
+        if animation in {"kira", "disco", "psycho"}:
+            assert 'outline_width: "0"' in block, f"missing suppression in:\n{block}"
+            assert "outline:" not in block, f"unexpected outline for {animation}:\n{block}"
+        if animation in {"kaiten", "kage_kaiten"}:
+            assert "speed: slow" in block, f"missing speed: slow for {animation}:\n{block}"
 
 
 def test_coverage_detects_paragraph_bias() -> None:
