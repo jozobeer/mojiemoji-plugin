@@ -104,7 +104,7 @@ flowchart TD
     style A fill:#fbbf24,color:#000,stroke:#f59e0b,stroke-width:2px
 ```
 
-緊急 bypass: `HOOK_DISABLE=1` を含めると Hook がスキップされる（推奨しない、ダークモードで <img src="https://mojiemoji.jozo.beer/emoji/%E4%B8%8D%E5%8F%AF%E8%A6%96?font=maru-bold&color=3b82f6&animation=mabataki&background=transparent&outline=f63b82&outline_width=2" alt="不可視" height="24" align="absmiddle"> のまま投稿される）。Bash 経路はコマンドの先頭、MCP 経路は `body` 内のどこかに含めれば良い。
+緊急 bypass: `MOJIEMOJI_HOOK_DISABLED=1` を含めると Hook がスキップされる（推奨しない、ダークモードで <img src="https://mojiemoji.jozo.beer/emoji/%E4%B8%8D%E5%8F%AF%E8%A6%96?font=maru-bold&color=3b82f6&animation=mabataki&background=transparent&outline=f63b82&outline_width=2" alt="不可視" height="24" align="absmiddle"> のまま投稿される）。Bash 経路はコマンドの先頭、MCP 経路は `body` 内のどこかに含めれば良い。詳細は § 環境変数。
 
 ---
 
@@ -183,15 +183,30 @@ skills:
 
 ## ⚙️ 設定
 
-### Hook を一時 <img src="https://mojiemoji.jozo.beer/emoji/%E7%84%A1%E5%8A%B9?font=mincho&color=f87171&animation=bane&background=transparent&outline=71f871&outline_width=2" alt="無効" height="24" align="absmiddle"> 化
+### 環境変数
 
-Bash 経路はコマンドの先頭に `HOOK_DISABLE=1` を置く:
+このプラグインが認識する変数の一覧。
 
-```bash
-HOOK_DISABLE=1 gh issue create --title "..." --body "..."
-```
+#### プラグイン固有(`MOJIEMOJI_*`)
 
-MCP 経路は `body` の中のどこかに `HOOK_DISABLE=1` を含めれば良い (フックは `body` テキストを走査するので、コメントとして埋めても効く)。
+| 変数 | 用途 | 例 |
+|---|---|---|
+| `MOJIEMOJI_HOOK_DISABLED` | `1` にすると PreToolUse hook を 1 投稿分だけ素通しさせる緊急 bypass。Bash なら command 先頭、MCP なら `body` 中のどこかに含める | `MOJIEMOJI_HOOK_DISABLED=1 gh issue create ...` |
+| `MOJIEMOJI_CACHE_FILE` | 使用ログ (`usage.jsonl`) の保存先を上書き | `MOJIEMOJI_CACHE_FILE=/tmp/mojiemoji.jsonl` |
+| `MOJIEMOJI_CACHE_DISABLED` | `1` / `true` / `yes` にすると `cache-record.rb` が静かに no-op になる(オプトアウト) | `MOJIEMOJI_CACHE_DISABLED=1` |
+
+MCP 経路で `MOJIEMOJI_HOOK_DISABLED=1` を使う場合、`body` テキストならコメントや脚注に紛れさせても hook が走査するので効く。乱用は厳禁 — 1 投稿 1 bypass の最小スコープで使うこと(hook が騒いだ箇所はだいたい本物の問題である)。
+
+> [!NOTE]
+> `MOJIEMOJI_HOOK_DISABLED` の旧名 `HOOK_DISABLE` も当面は動くが、検出時に stderr に deprecation warning を出力する。将来のリリースで削除予定なので新名へ移行してほしい。`MOJIEMOJI_*` 接頭辞に揃える方針 ([#50](https://github.com/jozobeer/mojiemoji-plugin/issues/50))。
+
+#### 参照する外部変数
+
+| 変数 | 用途 |
+|---|---|
+| `XDG_DATA_HOME` | `MOJIEMOJI_CACHE_FILE` 未設定時のデフォルト保存先 `${XDG_DATA_HOME:-$HOME/.local/share}/mojiemoji-plugin/usage.jsonl` の起点 |
+| `CLAUDE_PLUGIN_ROOT` | Claude Code が hook / skill 起動時に注入する、プラグインの展開先絶対パス。`hooks/hooks.json` や SKILL.md の引数で `${CLAUDE_PLUGIN_ROOT}/...` として参照 |
+| `SKILL_DIR` | `mojiemoji-github` skill が `mojiemoji-selector` subagent をディスパッチする際に渡す、skill 本体ディレクトリの絶対パス。subagent が references を読み解けるようにするための明示渡し |
 
 ### Hook 自体を無効化したい
 
