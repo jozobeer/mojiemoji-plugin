@@ -1,0 +1,71 @@
+name: Canonical list drift check
+
+# Weekly run to catch drift between the hook's allowlists and either
+# parameters.md or (in the future) the live mojiemoji service. If
+# drift is detected, an issue is auto-opened so the maintainer sees it
+# the next time they look at the project.
+#
+# Security note: no user-controlled GitHub event inputs reach `run:`
+# scripts — only `github.repository` / `github.token` / `github.run_id`
+# (GitHub-controlled) and `steps.verify.outputs.output` (from our own
+# verify-canonical-lists.sh, no shell interpolation).
+
+on:
+  schedule:
+    # Monday 00:00 UTC = Monday 09:00 JST
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    name: Verify canonical lists
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run verify-canonical-lists.sh
+        id: verify
+        run: |
+          set +e
+          output=$(bash scripts/verify-canonical-lists.sh 2>&1)
+          status=$?
+          {
+            echo "status=$status"
+            echo "output<<EOF"
+            echo "$output"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "$output"
+          exit 0
+
+      - name: Open drift issue
+        if: steps.verify.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_OUTPUT: ${{ steps.verify.outputs.output }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="[drift] canonical list drift detected ($(date -u +%Y-%m-%d))"
+          existing=$(gh issue list --repo "$REPO" --state open --label drift --json number --jq '.[0].number' || true)
+          body=$(printf '%s\n\n```\n%s\n```\n\n対応: `scripts/verify-canonical-lists.sh` の指示に従い、hook の set リテラルか parameters.md のコードブロックのいずれかを更新して両者を一致させる。\n\n- workflow run: %s\n' \
+            "週次 drift-check が hook の canonical 値リストと parameters.md の不整合を検出した。" \
+            "$VERIFY_OUTPUT" \
+            "$RUN_URL")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --label drift --body "$body"
+          fi
+
+      - name: Fail the workflow
+        if: steps.verify.outputs.status != '0'
+        run: exit 1
