@@ -55,7 +55,16 @@ parser = OptionParser.new do |opts|
 end
 parser.parse!
 
-required = %i[term font color animation outline]
+# Color-shifting animations render their own per-frame colors, so the
+# plugin contract (mojiemoji-selector.md, hooks/mojiemoji-japanese-gate.py)
+# allows omitting outline for these. Match that contract here — requiring
+# --outline for `disco` / `psycho` / `kira` would silently drop those
+# legitimate selections from the cache.
+COLOR_SHIFT_ANIMATIONS = %w[disco psycho kira].freeze
+outline_required = !COLOR_SHIFT_ANIMATIONS.include?(options[:animation].to_s)
+
+required = %i[term font color animation]
+required << :outline if outline_required
 missing = required.reject { |k| options[k] && !options[k].to_s.empty? }
 unless missing.empty?
   STDERR.puts "missing required flag(s): #{missing.map { |k| "--#{k.to_s.tr('_', '-')}" }.join(', ')}"
@@ -67,9 +76,11 @@ flavor = {
   font: options[:font],
   color: options[:color],
   animation: options[:animation],
-  outline: options[:outline],
-  outline_width: options[:outline_width],
 }
+if options[:outline] && !options[:outline].to_s.empty?
+  flavor[:outline] = options[:outline]
+  flavor[:outline_width] = options[:outline_width]
+end
 flavor[:speed] = options[:speed] if options[:speed] && !options[:speed].empty?
 
 entry = {

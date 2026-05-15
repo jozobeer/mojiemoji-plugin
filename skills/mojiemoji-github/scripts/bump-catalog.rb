@@ -25,6 +25,8 @@ require "optparse"
 require "json"
 require "yaml"
 require "set"
+require "open3"
+require "pathname"
 require "fileutils"
 
 REPO_ROOT = File.expand_path("../../../..", __FILE__)
@@ -71,11 +73,14 @@ end
 
 # --- 1. Run cache-stats to get candidate YAML fragment -------------------
 
-stats_out = IO.popen(
-  ["ruby", CACHE_STATS_SCRIPT, "--file", cache_file, "--threshold", options[:threshold].to_s],
-  err: $stderr,
-  &:read
+stats_out, stats_err, stats_status = Open3.capture3(
+  "ruby", CACHE_STATS_SCRIPT, "--file", cache_file, "--threshold", options[:threshold].to_s
 )
+STDERR.print stats_err unless stats_err.empty?
+unless stats_status.success?
+  STDERR.puts "bump-catalog: cache-stats failed (exit #{stats_status.exitstatus}); aborting."
+  exit stats_status.exitstatus || 1
+end
 
 if stats_out.strip.empty?
   STDOUT.puts "bump-catalog: no candidates from cache (threshold=#{options[:threshold]})."
@@ -185,11 +190,21 @@ additions_for_existing.each do |term, variants|
 end
 
 # Append wholly new terms at end of file (after a blank line).
+# Quote term keys defensively — selectors may record any user phrase,
+# including ones with YAML-significant characters (`:`, leading `-`, etc.).
+def emit_term_key(term)
+  s = term.to_s
+  return s if s.match?(/\A[\p{Han}\p{Katakana}\p{Hiragana}A-Za-z0-9_]+\z/) &&
+              !s.match?(/\A\d/)
+  escaped = s.gsub("\\", "\\\\").gsub("\"", "\\\"")
+  "\"#{escaped}\""
+end
+
 unless new_terms.empty?
   lines << "\n" unless lines.last&.end_with?("\n")
   new_terms.each do |term, variants|
     lines << "\n"
-    lines << "  #{term}:\n"
+    lines << "  #{emit_term_key(term)}:\n"
     variants.each do |v|
       render_variant_lines(v).each { |l| lines << l + "\n" }
     end
@@ -218,14 +233,26 @@ end
 
 # --- 6. Git: branch + commit + PR ---------------------------------------
 
+# Normalize our intended paths to repo-relative form so we can compare them
+# against `git status --porcelain` output (which is always repo-relative).
+git_repo_root = IO.popen(["git", "rev-parse", "--show-toplevel"], &:read).strip
+repo_pn = Pathname.new(git_repo_root)
+relativize = ->(p) { Pathname.new(File.expand_path(p)).relative_path_from(repo_pn).to_s }
+catalog_rel = relativize.call(catalog_path)
+plugin_json_exists = File.exist?(options[:plugin_json])
+plugin_json_rel = plugin_json_exists ? relativize.call(options[:plugin_json]) : nil
+intended_paths = [catalog_rel, plugin_json_rel].compact
+
 # Verify clean tree (excluding the catalog + plugin.json we just modified).
 # A dirty tree means uncommitted changes from other work — fail loudly
 # rather than mix them into the auto PR.
 status_out = IO.popen(["git", "status", "--porcelain"], &:read)
 dirty = status_out.lines.reject do |line|
+  # porcelain v1 format: "XY path" — path starts at byte 3. Renames produce
+  # "XY orig -> new"; for our filter we treat the destination as the path.
   path = line[3..].to_s.strip
-  path == catalog_path || path == options[:plugin_json] ||
-    path == File.expand_path(catalog_path) || path == File.expand_path(options[:plugin_json])
+  path = path.split(" -> ").last.to_s.strip if path.include?(" -> ")
+  intended_paths.include?(path)
 end
 unless dirty.empty?
   STDERR.puts "bump-catalog: refusing to PR — working tree has unrelated changes:"
@@ -234,7 +261,7 @@ unless dirty.empty?
 end
 
 # Stash our catalog + plugin.json changes so we can branch from a clean main.
-system("git", "stash", "push", "-m", "bump-catalog-temp", "--", catalog_path, options[:plugin_json]) || exit(1)
+system("git", "stash", "push", "-m", "bump-catalog-temp", "--", *intended_paths) || exit(1)
 system("git", "fetch", "origin", "main") || exit(1)
 system("git", "checkout", "main") || (system("git", "stash", "pop"); exit(1))
 system("git", "pull", "--ff-only", "origin", "main") || (system("git", "stash", "pop"); exit(1))
@@ -260,7 +287,7 @@ BODY
 
 system("git", "checkout", "-b", branch) || (system("git", "stash", "pop"); exit(1))
 system("git", "stash", "pop") || exit(1)
-system("git", "add", catalog_path, options[:plugin_json]) || exit(1)
+system("git", "add", *intended_paths) || exit(1)
 system("git", "commit", "-m", title) || exit(1)
 system("git", "push", "-u", "origin", branch) || exit(1)
 pr_url = IO.popen(["gh", "pr", "create", "--assignee", "@me", "--title", title, "--body", body], &:read).strip

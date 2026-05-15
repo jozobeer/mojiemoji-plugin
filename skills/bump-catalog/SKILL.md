@@ -21,35 +21,57 @@ flavor を選定したとき、`cache-record.rb` が JSONL に追記する。
 
 ## 手順
 
-1. 引数なしで `scripts/bump-catalog.rb` を実行する:
+1. まず引数なしで dry-run して何が追加されるか確認する(デフォルトが
+   `--dry-run` なので破壊的操作は起きない):
 
    ```bash
    ruby skills/mojiemoji-github/scripts/bump-catalog.rb
    ```
 
-   スクリプトは以下を自動でやる:
+   出力に「would add N variant(s) ...」が出たら次へ。「no new variants
+   to add」だけならその回はスキップして終わり。
+
+2. 内容に問題なければ `--pr` を付けて本実行する:
+
+   ```bash
+   ruby skills/mojiemoji-github/scripts/bump-catalog.rb --pr
+   ```
+
+   `--pr` モードがやること:
    - `usage.jsonl` を読む(`$MOJIEMOJI_CACHE_FILE` または
      `${XDG_DATA_HOME:-~/.local/share}/mojiemoji-plugin/usage.jsonl`)
    - 閾値(デフォルト 2)を満たした variant を diff として抽出
    - 既存 variant とまったく同一の flavor はスキップ
    - `prestamp-catalog.yml` をマージ
    - `plugin.json` の patch version を bump
+   - clean tree 検証 + `git fetch origin main && git checkout main && git pull`
    - `feat/auto-catalog-grow-<yyyymmdd>` ブランチを切って commit + push
    - `gh pr create --assignee @me` で PR を作成
    - PR URL を stdout に出す
 
-2. PR URL をユーザーに報告する。それだけ。
+3. PR URL をユーザーに報告する。それだけ。
 
 ## オプション
 
-- 何も追加するものがないか先に確認したいなら `--dry-run` を渡す:
+- catalog だけ更新したい(PR は手で出す)なら `--apply`:
 
   ```bash
-  ruby skills/mojiemoji-github/scripts/bump-catalog.rb --dry-run
+  ruby skills/mojiemoji-github/scripts/bump-catalog.rb --apply
   ```
+
+  これは `prestamp-catalog.yml` のマージのみ。`plugin.json` も触らず git
+  操作もしない。
 
 - 閾値を変えたいなら `--threshold N` (デフォルト 2)。1 件単位でも
   複利が効くという観点で、しきい値は低めに保つのが推奨。
+
+## モードまとめ
+
+| モード | catalog | plugin.json | git/PR |
+|---|---|---|---|
+| `--dry-run` (default) | — | — | — |
+| `--apply` | ✓ | — | — |
+| `--pr` | ✓ | ✓ (patch bump) | ✓ |
 
 ## 注意
 

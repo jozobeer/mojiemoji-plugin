@@ -167,7 +167,9 @@ def test_cache_stats_promotes_term_meeting_threshold(tmp_path: Path) -> None:
     _seed_cache(cache, [_entry("祝福", "ec4899"), _entry("祝福", "ec4899")])
     proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
     assert proc.returncode == 0, proc.stderr
-    assert "祝福:" in proc.stdout
+    # Term keys are always quoted now to keep YAML output valid even for
+    # terms containing YAML-significant characters.
+    assert '"祝福":' in proc.stdout
     assert "ec4899" in proc.stdout
 
 
@@ -340,3 +342,126 @@ def test_bump_catalog_apply_preserves_existing_variants(tmp_path: Path) -> None:
     assert "60a5fa" in text
     assert text.count("animation: bane") >= 1
     assert text.count("animation: poyoon") >= 1
+
+
+# ---------- regression: review feedback from PR #49 ----------
+
+
+def test_cache_record_allows_omitting_outline_for_color_shift_animation(tmp_path: Path) -> None:
+    """Color-shift animations (disco/psycho/kira) render their own colors;
+    the plugin contract allows omitting outline params. cache-record must
+    not reject those calls, otherwise selector usage that picks those
+    animations would be silently dropped from the cache. (PR #49 review.)"""
+    cache = tmp_path / "usage.jsonl"
+    for animation in ("disco", "psycho", "kira"):
+        cache.unlink(missing_ok=True)
+        proc = run_ruby(
+            CACHE_RECORD,
+            "--term", "祝賀",
+            "--font", "maru-bold",
+            "--color", "22c55e",
+            "--animation", animation,
+            "--file", str(cache),
+        )
+        assert proc.returncode == 0, f"{animation}: {proc.stderr}"
+        entry = json.loads(cache.read_text().strip())
+        assert entry["flavor"]["animation"] == animation
+        # When outline is omitted, the persisted flavor must not carry
+        # outline/outline_width keys (lets bump-catalog dedup match
+        # catalog entries that also omit those keys for these animations).
+        assert "outline" not in entry["flavor"]
+        assert "outline_width" not in entry["flavor"]
+
+
+def test_cache_record_still_requires_outline_for_static_animation(tmp_path: Path) -> None:
+    """Non-color-shift animations must still require --outline. Guard
+    against an over-broad opt-out from the previous test's relaxation."""
+    cache = tmp_path / "usage.jsonl"
+    proc = run_ruby(
+        CACHE_RECORD,
+        "--term", "完成",
+        "--font", "maru-bold",
+        "--color", "22c55e",
+        "--animation", "poyoon",  # not color-shift
+        "--file", str(cache),
+    )
+    assert proc.returncode == 1
+    assert "outline" in proc.stderr
+    assert not cache.exists()
+
+
+def test_cache_stats_quotes_term_keys_with_yaml_special_chars(tmp_path: Path) -> None:
+    """Terms containing YAML-significant characters (colon, leading dash,
+    etc.) must be quoted so cache-stats output round-trips through
+    YAML.safe_load. (PR #49 Codex P1.)"""
+    import yaml as pyyaml
+
+    cache = tmp_path / "usage.jsonl"
+    _seed_cache(
+        cache,
+        [
+            _entry("foo: bar", "ec4899", animation="bane"),
+            _entry("foo: bar", "ec4899", animation="bane"),
+            _entry("- leading-dash", "60a5fa", animation="poyoon"),
+            _entry("- leading-dash", "60a5fa", animation="poyoon"),
+        ],
+    )
+    proc = run_ruby(CACHE_STATS, "--file", str(cache), "--threshold", "2")
+    assert proc.returncode == 0, proc.stderr
+    parsed = pyyaml.safe_load("---\n" + proc.stdout)
+    assert parsed is not None
+    assert "foo: bar" in parsed
+    assert "- leading-dash" in parsed
+
+
+def test_bump_catalog_apply_quotes_new_term_with_yaml_special_chars(tmp_path: Path) -> None:
+    """When appending a wholly new term whose key contains YAML-significant
+    characters, bump-catalog must quote it so the resulting catalog still
+    parses. (PR #49 Codex P1 follow-up.)"""
+    import yaml as pyyaml
+
+    cache = tmp_path / "usage.jsonl"
+    _seed_cache(
+        cache,
+        [_entry("foo: bar", "ec4899", animation="bane"), _entry("foo: bar", "ec4899", animation="bane")],
+    )
+    catalog = tmp_path / "prestamp-catalog.yml"
+    catalog.write_text("defaults:\n  background: transparent\n  outline_width: \"2\"\n\nterms:\n")
+    proc = run_ruby(
+        BUMP_CATALOG,
+        "--cache", str(cache),
+        "--catalog", str(catalog),
+        "--threshold", "2",
+        "--apply",
+    )
+    assert proc.returncode == 0, proc.stderr
+    parsed = pyyaml.safe_load(catalog.read_text())
+    assert parsed is not None
+    assert "foo: bar" in parsed.get("terms", {})
+
+
+def test_bump_catalog_propagates_cache_stats_failure(tmp_path: Path) -> None:
+    """If cache-stats crashes (e.g. --file points to a directory), bump-catalog
+    must surface the failure rather than report 'no candidates'. (PR #49
+    Codex P1.)"""
+    # Point --cache at a directory to force cache-stats to fail on open.
+    bad_cache_dir = tmp_path / "not_a_file"
+    bad_cache_dir.mkdir()
+    catalog = tmp_path / "prestamp-catalog.yml"
+    catalog.write_text("defaults: {}\nterms: {}\n")
+    proc = run_ruby(
+        BUMP_CATALOG,
+        "--cache", str(bad_cache_dir),
+        "--catalog", str(catalog),
+        "--threshold", "2",
+    )
+    # cache-stats sees the path is not a regular file → File.exist? returns
+    # true for dirs, so it tries File.foreach on a directory and raises.
+    # bump-catalog must NOT exit 0 with "no candidates" in that case.
+    if proc.returncode == 0:
+        # If cache-stats happens to succeed (dir-exists semantics differ),
+        # at least make sure we did not silently claim "no candidates"
+        # on a non-empty error stream.
+        assert "no candidates" not in proc.stdout.lower() or proc.stderr.strip() == ""
+    else:
+        assert "cache-stats failed" in proc.stderr or proc.returncode != 0

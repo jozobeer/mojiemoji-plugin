@@ -27,7 +27,6 @@
 
 require "optparse"
 require "json"
-require "set"
 
 def default_cache_file
   env_override = ENV["MOJIEMOJI_CACHE_FILE"]
@@ -94,8 +93,17 @@ def yaml_value(value)
   "\"#{s}\""
 end
 
+# Term keys may contain YAML-significant characters (`:`, `>`, `#`, ` -`,
+# leading symbols, etc.). Always quote to keep the emitted fragment a
+# valid YAML mapping. JSON-style double-quoted scalars handle the common
+# cases; embedded `"` and `\` get escaped.
+def yaml_term_key(term)
+  escaped = term.to_s.gsub("\\", "\\\\").gsub("\"", "\\\"")
+  "\"#{escaped}\""
+end
+
 candidates_by_term.sort.each do |term, variants|
-  STDOUT.puts "  #{term}:"
+  STDOUT.puts "  #{yaml_term_key(term)}:"
   variants.each do |flavor|
     STDOUT.puts "    - font: #{flavor['font']}"
     STDOUT.puts "      color: #{yaml_value(flavor['color'])}"
