@@ -1,7 +1,7 @@
 <!--
-shields.io バッジを 1 行目に置いてください (type / scope / breaking / diff / tests など)。
-詳細は ~/.config/claude/rules/github-markdown.md § Shields.io Badges を参照。
-日本語本文を投稿する場合は `mojiemoji-github` skill 経由でインライン装飾されます。
+1 行目に shields.io バッジを置いてください (type / scope / breaking / diff / tests など)。
+例: ![type](https://img.shields.io/badge/type-feat-blue) ![breaking](https://img.shields.io/badge/breaking-no-green)
+日本語本文を投稿する場合、リポジトリ同梱の mojiemoji-github skill が自動でインライン装飾します。
 -->
 
 ## <img src="https://mojiemoji.jozo.beer/emoji/%E6%A6%82%E8%A6%81?font=maru-bold&color=06b6d4&animation=tate_scroll&background=transparent&outline=darker&outline_width=2" alt="概要" height="24" align="absmiddle"> 概要

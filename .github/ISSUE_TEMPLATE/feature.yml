@@ -37,7 +37,7 @@ body:
       description: |
         mojiemoji.jozo.beer 側で必要な機能 (新しい animation / font / API パラメータ) があれば書いてください。
         プラグイン側だけで完結する変更なら「不要」と書いてください。
-      placeholder: 例: 不要 (プラグイン側の hook 拡張だけで実現可能)
+      placeholder: "例: 不要 (プラグイン側の hook 拡張だけで実現可能)"
     validations:
       required: false
 
