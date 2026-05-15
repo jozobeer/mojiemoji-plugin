@@ -12,8 +12,8 @@ when_to_use: |
     - `gh api repos/{owner}/{repo}/pulls/{n}/reviews` (PR レビュー本文)
     - `gh api repos/{owner}/{repo}/pulls/{n}/comments` (PR インラインコメント / 返信)
     - `gh api repos/{owner}/{repo}/issues/{n}/comments` (issue / PR への top-level コメント)
-    - `gh api repos/{owner}/{repo}/issues` (issue 作成 / 編集)
-    - `gh api repos/{owner}/{repo}/releases` (リリース作成 / 編集)
+    - `gh api repos/{owner}/{repo}/issues` (issue 作成 — POST) / `.../issues/{n}` (issue 編集 — PATCH)
+    - `gh api repos/{owner}/{repo}/releases` (リリース作成 — POST) / `.../releases/{id}` (リリース編集 — PATCH)
     - `--input <file>` や `-F body=...` / `-f body=...` の payload も同様に対象
   - MCP GitHub ツール経路でも同じ surface に投稿する直前: `mcp__*__github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` / `github_issue_write` / `github_update_pull_request` / `github_add_comment_to_pending_review` / `github_add_reply_to_pull_request_comment` 等。PreToolUse hook が最後の砦として block するが、ここでスキルが先に発火していれば再装飾のラウンドトリップが発生しない
   - subagent driven batch posting (cross-repo-review / triage-review / vibes-review / copilot-review の review/comment 連投) — gate は「日本語 body 提出」自体に発火するので、`gh` でも `gh api` でも MCP でも subagent 経由でも例外なく適用
@@ -44,7 +44,7 @@ allowed-tools:
 
 以下のいずれかで日本語 body を提出する直前に、`mojiemoji-github` skill による装飾を行う:
 
-- `gh` CLI 投稿系: `gh issue create` / `gh issue comment` / `gh pr create` / `gh pr comment` / `gh pr review` / `gh release create`
+- `gh` CLI 投稿系: `gh issue create` / `gh issue comment` / `gh issue edit` / `gh pr create` / `gh pr comment` / `gh pr review` / `gh pr edit` / `gh release create` / `gh release edit`
 - raw GitHub REST: `gh api .../pulls/.../reviews` / `gh api .../pulls/.../comments` / `gh api .../issues/.../comments` / `gh api .../issues` 等(`--input` payload や `-F body=...` も同じ)
 - MCP GitHub ツール経路: `mcp__*__github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` / `github_issue_write` / `github_update_pull_request` / `github_add_comment_to_pending_review` / `github_add_reply_to_pull_request_comment` 等
 - subagent 駆動の一括投稿: `cross-repo-review` / `triage-review` / `vibes-review` / `copilot-review` 等が複数 PR を回って review/comment を連投する経路

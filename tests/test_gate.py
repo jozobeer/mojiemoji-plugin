@@ -66,6 +66,41 @@ class TestToolFiltering:
         assert result.returncode == 0
 
 
+# --- gh edit variants (issue / pr / release edit) -------------------------
+
+
+class TestGhEditVariants:
+    """`edit` subcommands accept body inputs (`--body`, `--notes`, etc.)
+    and must trip the gate just like `create` / `comment` / `review`."""
+
+    def test_gh_issue_edit_with_japanese_body_is_blocked(self, run_hook):
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh issue edit 123 --body "{JP_BODY}"'},
+            }
+        )
+        assert result.returncode == 2
+
+    def test_gh_pr_edit_with_japanese_body_is_blocked(self, run_hook):
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh pr edit 123 --body "{JP_BODY}"'},
+            }
+        )
+        assert result.returncode == 2
+
+    def test_gh_release_edit_with_japanese_notes_is_blocked(self, run_hook):
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh release edit v1.0.0 --notes "{JP_BODY}"'},
+            }
+        )
+        assert result.returncode == 2
+
+
 # --- Language filtering ----------------------------------------------------
 
 

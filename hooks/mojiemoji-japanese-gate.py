@@ -41,7 +41,7 @@ import sys
 
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # High-level `gh` commands that publish bodies.
-GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review)")
+GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review|edit)")
 # Raw REST POSTs that skills like cross-repo-review use to publish reviews,
 # comments, issues, or releases. We match the resource segment so we don't
 # fire on GET / read-only calls.
@@ -376,7 +376,7 @@ def main() -> int:
             "  --outline triadic --outline-width 2\n"
             "```\n"
             "\n"
-            "(`--inline` で `<img ... height=\"20\" align=\"absmiddle\">` 形式を出力。background=transparent と outline は自動付与。font / color / animation の正準値は\n"
+            "(`--inline` で `<img ... height=\"24\" align=\"absmiddle\">` 形式を出力。background はデフォルトで `transparent`、outline は明示指定が必要。font / color / animation の正準値は\n"
             "`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md` 参照。)\n"
             "\n"
             "## skip 正当ケース\n"
