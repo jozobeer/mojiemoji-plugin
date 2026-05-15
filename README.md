@@ -130,6 +130,35 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 
 ---
 
+## 🎯 スコープ — plugin 単独で再現される範囲
+
+このプラグインは **mojiemoji 装飾そのもの** を 1 つの SSOT に集約することを目的としている。「`/plugin install` するだけで装飾規約が動く」状態を保証するため、user-global config への依存を作らない設計。
+
+### ✓ Plugin 単独で再現されるもの
+
+- **発火 surface の完全列挙** — `gh issue/pr/release create` / raw `gh api .../reviews` / MCP GitHub ツール / subagent 駆動の一括投稿、いずれの経路でも日本語 body 投稿前に gate が発火する(SKILL.md § Hard pre-action gate)
+- **装飾ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / LGTM 画像は make-image 経由 / do-not-stamp リスト(API 名 / file path / 識別子)
+- **URL canonical 仕様** — 通常は 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは追加で speed 必須、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する例外(4 パラメータ運用)、ダークモード対応 hex 帯
+- **PreToolUse hook** — 未装飾 body の submission を block(`gh` / raw `gh api` / MCP / subagent 経由すべて)
+- **mojiemoji-selector subagent** — 複数フレーズ・カタログ生成・配置判断のデリゲート先
+- **helper script** (`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.rb`) — 単一フレーズのファストパス
+
+### ✗ Plugin 単独では再現されないもの(別 SSOT)
+
+以下は **user-personal な workflow skills/agents** であり、本プラグインの責務範囲外:
+
+- `make-issue` / `make-pr` / `address-review` / `triage-review` / `cross-repo-review` / `vibes-review` / `copilot-review` / `good-morning` 等の review/issue/PR ワークフロー skills
+- `pr-reviewer` / `review-responder` 等のレビュー特化 subagents
+- `make-image` skill(LGTM 画像生成。本プラグインは「LGTM は make-image 経由」というポリシーだけ持ち、生成ロジックは持たない)
+
+これらのスキルが mojiemoji を使う場合、本プラグインの skill / hook を呼ぶ形で integration するのが正しい設計。逆方向(plugin が user-personal skill を仮定する)は依存方向として禁止。
+
+### 設計原則: plugin-agnostic な user-global
+
+本プラグインを採用するなら、user-global config(`~/.config/claude/CLAUDE.md` / `rules/*` / `agents/*`)から「mojiemoji」言及を削除して構わない。すべての routing は plugin の `when_to_use` トリガーと hook の発火で完結する。これで user 環境と fresh-install 環境が対称になる。
+
+---
+
 ## ⚙️ 設定 <img src="https://mojiemoji.jozo.beer/emoji/%E8%A8%AD%E5%AE%9A?font=noto&color=06b6d4&animation=mabataki&background=transparent&outline=d406b6&outline_width=2" alt="設定" height="24" align="absmiddle">
 
 ### Hook を一時無効化 <img src="https://mojiemoji.jozo.beer/emoji/%E7%84%A1%E5%8A%B9?font=dela&color=fb923c&animation=zanzo&background=transparent&outline=3cfb92&outline_width=2" alt="無効" height="24" align="absmiddle">
