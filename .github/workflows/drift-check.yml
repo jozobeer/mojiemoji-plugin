@@ -55,7 +55,12 @@ jobs:
         run: |
           set -euo pipefail
           title="[drift] canonical list drift detected ($(date -u +%Y-%m-%d))"
-          existing=$(gh issue list --repo "$REPO" --state open --label drift --json number --jq '.[0].number' || true)
+          # `.[0].number // empty` collapses both "empty list" and "null"
+          # cases to an empty string. Without `// empty`, an empty result
+          # would yield literal "null", making `-n` true and routing to
+          # the comment branch with `existing="null"` — exactly the
+          # first-detection failure mode this step is supposed to handle.
+          existing=$(gh issue list --repo "$REPO" --state open --label drift --json number --jq '.[0].number // empty' || true)
           body=$(printf '%s\n\n```\n%s\n```\n\n対応: `scripts/verify-canonical-lists.sh` の指示に従い、hook の set リテラルか parameters.md のコードブロックのいずれかを更新して両者を一致させる。\n\n- workflow run: %s\n' \
             "週次 drift-check が hook の canonical 値リストと parameters.md の不整合を検出した。" \
             "$VERIFY_OUTPUT" \
