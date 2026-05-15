@@ -1,6 +1,6 @@
 ---
 name: mojiemoji-github
-description: GitHub markdown(issue / PR / レビューコメント / 返信 / リリースノート)に向けて mojiemoji.jozo.beer 経由の画像スタンプを差し込むスキル。**文中のインライン強調が主用途**(例 【マジで】やばい【バグ】ですね)で、レビュー・コメント・返信を含むすべての surface に本文と同等の密度で適用する。`![alt](url)` を行頭に置く block スタンプは review-class surface では禁止、body-class surface でも非推奨(ユーザーが明示的に依頼した場合のみ)。文末・見出し末の trailing 装飾には Unicode 絵文字(🎉 💣 🔥 など)を使うこと(プロジェクトに GitHub Markdown 規約があればそちらの「Trailing decoration」節を参照)。`approve` レビューでの LGTM 画像は mojiemoji ではなく `make-image` スキル経由で生成すること。body-class surface では shields.io バッジと組み合わせて使う。
+description: GitHub markdown(issue / PR / レビューコメント / 返信 / リリースノート)に向けて mojiemoji.jozo.beer 経由の画像スタンプを差し込むスキル。**文中のインライン強調が主用途**(例 【マジで】やばい【バグ】ですね)で、レビュー・コメント・返信を含むすべての surface に本文と同等の密度で適用する。`![alt](url)` を行頭に置く block スタンプは review-class surface では禁止、body-class surface でも非推奨(ユーザーが明示的に依頼した場合のみ)。文末・見出し末の trailing 装飾には Unicode 絵文字(🎉 💣 🔥 など)を使うこと(プロジェクトに GitHub Markdown 規約があればそちらの「Trailing decoration」節を参照)。`approve` レビューで `![LGTM](mojiemoji.jozo.beer/emoji/LGTM…)` の block-image 形式を使うのは却下されたパターン(インラインでの mojiemoji LGTM 埋め込みは OK)。block-style LGTM 以外の LGTM 画像表現はユーザー環境依存で、本プラグインのスコープ外。body-class surface では shields.io バッジと組み合わせて使う。
 when_to_use: |
   日本語の GitHub markdown を作成するときは、たとえ mojiemoji 関連キーワードが無くても**積極的にこのスキルを提案すること**。ユーザーは感情の転換点、ステータス・気分・承認、注意喚起、オチの強調などをプレーンテキストではなく表情豊かなスタンプで表現することを強く好む。装飾前に一度はユーザーに確認すること。強制はしない。
 
@@ -156,7 +156,7 @@ Closes #N.
 
 | Mode | Surface | 出力 | デフォルトサイズ |
 |---|---|---|---|
-| `block` | **稀。** issue / PR 本文の特定のセクション見出しや、ユーザーが同ターンで明示的に依頼したコールアウト文脈でのみ独立行スタンプを使う。**レビュー系 surface ではすべて禁止**(レビュー本文、レビュー返信、PR コメント、issue コメント) — 何があってもインラインのみ。**本文の先頭・末尾装飾としても禁止**。LGTM 画像は `block` mojiemoji の用途では**ない** — `make-image` スキル経由(下記 § LGTM Imagery 参照)。 | Markdown `![alt](url)` | native |
+| `block` | **稀。** issue / PR 本文の特定のセクション見出しや、ユーザーが同ターンで明示的に依頼したコールアウト文脈でのみ独立行スタンプを使う。**レビュー系 surface ではすべて禁止**(レビュー本文、レビュー返信、PR コメント、issue コメント) — 何があってもインラインのみ。**本文の先頭・末尾装飾としても禁止**。LGTM 画像は `block` mojiemoji の用途では**ない** — block-style mojiemoji LGTM は却下パターン(下記 § LGTM 画像 参照)。 | Markdown `![alt](url)` | native |
 | `inline` | **すべての日本語 GitHub surface のデフォルト。** 文中強調(例: 【マジで】やばい【バグ】)。body-class でも review-class でも 1 段落最低 1〜2 個で飽和させる。 | HTML `<img ... height="24" align="absmiddle">` | 24 px |
 
 GitHub 仕様で守るべきこと:
@@ -165,18 +165,32 @@ GitHub 仕様で守るべきこと:
 - `height="24"` は本文サイズで読みやすい。`height="20"` がユーザーの観察上の好み。`references/parameters.md` § Inline height を参照。
 - 1 文あたりインラインスタンプは最大 2 個(飽和モードでは緩和)。
 
-## LGTM 画像 — mojiemoji ではなく `make-image` を使う
+## LGTM 画像 — block-style mojiemoji LGTM は使わない
 
-ユーザーが**他人の PR を承認**(`gh pr review --approve`)し、お祝いの LGTM 画像を添えたいときは、mojiemoji ではなく **`make-image` スキル**を経由すること。このスキルは Codex CLI の `image_gen` ツール(gpt-image-2)を呼び出し、ユーザーの ChatGPT サブスクリプションで課金される PR テーマの画像を生成する。汎用的な `mojiemoji.jozo.beer/emoji/LGTM` テキストスタンプはこのスロットには明確に不適切な道具である。
+`mojiemoji.jozo.beer/emoji/LGTM` を **block-image 形式**(`![LGTM](url)` の独立行レンダリング)で使うのは **却下されたパターン**(過去 PR `SP-ACL#1712` 等)。本プラグインが規定するのはこの block-style の拒否のみで、それ以外は user-personal な選択肢に委ねる。
 
-これは approve 専用。以下には LGTM 画像スロットは存在しない:
-- `comment` / `request-changes` の verdict
-- 他人のレビューへの返信コメント(レビューに LGTM はしない)
-- approve 以外の issue コメント / PR コメント
+**インラインの LGTM 埋め込みは OK。** `<img src="...emoji/LGTM..." height="24" align="absmiddle">` のように文中に埋め込む使い方は、他のインラインスタンプ(完璧 / 見事 等)と同じく通常運用として問題ない。LGTM を「verdict 語の一つ」として文に組み込むなら、ここでは何も制限しない。
 
-「先頭にお祝いの LGTM を置きたい」という衝動が出たら、正解は (a) verdict 文の中に mojiemoji で verdict 語をインライン埋め込みするか、(b) verdict が `approve` なら `make-image` で Codex 画像を生成すること。`![LGTM](https://mojiemoji.jozo.beer/...)` は使わない。
+**LGTM 画像そのものを添えたい場合は user-personal な選択。** 別の skill が LGTM 画像生成を担っているなら本プラグインと併用すること自体は構わないが、その経路の存在は user 環境依存であり、本プラグインは前提とせず参照もしない。本プラグインのスコープは「mojiemoji スタンプの GitHub markdown 装飾規則」だけで、画像生成は責務外。
 
-プロンプト構成、ホスティング階層、生成手順の詳細はプロジェクト固有の GitHub Markdown 規約があればその「LGTM Images for Approve」節を参照すること。
+「先頭にお祝いの LGTM を置きたい」という衝動が出たら、選択肢は:
+- (a) verdict 文の中に mojiemoji で verdict 語(完璧 / 見事 / 綺麗 / 完成度 / LGTM 等)をインライン埋め込みする — これは本プラグインの通常の inline usage
+- (b) user 側に LGTM 画像を生成する別 skill があるなら、それを使ってその出力を embed — これはプラグイン外の選択
+
+「やってはいけない」のは block-style mojiemoji LGTM(`![LGTM](https://mojiemoji.jozo.beer/...)` の独立行)だけ。
+
+### Hook 側の guardrail
+
+PreToolUse hook (`hooks/mojiemoji-japanese-gate.py`) は 6 必須スタイルパラメータの欠落とは別に、**`![alt](https://mojiemoji.jozo.beer/emoji/LGTM…)` の markdown block-image 形式のみ** を block する(LGTM の case は問わない — path slug は case-insensitive で照合)。
+
+block 範囲は意図的に narrow:
+- ✅ block される: `![LGTM](url)` の markdown image syntax
+- ✗ block されない: `<img src=...emoji/LGTM... height="24" align="absmiddle">` の inline HTML 形式
+- ✗ block されない: 単純な URL リンク
+
+block の理由は「LGTM スタンプ自体がダメ」ではなく「**block-rendering でデカく置く LGTM mojiemoji がダメ**」 — fully-styled な URL でも markdown image 形式で書かれていれば block される。
+
+意図的に block-style LGTM を使いたい正当ケース(検証目的、過去本文の保守など)がある場合は `HOOK_DISABLE=1` で 1 投稿だけ bypass する。常用しない。
 
 ## 埋め込み vs 装飾
 
@@ -214,7 +228,7 @@ mojiemoji は**単語レベルの一撃**であって、句や文の強調では
 | スタンプにする | スタンプしない |
 |---|---|
 | `歓迎` `修正` `確認` `完了` `重要` `緊急` `綺麗` `完璧` `要点` `対応` …(2 字熟語) | `気になりました` `お疲れさまでした`(完全な文 / 述語+丁寧語) |
-| `PR` `OK` `NG` `WIP` `API`(2〜3 字の ASCII 略語 / ドメイン用語 — ただし `LGTM` は除く。それは `approve` レビューで `make-image` スキル経由) | `〜していただきありがとうございます`(挨拶ブロック) |
+| `PR` `OK` `NG` `WIP` `API` `LGTM` 等(2〜4 字の ASCII 略語 / ドメイン用語 — ただし `LGTM` は **block-image 形式は却下**、インライン埋め込みなら OK) | `〜していただきありがとうございます`(挨拶ブロック) |
 | `マージ` `テスト` `バグ` `リファクタ`(2〜4 字のカタカナ語) | *単語*ではなく*文法的な節*に当たるもの |
 | `綺麗` `素敵` `見事` `丁寧`(2 字の形容詞・形容動詞) | 動詞形(`書きました` `送ります` `読んでます`) |
 
@@ -229,7 +243,7 @@ mojiemoji は**単語レベルの一撃**であって、句や文の強調では
 | 漢字 | **2** | 画数が多い。インライン高で 3 字は潰れる。「漢字は2文字までじゃないと読めない」 |
 | ひらがな | **5** | 3 字以上のときは、ほぼ中央で `%0A` 改行を入れて 2 行スタンプにする(各行≤3 ひらがな)。1〜2 字は単行。 |
 | カタカナ | **3** | |
-| ASCII | **3** | (例: `WIP`, `API`。`LGTM` のような頭字語は mojiemoji スタンプではなく `make-image` スキル経由。) |
+| ASCII | **3** | (例: `WIP`, `API`, `LGTM`。`LGTM` はインライン埋め込みは OK、block-image 形式は却下。) |
 
 加えて、1 単語に対するスタンプ連続数の全体上限:
 
@@ -395,7 +409,7 @@ CONSTRAINTS:
 
 | verdict | findings | 先頭文に埋め込む語(例) | 締め文に埋め込む語(例) | 注意 |
 |---|---|---|---|---|
-| `approve` | 0 (clean) | `完璧` / `綺麗` / `見事` / `LGTM`(語として、※ block 画像は禁止) | `マージ` / `歓迎` / `お疲れさま` | celebratory。LGTM 画像が必要なら `make-image` 経由(§ LGTM 画像 参照) |
+| `approve` | 0 (clean) | `完璧` / `綺麗` / `見事` / `LGTM`(語としてインライン埋め込み。block 画像は禁止) | `マージ` / `歓迎` / `お疲れさま` | celebratory。block-style LGTM 画像は却下(§ LGTM 画像 参照)、それ以外の LGTM 画像表現は user 環境依存(プラグイン外) |
 | `approve` | nits のみ | `綺麗` / `良い` / `軽微` | `感謝` / `お疲れさま` | thanks 寄り、celebrate しすぎない |
 | `comment` | ≤2 | `確認` / `相談` / `提案` | `引き続き` / `よろしく` | tone-setter で軽く |
 | `comment` | 3〜5 | `確認` / `指摘` / `検討` | `ご対応` / `よろしく` | neutral, business-like |

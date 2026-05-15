@@ -137,7 +137,7 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 ### ✓ Plugin 単独で再現されるもの
 
 - **発火 surface の完全列挙** — `gh issue/pr/release create` / raw `gh api .../reviews` / MCP GitHub ツール / subagent 駆動の一括投稿、いずれの経路でも日本語 body 投稿前に gate が発火する(SKILL.md § Hard pre-action gate)
-- **装飾ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / LGTM 画像は make-image 経由 / do-not-stamp リスト(API 名 / file path / 識別子)
+- **装飾ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / block-style mojiemoji LGTM は却下(インライン埋め込みは OK) / do-not-stamp リスト(API 名 / file path / 識別子)
 - **URL canonical 仕様** — 通常は 6 必須パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは追加で speed 必須、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する例外(4 パラメータ運用)、ダークモード対応 hex 帯
 - **PreToolUse hook** — 未装飾 body の submission を block(`gh` / raw `gh api` / MCP / subagent 経由すべて)
 - **mojiemoji-selector subagent** — 複数フレーズ・カタログ生成・配置判断のデリゲート先
@@ -149,7 +149,7 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 
 - `make-issue` / `make-pr` / `address-review` / `triage-review` / `cross-repo-review` / `vibes-review` / `copilot-review` / `good-morning` 等の review/issue/PR ワークフロー skills
 - `pr-reviewer` / `review-responder` 等のレビュー特化 subagents
-- `make-image` skill(LGTM 画像生成。本プラグインは「LGTM は make-image 経由」というポリシーだけ持ち、生成ロジックは持たない)
+- LGTM 画像生成系の skill(本プラグインは「block-style mojiemoji LGTM は却下、インライン埋め込みは OK」までしか規定せず、それ以外の LGTM 画像表現の手段は user 環境依存)
 
 これらのスキルが mojiemoji を使う場合、本プラグインの skill / hook を呼ぶ形で integration するのが正しい設計。逆方向(plugin が user-personal skill を仮定する)は依存方向として禁止。
 
