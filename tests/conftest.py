@@ -35,7 +35,7 @@ def run_hook(tmp_path):
     return _run
 
 
-# Reusable URL builder for tests. Mirrors what `mojiemoji_markdown.rb`
+# Reusable URL builder for tests. Mirrors what `mojiemoji_markdown.py`
 # would emit when given the canonical 6-parameter set, so a single
 # helper covers happy-path URLs across cases.
 def stamp_url(

@@ -9,34 +9,24 @@ trailing decorations will be silently rejected at submission time.
 
 from __future__ import annotations
 
-import json
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml"
 
 
-def _load_catalog_via_ruby() -> dict:
-    """Parse the catalog YAML via Ruby and re-emit as JSON. The plugin already
-    requires Ruby on the host (prestamp.rb, generate-catalog.rb), so this
-    avoids forcing PyYAML on the CI test environment — which is intentionally
-    minimal (`pip install pytest`) and was breaking on this test."""
-    proc = subprocess.run(
-        ["ruby", "-ryaml", "-rjson", "-e",
-         f"puts JSON.dump(YAML.safe_load_file(%q[{CATALOG_PATH}]))"],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert proc.returncode == 0, f"Ruby YAML parse failed: {proc.stderr}"
-    return json.loads(proc.stdout)
+def _load_catalog() -> dict:
+    """Parse the catalog YAML via PyYAML (declared dependency since #57)."""
+    return yaml.safe_load(CATALOG_PATH.read_text(encoding="utf-8"))
 
 
 # Parse once at module load — pytest.mark.parametrize is evaluated at
 # collection time before any fixtures, so we cannot defer this.
-_CATALOG = _load_catalog_via_ruby()
+_CATALOG = _load_catalog()
 
 # Canonical lists must mirror parameters.md / hook constants. Kept inline so the
 # test catches drift in either direction (catalog adds value not in canon, or
@@ -140,7 +130,7 @@ def test_unsupported_emoji_not_in_catalog(catalog):
 
 def test_no_bakusan_in_catalog(catalog):
     # bakusan is canonically block-only — its radial burst obscures the
-    # glyph at inline 24px and `generate-catalog.rb` explicitly excludes it
+    # glyph at inline 24px and `generate_catalog.py` explicitly excludes it
     # from the inline pool (`INLINE_PROBLEMATIC_ANIMATIONS`). The emoji
     # catalog is *only* consumed for inline trailing decorations, so any
     # bakusan variant here would generate unreadable stamps.
