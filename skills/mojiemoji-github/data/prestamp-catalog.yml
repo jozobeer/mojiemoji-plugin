@@ -1,0 +1,120 @@
+# Mojiemoji pre-stamp catalog — loaded by skills/mojiemoji-github/scripts/prestamp.rb
+#
+# To add a new term:
+#   1. Append a key under `terms:` (longest match wins — see prestamp.rb).
+#   2. Provide 1+ variants; 3+ recommended so the seeded selector can spread
+#      flavors across repeated occurrences of the same word.
+#   3. Each variant overrides `defaults:` below. Allowed keys per variant:
+#        font, color, animation, speed, background, outline, outline_width
+#      Color values must be quoted (hex strings like "3b82f6" can be misparsed
+#      as numbers if bare).
+#
+# Canonical font / animation / color values: see
+#   skills/mojiemoji-github/references/parameters.md
+# Hard validation happens at submission time via hooks/mojiemoji-japanese-gate.py.
+# Note: color-shifting animations (kira / disco / psycho) conflict with a
+# fixed-color outline. The rendering helper mojiemoji_markdown.rb strips
+# outline automatically for those; prestamp.rb currently does not. To
+# explicitly suppress the outline on a variant, set `outline: ~` and
+# `outline_width: "0"`.
+
+defaults:
+  background: transparent
+  outline: darker
+  outline_width: "2"
+
+terms:
+  修正版:
+    - { font: gothic-bold, color: "3b82f6", animation: bane }
+    - { font: maru-bold,   color: "22c55e", animation: mochimochi }
+    - { font: noto,        color: "8b5cf6", animation: neruneru }
+
+  修正:
+    - { font: gothic-bold, color: "ef4444", animation: gatagata }
+    - { font: akzk,        color: "f97316", animation: ekken }
+    - { font: kurobara,    color: "ec4899", animation: zanzo }
+
+  緊急:
+    - { font: dela,        color: "ef4444", animation: tenmetsu }
+    - { font: gothic-bold, color: "f59e0b", animation: shuchusen }
+    - { font: chikara,     color: "dc2626", animation: bure }
+
+  完了:
+    - { font: pixel,       color: "22c55e", animation: yatta }
+    - { font: maru-bold,   color: "34d399", animation: kirari }
+    - { font: zero,        color: "10b981", animation: nami }
+
+  失敗:
+    - { font: mincho,      color: "dc2626", animation: bure }
+    - { font: gothic-bold, color: "ef4444", animation: gatagata }
+    - { font: akzk,        color: "f97316", animation: ekken }
+
+  成功:
+    - { font: maru-bold,   color: "34d399", animation: kira }
+    - { font: gothic-bold, color: "22c55e", animation: kirari }
+    - { font: noto,        color: "60a5fa", animation: yatta }
+
+  重要:
+    - { font: mincho,      color: "f59e0b", animation: shuchusen }
+    - { font: gothic-bold, color: "f97316", animation: ekken }
+    - { font: dela,        color: "ef4444", animation: tenmetsu }
+
+  注意:
+    - { font: gothic-bold, color: "f97316", animation: mabataki }
+    - { font: mincho,      color: "ea580c", animation: tenmetsu }
+    - { font: akzk,        color: "f59e0b", animation: chirichiri }
+
+  対応:
+    - { font: maru-bold,   color: "3b82f6", animation: norinori }
+    - { font: gothic-bold, color: "60a5fa", animation: nami }
+    - { font: noto,        color: "8b5cf6", animation: patapata }
+
+  確認:
+    - { font: gothic-bold, color: "60a5fa", animation: tate_scroll }
+    - { font: maru-bold,   color: "3b82f6", animation: bane }
+    - { font: noto,        color: "22c55e", animation: mabataki }
+
+  歓迎:
+    - { font: maru,        color: "10b981", animation: poyoon }
+    - { font: gothic-bold, color: "22c55e", animation: kirari }
+    - { font: noto,        color: "34d399", animation: mochimochi }
+
+  警告:
+    - { font: mincho,      color: "c2410c", animation: tenmetsu }
+    - { font: dela,        color: "dc2626", animation: ekken }
+    - { font: gothic-bold, color: "f97316", animation: shuchusen }
+
+  必須:
+    - { font: akzk,        color: "ef4444", animation: ekken }
+    - { font: gothic-bold, color: "dc2626", animation: tenmetsu }
+    - { font: dela,        color: "f97316", animation: chirichiri }
+
+  任意:
+    - { font: noto,        color: "8b5cf6", animation: nami }
+    - { font: maru-bold,   color: "a855f7", animation: poyoon }
+    - { font: gothic-bold, color: "c084fc", animation: yurayura }
+
+  導入:
+    - { font: kurobara,    color: "22c55e", animation: kaiten, speed: slow }
+    - { font: maru-bold,   color: "10b981", animation: norinori }
+    - { font: noto,        color: "34d399", animation: nami }
+
+  削除:
+    - { font: toge,        color: "dc2626", animation: zanzo }
+    - { font: gothic-bold, color: "ef4444", animation: bure }
+    - { font: dela,        color: "f97316", animation: ekken }
+
+  追加:
+    - { font: zero,        color: "3b82f6", animation: patapata }
+    - { font: maru-bold,   color: "60a5fa", animation: bane }
+    - { font: gothic-bold, color: "22c55e", animation: yatta }
+
+  更新:
+    - { font: chikara,     color: "f59e0b", animation: chirichiri }
+    - { font: gothic-bold, color: "f97316", animation: gatagata }
+    - { font: noto,        color: "60a5fa", animation: yurayura }
+
+  PR:
+    - { font: gothic-bold, color: "3b82f6", animation: norinori }
+    - { font: maru-bold,   color: "8b5cf6", animation: nami }
+    - { font: noto,        color: "ec4899", animation: mozaiku }

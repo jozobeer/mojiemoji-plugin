@@ -3,112 +3,17 @@
 require "optparse"
 require "uri"
 require "cgi"
+require "yaml"
 require "zlib"
 
 DEFAULT_BASE_URL = "https://mojiemoji.jozo.beer"
+CATALOG_PATH = File.expand_path("../data/prestamp-catalog.yml", __dir__)
 
-CATALOG = {
-  "修正版" => [
-    { font: "gothic-bold", color: "3b82f6", animation: "bane", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "22c55e", animation: "mochimochi", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "8b5cf6", animation: "neruneru", outline: "darker", outline_width: "2" },
-  ],
-  "修正" => [
-    { font: "gothic-bold", color: "ef4444", animation: "gatagata", outline: "darker", outline_width: "2" },
-    { font: "akzk", color: "f97316", animation: "ekken", outline: "darker", outline_width: "2" },
-    { font: "kurobara", color: "ec4899", animation: "zanzo", outline: "darker", outline_width: "2" },
-  ],
-  "緊急" => [
-    { font: "dela", color: "ef4444", animation: "tenmetsu", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "f59e0b", animation: "shuchusen", outline: "darker", outline_width: "2" },
-    { font: "chikara", color: "dc2626", animation: "bure", outline: "darker", outline_width: "2" },
-  ],
-  "完了" => [
-    { font: "pixel", color: "22c55e", animation: "yatta", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "34d399", animation: "kirari", outline: "darker", outline_width: "2" },
-    { font: "zero", color: "10b981", animation: "nami", outline: "darker", outline_width: "2" },
-  ],
-  "失敗" => [
-    { font: "mincho", color: "dc2626", animation: "bure", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "ef4444", animation: "gatagata", outline: "darker", outline_width: "2" },
-    { font: "akzk", color: "f97316", animation: "ekken", outline: "darker", outline_width: "2" },
-  ],
-  "成功" => [
-    { font: "maru-bold", color: "34d399", animation: "kira", background: "transparent" },
-    { font: "gothic-bold", color: "22c55e", animation: "kirari", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "60a5fa", animation: "yatta", outline: "darker", outline_width: "2" },
-  ],
-  "重要" => [
-    { font: "mincho", color: "f59e0b", animation: "shuchusen", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "f97316", animation: "ekken", outline: "darker", outline_width: "2" },
-    { font: "dela", color: "ef4444", animation: "tenmetsu", outline: "darker", outline_width: "2" },
-  ],
-  "注意" => [
-    { font: "gothic-bold", color: "f97316", animation: "mabataki", outline: "darker", outline_width: "2" },
-    { font: "mincho", color: "ea580c", animation: "tenmetsu", outline: "darker", outline_width: "2" },
-    { font: "akzk", color: "f59e0b", animation: "chirichiri", outline: "darker", outline_width: "2" },
-  ],
-  "対応" => [
-    { font: "maru-bold", color: "3b82f6", animation: "norinori", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "60a5fa", animation: "nami", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "8b5cf6", animation: "patapata", outline: "darker", outline_width: "2" },
-  ],
-  "確認" => [
-    { font: "gothic-bold", color: "60a5fa", animation: "tate_scroll", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "3b82f6", animation: "bane", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "22c55e", animation: "mabataki", outline: "darker", outline_width: "2" },
-  ],
-  "歓迎" => [
-    { font: "maru", color: "10b981", animation: "poyoon", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "22c55e", animation: "kirari", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "34d399", animation: "mochimochi", outline: "darker", outline_width: "2" },
-  ],
-  "警告" => [
-    { font: "mincho", color: "c2410c", animation: "tenmetsu", outline: "darker", outline_width: "2" },
-    { font: "dela", color: "dc2626", animation: "ekken", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "f97316", animation: "shuchusen", outline: "darker", outline_width: "2" },
-  ],
-  "必須" => [
-    { font: "akzk", color: "ef4444", animation: "ekken", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "dc2626", animation: "tenmetsu", outline: "darker", outline_width: "2" },
-    { font: "dela", color: "f97316", animation: "chirichiri", outline: "darker", outline_width: "2" },
-  ],
-  "任意" => [
-    { font: "noto", color: "8b5cf6", animation: "nami", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "a855f7", animation: "poyoon", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "c084fc", animation: "yurayura", outline: "darker", outline_width: "2" },
-  ],
-  "導入" => [
-    { font: "kurobara", color: "22c55e", animation: "kaiten", speed: "slow", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "10b981", animation: "norinori", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "34d399", animation: "nami", outline: "darker", outline_width: "2" },
-  ],
-  "削除" => [
-    { font: "toge", color: "dc2626", animation: "zanzo", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "ef4444", animation: "bure", outline: "darker", outline_width: "2" },
-    { font: "dela", color: "f97316", animation: "ekken", outline: "darker", outline_width: "2" },
-  ],
-  "追加" => [
-    { font: "zero", color: "3b82f6", animation: "patapata", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "60a5fa", animation: "bane", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "22c55e", animation: "yatta", outline: "darker", outline_width: "2" },
-  ],
-  "更新" => [
-    { font: "chikara", color: "f59e0b", animation: "chirichiri", outline: "darker", outline_width: "2" },
-    { font: "gothic-bold", color: "f97316", animation: "gatagata", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "60a5fa", animation: "yurayura", outline: "darker", outline_width: "2" },
-  ],
-  "PR" => [
-    { font: "gothic-bold", color: "3b82f6", animation: "norinori", outline: "darker", outline_width: "2" },
-    { font: "maru-bold", color: "8b5cf6", animation: "nami", outline: "darker", outline_width: "2" },
-    { font: "noto", color: "ec4899", animation: "mozaiku", outline: "darker", outline_width: "2" },
-  ],
-}.freeze
+catalog_data = YAML.safe_load_file(CATALOG_PATH)
 
-DEFAULT_FLAVOR = {
-  background: "transparent",
-  outline: "darker",
-  outline_width: "2",
+DEFAULT_FLAVOR = catalog_data.fetch("defaults").transform_keys(&:to_sym).freeze
+CATALOG = catalog_data.fetch("terms").transform_values { |variants|
+  variants.map { |variant| variant.transform_keys(&:to_sym).freeze }.freeze
 }.freeze
 
 TERM_RE = Regexp.union(CATALOG.keys.sort_by { |term| [-term.length, term] })
