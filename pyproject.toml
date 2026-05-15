@@ -22,6 +22,10 @@ addopts = "--tb=short"
 branch = true
 parallel = true
 relative_files = true
+source = [
+    "${MOJIEMOJI_COVERAGE_HOOKS-hooks}",
+    "${MOJIEMOJI_COVERAGE_SCRIPTS-skills/mojiemoji-github/scripts}",
+]
 omit = ["tests/*", "**/__pycache__/*"]
 
 [tool.coverage.report]

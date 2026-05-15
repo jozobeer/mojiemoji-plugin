@@ -19,6 +19,11 @@ HOOK = REPO_ROOT / "hooks" / "mojiemoji-japanese-gate.py"
 def _coverage_subprocess_env(monkeypatch: pytest.MonkeyPatch) -> None:
     cfg = REPO_ROOT / "pyproject.toml"
     monkeypatch.setenv("COVERAGE_PROCESS_START", str(cfg))
+    monkeypatch.setenv("MOJIEMOJI_COVERAGE_HOOKS", str(REPO_ROOT / "hooks"))
+    monkeypatch.setenv(
+        "MOJIEMOJI_COVERAGE_SCRIPTS",
+        str(REPO_ROOT / "skills" / "mojiemoji-github" / "scripts"),
+    )
     # Anchor data file to the repo root; otherwise subprocesses with cwd=tmp_path
     # write to a dir pytest deletes at teardown, silently losing all hits.
     monkeypatch.setenv("COVERAGE_FILE", str(REPO_ROOT / ".coverage"))
