@@ -179,9 +179,25 @@ skills:
 
 つまり「品質を保ちたい subagent は frontmatter に skill 宣言」、「最低限通したいだけなら宣言不要(hook の自己完結 recovery で通る)」の 2 段構成。
 
----
+### 移植性 audit — host 設定のドリフト検知
 
-## ⚙️ 設定
+「plugin 単独で再現される」状態が host 側で実際に保たれているかを確認するスクリプトを同梱している:
+
+```bash
+# デフォルトで ~/.config/claude を検査
+scripts/audit-host-leakage.sh
+
+# 任意のディレクトリを指定
+scripts/audit-host-leakage.sh /custom/config/path
+```
+
+スクリプトは host 設定下の `mojiemoji` 言及を grep し、以下を除外したうえで残った真の参照を列挙する:
+
+- plugin clone (`plugins/marketplaces/` / `plugins/cache/`) — プラグイン同梱物そのもの
+- 自動生成アーティファクト (`projects/` / `sessions/` / `tasks/` / `paste-cache/` / `file-history/` / `jobs/` / `*.jsonl` / `.claude.json` 等) — 運用上発生する履歴
+- `settings.json` / `plugins/installed_plugins.json` / `plugins/known_marketplaces.json` — プラグイン有効化に必須の登録情報
+
+終了コード: 0 = 残存なし(理想)、1 = 残存あり(列挙)、2 = config dir 不在。CI に組み込めば host ドリフトの早期検知にも使える。
 
 ### Hook を一時 <img src="https://mojiemoji.jozo.beer/emoji/%E7%84%A1%E5%8A%B9?font=mincho&color=f87171&animation=bane&background=transparent&outline=71f871&outline_width=2" alt="無効" height="24" align="absmiddle"> 化
 
