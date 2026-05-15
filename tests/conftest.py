@@ -43,7 +43,7 @@ def stamp_url(
     font: str = "gothic-bold",
     color: str = "3b82f6",
     animation: str = "bane",
-    background: str = "transparent",
+    background: str | None = "transparent",
     outline: str | None = "darker",
     outline_width: str | None = "2",
     speed: str | None = None,
@@ -55,8 +55,9 @@ def stamp_url(
         f"font={font}",
         f"color={color}",
         f"animation={animation}",
-        f"background={background}",
     ]
+    if background is not None:
+        parts.append(f"background={background}")
     if outline is not None:
         parts.append(f"outline={outline}")
     if outline_width is not None:

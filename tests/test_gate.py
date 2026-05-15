@@ -13,11 +13,12 @@ conflicts → rotational+speed).
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import re
+import subprocess
 
 import pytest
 
-from conftest import stamp_img, stamp_url
+from conftest import HOOK, stamp_img, stamp_url
 
 JP_BODY = "これは日本語の本文です。"
 JP_PARAGRAPH = (
@@ -46,10 +47,22 @@ class TestToolFiltering:
         )
         assert result.returncode == 0
 
-    def test_malformed_stdin_is_allowed(self, run_hook):
+    def test_missing_fields_is_allowed(self, run_hook):
+        # `{}` parses fine but lacks `tool_name` — the hook should
+        # treat it as a no-op (fail-open on missing fields).
+        result = run_hook({})
+        assert result.returncode == 0
+
+    def test_unparseable_stdin_is_allowed(self, tmp_path):
         # The hook should never crash a tool call on its own bug.
-        # An unparseable payload returns 0 (fail-open).
-        result = run_hook({})  # missing tool_name etc.
+        # Raw garbage that isn't JSON returns 0 (fail-open).
+        result = subprocess.run(
+            ["python3", str(HOOK)],
+            input=b"not json at all {{{",
+            capture_output=True,
+            cwd=str(tmp_path),
+            timeout=10,
+        )
         assert result.returncode == 0
 
 
@@ -155,9 +168,7 @@ class TestBashBlocking:
         assert result.returncode == 2
 
     def test_jp_body_with_url_missing_background_blocks(self, run_hook):
-        bad_url = stamp_url(background=None) if False else stamp_url().replace(
-            "&background=transparent", ""
-        )
+        bad_url = stamp_url(background=None)
         body = f'{JP_BODY} <img src="{bad_url}" alt="x">'
         result = run_hook(
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
@@ -336,21 +347,37 @@ class TestFileInspection:
 class TestMcpPath:
     """MCP GitHub tools are gated identically (body-field only)."""
 
+    # Names that Claude Code's matcher (`hooks/hooks.json`) actually routes
+    # to the hook today: the pattern is `Bash|mcp__.*github.*`, so the tool
+    # name must contain `github` somewhere. Production coverage is bounded
+    # by this matcher — names not matching it never reach the hook.
     @pytest.mark.parametrize(
         "tool_name",
         [
             "mcp__github__github_create_pull_request",
             "mcp__mcpm_profile_base__github_add_issue_comment",
             "mcp__gh__github_pull_request_review_write",
-            # Aliased server name without `github` in it — still matches
-            # because the tool-name pattern catches the GH operation suffix.
+        ],
+    )
+    def test_undecorated_jp_body_blocks(self, run_hook, tool_name):
+        result = run_hook({"tool_name": tool_name, "tool_input": {"body": JP_BODY}})
+        assert result.returncode == 2, f"{tool_name} should have been blocked"
+
+    # Defense-in-depth: even if a future matcher broadens to non-`github`
+    # aliases (`mcp__octo__*`, `mcp__forgejo__*`, …), the hook logic itself
+    # must still recognize the GH operation suffix. Documenting this
+    # separately from the matcher-bound tests above prevents false
+    # confidence about what production currently covers.
+    @pytest.mark.parametrize(
+        "tool_name",
+        [
             "mcp__octo__create_pull_request",
             "mcp__octo__pull_request_review_write",
             "mcp__octo__issue_write",
             "mcp__octo__add_issue_comment",
         ],
     )
-    def test_undecorated_jp_body_blocks(self, run_hook, tool_name):
+    def test_aliased_server_name_blocks_when_routed(self, run_hook, tool_name):
         result = run_hook({"tool_name": tool_name, "tool_input": {"body": JP_BODY}})
         assert result.returncode == 2, f"{tool_name} should have been blocked"
 
@@ -401,3 +428,44 @@ class TestMcpPath:
             }
         )
         assert result.returncode == 0
+
+
+# --- Matcher coverage (hooks/hooks.json) ----------------------------------
+
+
+class TestMatcherCoverage:
+    """The hook only runs for tool names that match the matcher in
+    `hooks/hooks.json`. This documents the actual production routing
+    boundary — names not matching here never reach the hook regardless
+    of how robust the hook logic is."""
+
+    @pytest.fixture(scope="class")
+    def matcher(self):
+        config = json.loads((HOOK.parent / "hooks.json").read_text())
+        pattern = config["hooks"]["PreToolUse"][0]["matcher"]
+        return re.compile(pattern)
+
+    @pytest.mark.parametrize(
+        "tool_name",
+        [
+            "Bash",
+            "mcp__github__github_create_pull_request",
+            "mcp__mcpm_profile_base__github_add_issue_comment",
+            "mcp__gh__github_pull_request_review_write",
+        ],
+    )
+    def test_routed_to_hook(self, matcher, tool_name):
+        assert matcher.search(tool_name), f"{tool_name} should be routed to the hook"
+
+    @pytest.mark.parametrize(
+        "tool_name",
+        [
+            "Read",
+            "Edit",
+            "mcp__octo__create_pull_request",  # alias without `github` — NOT routed
+            "mcp__forgejo__pull_request_review_write",
+            "mcp__notion__create_page",
+        ],
+    )
+    def test_not_routed_to_hook(self, matcher, tool_name):
+        assert not matcher.search(tool_name), f"{tool_name} should NOT be routed to the hook"
