@@ -367,26 +367,14 @@ def test_prestamp_renders_compound_variant_as_adjacent_imgs(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    # Swap the catalog path in via a copy of prestamp.rb won't work cleanly;
-    # instead run prestamp.rb with a temp YAML by symlinking into place via
-    # a wrapper that overrides CATALOG_PATH. Simpler: monkey-patch via a
-    # heredoc wrapper.
-    wrapper = tmp_path / "prestamp-with-catalog.rb"
-    wrapper.write_text(
-        f'CATALOG_PATH_OVERRIDE = "{catalog}"\n'
-        'orig_load = YAML.method(:safe_load_file)\n'
-        f'load "{PRESTAMP}"\n',
-        encoding="utf-8",
-    )
-
-    # Direct approach: copy prestamp.rb and substitute CATALOG_PATH.
+    # Copy prestamp.rb to tmp_path and rewrite the CATALOG_PATH constant
+    # to point at the fixture catalog, so we can run it in isolation
+    # without touching the repo's real catalog.
     import shutil
 
-    src = PRESTAMP
     dst = tmp_path / "prestamp.rb"
-    shutil.copy(src, dst)
-    text = dst.read_text(encoding="utf-8")
-    text = text.replace(
+    shutil.copy(PRESTAMP, dst)
+    text = dst.read_text(encoding="utf-8").replace(
         'CATALOG_PATH = File.expand_path("../data/prestamp-catalog.yml", __dir__)',
         f'CATALOG_PATH = "{catalog}"',
     )

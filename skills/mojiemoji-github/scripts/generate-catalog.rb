@@ -66,9 +66,11 @@ def fits_single_stamp?(term)
   c[:kanji] <= 2 && c[:kata] <= 3 && c[:ascii] <= 3 && c[:hira] <= 4
 end
 
-# Per-character class detection for split_term. `:other` covers
-# punctuation / digits / katakana variants like ヴ that don't fall under
-# Hiragana / Han / basic ASCII letters but still appear in normal terms.
+# Per-character class detection for split_term. `:other` is reserved for
+# punctuation, symbols, and characters outside the four scripts we track
+# (Han / Hiragana / Katakana / ASCII alphanumerics) — full-width katakana
+# extensions such as ヴ match \p{Katakana} and ASCII digits 0-9 match the
+# /[A-Za-z0-9]/ branch, so neither falls through to `:other`.
 def char_class_of(c)
   case c
   when /\p{Han}/ then :kanji
@@ -156,14 +158,22 @@ def seeded_random(seed, term, axis)
   Random.new(raw.to_i(16) % (2**32))
 end
 
-def pick_flavor(term, seed:, index:)
-  fonts = CANONICAL_FONTS.shuffle(random: seeded_random(seed, term, "font"))
-  animations = POOLED_ANIMATIONS.shuffle(random: seeded_random(seed, term, "anim"))
-  colors = TAILWIND_PALETTE.shuffle(random: seeded_random(seed, term, "color"))
+# Pre-shuffle the canonical pools once per term, then index into them for
+# each variant. Shuffling inside the per-variant loop would be O(variants *
+# pool_size) instead of O(pool_size + variants), wasteful for large
+# `--variants` counts.
+def shuffled_pools(term, seed:)
+  {
+    fonts: CANONICAL_FONTS.shuffle(random: seeded_random(seed, term, "font")),
+    animations: POOLED_ANIMATIONS.shuffle(random: seeded_random(seed, term, "anim")),
+    colors: TAILWIND_PALETTE.shuffle(random: seeded_random(seed, term, "color")),
+  }
+end
 
-  font = fonts[index % fonts.size]
-  animation = animations[index % animations.size]
-  color = colors[index % colors.size]
+def flavor_at(pools, index)
+  font = pools[:fonts][index % pools[:fonts].size]
+  animation = pools[:animations][index % pools[:animations].size]
+  color = pools[:colors][index % pools[:colors].size]
   {
     font: font,
     color: color,
@@ -175,15 +185,17 @@ def pick_flavor(term, seed:, index:)
 end
 
 def generate_variants(term, seed:, count:)
-  (0...count).map { |i| pick_flavor(term, seed: seed, index: i) }
+  pools = shuffled_pools(term, seed: seed)
+  (0...count).map { |i| flavor_at(pools, i) }
 end
 
 # Compound variants: each variant is one shared flavor split across the
 # adjacent chunks. SKILL.md prescribes matching font/color/animation across
 # the two halves so the split reads as a single cohesive word.
 def generate_compound_variants(term, chunks, seed:, count:)
+  pools = shuffled_pools(term, seed: seed)
   (0...count).map do |i|
-    flavor = pick_flavor(term, seed: seed, index: i)
+    flavor = flavor_at(pools, i)
     { chunks: chunks.map { |chunk_text| flavor.merge(text: chunk_text) } }
   end
 end

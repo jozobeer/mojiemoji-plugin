@@ -116,6 +116,20 @@ terms:
       outline: "5ef43f"
       animation: neruneru
 
+  失敗:
+    - font: gothic
+      color: "c084fc"
+      outline: "fcc084"
+      animation: yokomoya
+    - font: pixel
+      color: "f43f5e"
+      outline: "5ef43f"
+      animation: zairu
+    - font: noto
+      color: "ec4899"
+      outline: "99ec48"
+      animation: kirari
+
   着手:
     - font: kurobara
       color: "db2777"
@@ -130,6 +144,20 @@ terms:
       color: "ca8a04"
       outline: "04ca8a"
       animation: kirari
+
+  導入:
+    - font: gothic
+      color: "7c3aed"
+      outline: "ed7c3a"
+      animation: poyoon
+    - font: noto
+      color: "0891b2"
+      outline: "b20891"
+      animation: tate_scroll
+    - font: dela
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: yokomoya
 
   開始:
     - font: noto
@@ -2567,6 +2595,20 @@ terms:
       outline: "f63b82"
       animation: bane
 
+  歓迎:
+    - font: noto
+      color: "ca8a04"
+      outline: "04ca8a"
+      animation: mochimochi
+    - font: zero
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: bane
+    - font: akzk
+      color: "16a34a"
+      outline: "4a16a3"
+      animation: yurayura
+
   動作:
     - font: mincho
       color: "db2777"
@@ -4723,6 +4765,20 @@ terms:
     - font: maru-bold
       color: "d97706"
       outline: "06d977"
+      animation: tenmetsu
+
+  対応:
+    - font: kurobara
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: yokomoya
+    - font: maru
+      color: "2563eb"
+      outline: "eb2563"
+      animation: poyoon
+    - font: hachimaru
+      color: "fdba74"
+      outline: "74fdba"
       animation: tenmetsu
 
   更新:
