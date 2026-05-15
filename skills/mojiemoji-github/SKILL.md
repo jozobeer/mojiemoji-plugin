@@ -1,6 +1,6 @@
 ---
 name: mojiemoji-github
-description: GitHub markdown(issue / PR / レビューコメント / 返信 / リリースノート)に向けて mojiemoji.jozo.beer 経由の画像スタンプを差し込むスキル。**文中のインライン強調が主用途**(例 【マジで】やばい【バグ】ですね)で、レビュー・コメント・返信を含むすべての surface に本文と同等の密度で適用する。`![alt](url)` を行頭に置く block スタンプは review-class surface では禁止、body-class surface でも非推奨(ユーザーが明示的に依頼した場合のみ)。文末・見出し末の trailing 装飾には Unicode 絵文字(🎉 💣 🔥 など)を使うこと(プロジェクトに GitHub Markdown 規約があればそちらの「Trailing decoration」節を参照)。`approve` レビューでの LGTM は mojiemoji 単独なら inline / block-image どちらでも自由。他の LGTM-imagery skill を併用する場合のみ mojiemoji は inline に留めるのが推奨(派手な装飾 2 つの並置を避けるため)。body-class surface では shields.io バッジと組み合わせて使う。
+description: GitHub markdown(issue / PR / レビューコメント / 返信 / リリースノート)に向けて mojiemoji.jozo.beer 経由の画像スタンプを差し込むスキル。**文中のインライン強調が主用途**(例 【マジで】やばい【バグ】ですね)で、レビュー・コメント・返信を含むすべての surface に本文と同等の密度で適用する。`![alt](url)` を行頭に置く block スタンプは review-class surface では禁止、body-class surface でも非推奨(ユーザーが明示的に依頼した場合のみ)。文末・見出し末の trailing 装飾は **2 段階優先**: `data/emoji-catalog.yml` に登録のある絵文字(162 種、🎉 / 🔥 / ✨ / 💯 / ⚠ / ❤ / 😂 等)は **mojiemoji 化** してアニメ付きで埋め、無いもの(例 🚀 = U+1F680)だけ素の Unicode に fallback する(プロジェクトに GitHub Markdown 規約があればそちらの「Trailing decoration」節を参照)。`approve` レビューでの LGTM は mojiemoji 単独なら inline / block-image どちらでも自由。他の LGTM-imagery skill を併用する場合のみ mojiemoji は inline に留めるのが推奨(派手な装飾 2 つの並置を避けるため)。body-class surface では shields.io バッジと組み合わせて使う。
 when_to_use: |
   日本語の GitHub markdown を作成するときは、たとえ mojiemoji 関連キーワードが無くても**積極的にこのスキルを提案すること**。ユーザーは感情の転換点、ステータス・気分・承認、注意喚起、オチの強調などをプレーンテキストではなく表情豊かなスタンプで表現することを強く好む。装飾前に一度はユーザーに確認すること。強制はしない。
 
@@ -141,9 +141,12 @@ Closes #N.
 - ✅ **常にインライン埋め込み**で、文中の単語を置き換える。密度は惜しみなく — 1 段落あたり最低 1〜2 個、アイデアの濃い箇条書きならもっと多く。文法的に収まる名詞・動詞・副詞はすべて埋め込む。
 - ✗ **セクション末のオチ装飾**(各セクションの後ろに `→ <stamp1> <stamp2>` を独立行で置く)は**使わない**。「セクション末のブロックスタンプは不要」として明示的に拒否されている。
 - ✗ **締めの装飾**(本文末に `---` + 独立行のムードスタンプ)も**使わない**。同じ理由で拒否されている。
-- ✅ **文末・段落末・見出し末の trailing 装飾**には、普通の Unicode 絵文字を使う。例: `ようやくマージできた。🎉` / `## デプロイ手順 🚀` / `これで仕様の差分は無くなった。✨`。1 スロット 1 絵文字、連結禁止。
+- ✅ **文末・段落末・見出し末の trailing 装飾**は 2 段階優先で選ぶ:
+  1. **`data/emoji-catalog.yml` に登録のある絵文字** (162 種、🎉 / 🔥 / ✨ / 💯 / ⚠ / ❤ / 😂 / 🎊 / 🚨 / 😎 / 🤖 等) → **mojiemoji 化してアニメ付きで埋める**。catalog から該当 emoji の variant 1 つを引き、`<img src="https://mojiemoji.jozo.beer/emoji/<emoji>?font=<font>&color=<color>&animation=<anim>&background=transparent&outline=<outline>&outline_width=2" alt="<emoji>" height="24" align="absmiddle">` 形式で挿入する。動詞・名詞の inline 埋め込みと同じ URL 構造 — `mojiemoji_markdown.rb --text '<emoji>'` でも手で組んでも良い。
+  2. **登録の無い絵文字** (例 🚀 = U+1F680、upstream `jozobeer/mojiemoji/assets/emoji` にアセット無し) → **素の Unicode** にフォールバック。例: `## デプロイ手順 🚀`、`これは未対応 🪐`。
+  catalog 在否は `grep "\"$EMOJI\":" skills/mojiemoji-github/data/emoji-catalog.yml` で確認。1 スロット 1 絵文字、連結禁止(mojiemoji 化しても同じ — 連続して並べない)。
 
-ユーザーは「独立行の block スタンプは『デカくてよくわからない文節』になって本文を壊す」と指摘している。mojiemoji = インライン埋め込み(文中の強調)、Unicode 絵文字 = 末尾の装飾。2 つのスロット、2 つの道具 — 混同しないこと。
+ユーザーは「独立行の block スタンプは『デカくてよくわからない文節』になって本文を壊す」と指摘している。mojiemoji = インライン埋め込み(文中の強調)、Unicode 絵文字 / mojiemoji 化された絵文字 = 末尾の装飾。2 つのスロット、2 つの道具 — 混同しないこと。**末尾装飾の絵文字を mojiemoji 化しても役割は装飾のまま** — 文中の単語置換 (`【マジで】`) と混同せず、文末のシンボル位置に留める。
 
 **デフォルトモードはすべての日本語 GitHub surface でインラインのみ。** body-class surface に対してユーザーがそのターンで *明示的に* block 装飾を要求した場合(例: 「→ ブロックでつけて」 / 「盛大に」 / 「block でも OK」)を除き、block スタンプはどこにも置かない。例外が一切効かない厳格な排除が 2 つある:
 
@@ -298,7 +301,14 @@ ruby scripts/mojiemoji_markdown.rb --text $'ありが\nとう' --inline \
 
 ### mojiemoji と Unicode 絵文字の組み合わせ — その場で工夫する
 
-mojiemoji と Unicode 絵文字は 2 つの層で、**組み合わせるための道具**である。ユーザーは「色々クリエイティブに」「どうしたら良いか自律的に創作して考えて」と言っている。固定テンプレートに頼らず、本文ごとにパターンを変え、読者を驚かせ、自由に混ぜる。`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/` 配下の参照ファイル(もしあれば「Unicode emoji + mojiemoji — improvise」節を含むもの)は非網羅的な踏み台であって、レシピではない。
+mojiemoji(漢字熟語 / 略語 / カタカナ語のテキストスタンプ)と絵文字(Unicode シンボル)は 2 つの層で、**組み合わせるための道具**である。ユーザーは「色々クリエイティブに」「どうしたら良いか自律的に創作して考えて」と言っている。固定テンプレートに頼らず、本文ごとにパターンを変え、読者を驚かせ、自由に混ぜる。`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/` 配下の参照ファイル(もしあれば「Unicode emoji + mojiemoji — improvise」節を含むもの)は非網羅的な踏み台であって、レシピではない。
+
+**絵文字側の選択肢** — 文末・段落末・見出し末の trailing 装飾に絵文字を置くとき:
+
+- `data/emoji-catalog.yml` に登録された絵文字 (162 種) は **mojiemoji 化** された画像で出す。アニメ付きでパンチが増す。
+- 未登録(例 🚀 = U+1F680、🪐 = U+1FA90)は**素の Unicode** に fallback。
+- 判断フロー: 絵文字が catalog に居るかを `grep "<emoji>" data/emoji-catalog.yml` で確認 → 居れば mojiemoji 化、居なければ素の Unicode。
+- どちらも文末/見出し末の「シンボル位置」専用 — 文中の単語置換 mojiemoji と役割を混ぜない。
 
 ```html
 <!-- 悪い例: 5 字単独スタンプ、インライン高でグリフが判読不能 -->
@@ -364,7 +374,7 @@ body-class surface(issue / PR / リリース / コメント / 返信)が日本�
   - **頻出カタカナ (2-3 字)**: `バグ`, `ログ`, `テスト`, `タグ`, `パス`, `フラグ`, `フック`, `キー`, `ジョブ`, `タスク`, `スキル`, `モード`, `プラグ`, `スタブ`, `モック`
 - AC チェックリスト、調査リストも、その散文にスタンプを埋め込める。
 - 「1 文インラインスタンプ 2 個まで」の制約は緩和 — 文法が許す限り連ねてよい。
-- セクション見出し: 見出しのキーワードをインライン埋め込みする(例 `## <デプロイ> 手順`)、または末尾に Unicode 絵文字 trailing 装飾を付ける(例 `## デプロイ手順 🚀`)を推奨。見出し後の独立行 block 装飾は**撤回された** — 本文・レビュー surface での先頭/末尾 block スタンプと同じ破壊的パターンである。
+- セクション見出し: 見出しのキーワードをインライン埋め込みする(例 `## <デプロイ> 手順`)、または末尾に絵文字 trailing 装飾を付ける(catalog 登録済の絵文字なら mojiemoji 化、未登録なら素の Unicode。例 `## リリース 🎉` は catalog にあるので mojiemoji 化、`## デプロイ手順 🚀` は U+1F680 が catalog 外なので Unicode のまま)を推奨。見出し後の独立行 block 装飾は**撤回された** — 本文・レビュー surface での先頭/末尾 block スタンプと同じ破壊的パターンである。
 
 ### 絶対不変のもの
 
@@ -392,7 +402,7 @@ CONSTRAINTS:
 - Color: dark-mode-safe (Tailwind 300–500 range), bias toward 300–400
 - background=transparent in every URL
 - outline=darker outline_width=2 in every URL (auto-relative dark halo per stamp; never use outline=ffffff — white blends with light Tailwind 300–400 fills)
-- Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use a Unicode emoji (🎉 💣 🔥 ✨ 🚀 etc.) instead.
+- Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use an emoji — prefer mojiemoji-rendered if the emoji is in data/emoji-catalog.yml (162 supported, includes 🎉 🔥 ✨ 💯 ⚠ ❤ 😂 🎊 🚨 🤖 etc.), fall back to plain Unicode for unsupported codepoints (e.g. 🚀 = U+1F680, 🪐 = U+1FA90).
 ```
 
 ## Surface ごとの top/closing 装飾ヒューリスティック
