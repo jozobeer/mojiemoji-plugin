@@ -46,6 +46,13 @@ abort "error: --text is required" if options[:text].to_s.empty?
 # one of these, drop the outline + outline_width params automatically.
 COLOR_SHIFTING_ANIMATIONS = %w[disco psycho kira].freeze
 
+# Rotational animations spin the glyph; only readable at speed=step|slow.
+# Service default (effectively fast) and normal/fast leave a streak of
+# pixels. Inject speed=slow when the user picked rotation but didn't set
+# a speed — keeps the helper's output passing the hook's #12 validation
+# without forcing the caller to remember the rule.
+ROTATIONAL_ANIMATIONS = %w[kaiten kage_kaiten].freeze
+
 def hex_to_hsl(hex)
   h = hex.to_s.delete_prefix("#")
   r, g, b = [h[0..1], h[2..3], h[4..5]].map { |c| c.to_i(16) / 255.0 }
@@ -112,6 +119,33 @@ animation_val = options[:animation].to_s.downcase
 if COLOR_SHIFTING_ANIMATIONS.include?(animation_val)
   options.delete(:outline)
   options.delete(:outline_width)
+end
+
+# Rotational animations are unreadable at the default speed. If the
+# caller picked a rotation but didn't pick a speed, inject slow — an
+# explicit choice (step/slow/normal/fast) is left alone.
+#
+# When the explicit choice is normal/fast (or any non-canonical value),
+# the downstream hook will reject the URL. We intentionally don't
+# override the caller's selection (helper respects explicit input),
+# but emit a stderr warning so the conflict isn't silent — callers
+# piping `2>/dev/null` self-select out, callers who care see "the
+# helper made the URL you asked for, and the hook will reject it"
+# up front.
+#
+# Co-authored-by Copilot Autofix: independently arrived at the same
+# warning-without-override design (commit 268ed1d on this branch).
+# This version generalizes "fast / normal" → "anything not in
+# {step, slow}" so the warning fires on typos like `speed=fas` too.
+if ROTATIONAL_ANIMATIONS.include?(animation_val)
+  if options[:speed].to_s.empty?
+    options[:speed] = "slow"
+  elsif !%w[step slow].include?(options[:speed].to_s.downcase)
+    warn "mojiemoji_markdown.rb: --animation #{animation_val} with --speed " \
+         "#{options[:speed]} renders as an unreadable streak; the " \
+         "PreToolUse hook will reject this URL. Use --speed slow / " \
+         "--speed step, or drop --speed to auto-inject slow."
+  end
 end
 
 params = {
