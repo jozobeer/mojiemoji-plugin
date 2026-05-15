@@ -1,0 +1,62 @@
+name: 機能リクエスト
+description: 新しい挙動 / Skill / Subagent / Hook 拡張 / helper script 機能の提案
+title: "[feat]: "
+labels: ["feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <img src="https://mojiemoji.jozo.beer/emoji/%E6%8F%90%E6%A1%88?font=noto&color=3b82f6&animation=mabataki&background=transparent&outline=darker&outline_width=2" alt="提案" height="24" align="absmiddle">ありがとうございます ✨  <img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A2%E5%AD%98?font=maru-bold&color=60a5fa&animation=yurayura&background=transparent&outline=darker&outline_width=2" alt="既存" height="24" align="absmiddle">の Skill / Subagent / Hook で<img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%9F%E7%8F%BE?font=akzk&color=8b5cf6&animation=neruneru&background=transparent&outline=darker&outline_width=2" alt="実現" height="24" align="absmiddle">できないかも合わせて<img src="https://mojiemoji.jozo.beer/emoji/%E6%A4%9C%E8%A8%8E?font=mincho&color=a855f7&animation=ekken&background=transparent&outline=darker&outline_width=2" alt="検討" height="24" align="absmiddle">してもらえると助かります。
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: やりたいこと (motivation)
+      description: ユースケース、解決したい問題、現状の不便な点を具体的に書いてください。
+      placeholder: |
+        例: PR レビューでの「LGTM 画像」を mojiemoji ではなく make-image skill 経由で生成したいが、
+            現状の SKILL.md には approve 時の分岐ロジックが書かれていないので毎回確認が必要、など。
+    validations:
+      required: true
+
+  - type: textarea
+    id: existing-alternatives
+    attributes:
+      label: 既存機能で代用できるか確認しましたか
+      description: |
+        `mojiemoji-github` skill / `mojiemoji-selector` subagent / `mojiemoji-japanese-gate.py` hook / helper script (`mojiemoji_markdown.rb`) のどれかで実現できないか確認した結果を書いてください。
+      placeholder: |
+        例: SKILL.md § "LGTM 画像" を読んだが、approve 判定の trigger は書かれていない、など
+    validations:
+      required: false
+
+  - type: textarea
+    id: service-side
+    attributes:
+      label: 対応する mojiemoji service 側の機能はあるか
+      description: |
+        mojiemoji.jozo.beer 側で必要な機能 (新しい animation / font / API パラメータ) があれば書いてください。
+        プラグイン側だけで完結する変更なら「不要」と書いてください。
+      placeholder: "例: 不要 (プラグイン側の hook 拡張だけで実現可能)"
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ基準
+      description: 「これが満たされていれば close できる」と判断できる具体的な条件をチェックリストで。
+      placeholder: |
+        - [ ] `gh pr review --approve` 時に hook が make-image を起動する
+        - [ ] approve 以外の verdict では make-image を起動しない
+        - [ ] SKILL.md に挙動を明文化
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 追加の context
+      description: 関連 issue / 過去の議論 / 参考 PR があれば
+    validations:
+      required: false
