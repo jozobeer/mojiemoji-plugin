@@ -53,19 +53,6 @@ BYPASS_MARKER = "HOOK_DISABLE=1"
 # Match every mojiemoji URL up to the first URL/HTML delimiter so we can
 # verify per-URL query parameters. Delimiters: whitespace, `"`, `<`, `>`, `)`.
 MOJI_URL_RE = re.compile(r"https?://mojiemoji\.jozo\.beer/[^\s\"<>)]+")
-# Per-URL emoji-text path segment. The slug between `/emoji/` and the
-# next `/` or `?` is the stamp text. Used to check the `LGTM` slug.
-# Case-insensitive because the service treats the path slug as
-# case-insensitive too.
-EMOJI_TEXT_RE = re.compile(r"/emoji/([^/?#]+)", re.IGNORECASE)
-# Markdown image syntax pointing at a mojiemoji URL: `![alt](url)`.
-# This is the BLOCK-style image rendering — the only LGTM usage that's
-# rejected per SKILL.md § LGTM 画像. Inline `<img ... height="24"
-# align="absmiddle">` usage is fine (LGTM as a word like any other
-# inline embed).
-MD_IMG_MOJI_RE = re.compile(
-    r"!\[[^\]]*\]\((https?://mojiemoji\.jozo\.beer/[^)\s]+)\)"
-)
 # File-based body sources: `gh ... --body-file PATH`, `gh api ... --input
 # PATH`, `gh api ... -F body=@PATH`. Capture the path so we can also inspect
 # the file's contents — otherwise file-routed posts trivially bypass the URL
@@ -397,62 +384,6 @@ def main() -> int:
             "緊急bypass: Bash なら command 先頭、MCP なら body 内に `HOOK_DISABLE=1` を含める\n"
             "\n"
             "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
-        )
-        return 2
-
-    # Block-style LGTM mojiemoji is rejected per SKILL.md § LGTM 画像.
-    # Scope: ONLY Markdown image syntax `![alt](url)` where the URL points
-    # at `mojiemoji.jozo.beer/emoji/LGTM` — that's the block-rendering
-    # form that's a poor fit for approve imagery (rejected across multiple
-    # PRs including `SP-ACL#1712`). Inline `<img ... height="..." ...>`
-    # usage of LGTM is allowed — the user explicitly confirmed inline-in-
-    # prose LGTM mojiemoji is fine, like any other inline word stamp.
-    #
-    # What to use as an alternative for LGTM imagery overall is outside
-    # mojiemoji's scope — the plugin only scopes the rejection of the
-    # block-style mojiemoji pattern. Whether a user has another skill that
-    # produces LGTM imagery is entirely user-dependent.
-    #
-    # Block BEFORE param validation: a fully-styled block-LGTM URL is
-    # still the wrong tool. Otherwise the agent would fix outline/font/
-    # etc only to be blocked again here, wasting a round-trip.
-    block_lgtm_urls = []
-    for m in MD_IMG_MOJI_RE.finditer(inspect_text):
-        url = m.group(1)
-        em = EMOJI_TEXT_RE.search(url)
-        if em and em.group(1).upper() == "LGTM":
-            block_lgtm_urls.append(url)
-    if block_lgtm_urls:
-        preview_lines = []
-        for u in block_lgtm_urls[:5]:
-            short = u[:140] + ("…" if len(u) > 140 else "")
-            preview_lines.append(f"  - {short}")
-        preview = "\n".join(preview_lines)
-        more = f"\n  …他 {len(block_lgtm_urls) - 5} 件" if len(block_lgtm_urls) > 5 else ""
-        sys.stderr.write(
-            "🚧 block-style mojiemoji LGTM スタンプが検出されました\n"
-            "\n"
-            f"検出: {len(block_lgtm_urls)} 件の `![alt](mojiemoji.jozo.beer/emoji/LGTM…)`。\n"
-            "block-image 形式の mojiemoji LGTM は SKILL.md § LGTM 画像 で却下されて\n"
-            "いる運用パターン(過去 PR `SP-ACL#1712` でも却下)。\n"
-            "\n"
-            "**インラインの LGTM はブロックしない** — `<img src=...LGTM... height=\"24\"\n"
-            "align=\"absmiddle\">` 形式で文中に埋め込む使い方は通常のスタンプとして\n"
-            "OK。今ブロックしているのは `![...](url)` の独立行レンダリングだけ。\n"
-            "\n"
-            "## 該当URL\n"
-            f"{preview}{more}\n"
-            "\n"
-            "## 対応\n"
-            "1. block-image 表記をやめる — `![LGTM](...)` を削除\n"
-            "2. インラインで `<img src=...LGTM... height=\"24\" align=\"absmiddle\">`\n"
-            "   として文中に埋め込むのは OK\n"
-            "3. それ以外の LGTM 画像表現はユーザー環境依存(本プラグインのスコープ外)\n"
-            "\n"
-            "緊急bypass: Bash command 先頭 / MCP body 内に `HOOK_DISABLE=1` を含める\n"
-            "(block-style LGTM の意図的使用 — 推奨しない)\n"
-            "\n"
-            "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md § LGTM 画像\n"
         )
         return 2
 
