@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        報告ありがとうございます 🙏  template に沿って情報を埋めてもらえると、再現と修正が体感で 2 倍くらい早くなります。
+        <img src="https://mojiemoji.jozo.beer/emoji/%E5%A0%B1%E5%91%8A?font=gothic-bold&color=ef4444&animation=gatagata&background=transparent&outline=darker&outline_width=2" alt="報告" height="24" align="absmiddle">ありがとうございます 🙏  template に沿って情報を埋めてもらえると、<img src="https://mojiemoji.jozo.beer/emoji/%E5%86%8D%E7%8F%BE?font=maru-bold&color=dc2626&animation=bure&background=transparent&outline=darker&outline_width=2" alt="再現" height="24" align="absmiddle">と<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=gothic-bold&color=22c55e&animation=poyoon&background=transparent&outline=darker&outline_width=2" alt="修正" height="24" align="absmiddle">が<img src="https://mojiemoji.jozo.beer/emoji/%E4%BD%93%E6%84%9F?font=maru-bold&color=fb923c&animation=tenmetsu&background=transparent&outline=darker&outline_width=2" alt="体感" height="24" align="absmiddle">で 2 倍くらい早くなります。
 
   - type: dropdown
     id: surface

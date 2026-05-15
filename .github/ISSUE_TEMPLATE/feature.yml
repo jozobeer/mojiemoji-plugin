@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        提案ありがとうございます ✨  既存の Skill / Subagent / Hook で実現できないかも合わせて検討してもらえると助かります。
+        <img src="https://mojiemoji.jozo.beer/emoji/%E6%8F%90%E6%A1%88?font=noto&color=3b82f6&animation=mabataki&background=transparent&outline=darker&outline_width=2" alt="提案" height="24" align="absmiddle">ありがとうございます ✨  <img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A2%E5%AD%98?font=maru-bold&color=60a5fa&animation=yurayura&background=transparent&outline=darker&outline_width=2" alt="既存" height="24" align="absmiddle">の Skill / Subagent / Hook で<img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%9F%E7%8F%BE?font=akzk&color=8b5cf6&animation=neruneru&background=transparent&outline=darker&outline_width=2" alt="実現" height="24" align="absmiddle">できないかも合わせて<img src="https://mojiemoji.jozo.beer/emoji/%E6%A4%9C%E8%A8%8E?font=mincho&color=a855f7&animation=ekken&background=transparent&outline=darker&outline_width=2" alt="検討" height="24" align="absmiddle">してもらえると助かります。
 
   - type: textarea
     id: motivation
