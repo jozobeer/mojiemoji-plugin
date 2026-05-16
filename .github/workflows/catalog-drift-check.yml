@@ -1,0 +1,60 @@
+name: catalog-drift-check
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+
+      - name: Diff PR body vs prestamp output
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # 1. Fetch current body
+          gh pr view "$PR" --json body -q .body > /tmp/body.md
+          
+          # 2. Re-apply prestamp (idempotent check)
+          python3 skills/mojiemoji-github/scripts/prestamp.py < /tmp/body.md > /tmp/restamped.md
+          
+          # 3. Check for drift
+          if ! diff -q /tmp/body.md /tmp/restamped.md > /dev/null; then
+            echo "Drift detected!"
+            diff /tmp/body.md /tmp/restamped.md > /tmp/drift.diff || true
+            
+            # Add label
+            gh pr edit "$PR" --add-label catalog-drift || true
+            
+            # Prepare comment
+            {
+              echo "### ⚠️ catalog drift 検出"
+              echo "このPRの本文は最新の catalog 内容と乖離しています。以下を re-apply して同期してください。"
+              echo ""
+              echo "<details><summary>diff (original vs restamped)</summary>"
+              echo ""
+              echo '```diff'
+              cat /tmp/drift.diff
+              echo '```'
+              echo ""
+              echo "</details>"
+            } > /tmp/drift.comment.md
+            
+            # Dedupe comment: only post if not already present
+            HAS_COMMENT=$(gh pr view "$PR" --json comments -q '.comments[] | select(.body | contains("catalog drift 検出")) | .id' | head -1)
+            if [ -z "$HAS_COMMENT" ]; then
+              gh pr comment "$PR" --body-file /tmp/drift.comment.md
+            fi
+          else
+            echo "No drift detected."
+            # Remove label if it exists
+            gh pr edit "$PR" --remove-label catalog-drift || true
+          fi
