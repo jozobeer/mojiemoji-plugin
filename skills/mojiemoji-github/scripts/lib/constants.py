@@ -50,3 +50,23 @@ ROTATIONAL_ANIMATIONS = frozenset({"kaiten", "kage_kaiten"})
 # Block-only or otherwise illegible at h=24 inline. Excluded from
 # auto-selection pools.
 INLINE_PROBLEMATIC_ANIMATIONS = frozenset({"bakusan", "chuuou_zoom"})
+
+
+# Tailwind 600+ palette values that render black-on-dark in GitHub's
+# dark theme. Generators must not pick from this set; the hook
+# (`hooks/mojiemoji-japanese-gate.py:222`) rejects URLs containing
+# them. Keep this list in lockstep with the hook's `FORBIDDEN_COLORS`
+# until the hook can import from this package. `scripts/verify-
+# canonical-lists.sh` cross-checks for drift.
+FORBIDDEN_COLORS = frozenset({
+    "dc2626", "b91c1c", "991b1b",        # red-600/700/800
+    "c2410c",                            # orange-700
+    "ca8a04",                            # yellow-600
+    "15803d", "16a34a",                  # green-700/600
+    "0e7490",                            # cyan-700
+    "1d4ed8", "2563eb",                  # blue-700/600
+    "4338ca",                            # indigo-700
+    "7e22ce",                            # purple-700
+    "be185d",                            # pink-700
+    "000000", "111827", "1f2937",        # black / gray-900/800
+})
