@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -31,20 +30,14 @@ from typing import Optional
 
 import yaml
 
+from lib.cache_path import default_cache_file
+
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPTS_DIR.parent.parent.parent
 DEFAULT_CATALOG = SCRIPTS_DIR.parent / "data" / "prestamp-catalog.yml"
 DEFAULT_PLUGIN_JSON = REPO_ROOT / ".claude-plugin" / "plugin.json"
 CACHE_STATS_SCRIPT = SCRIPTS_DIR / "cache_stats.py"
-
-
-def default_cache_file() -> str:
-    env_override = os.environ.get("MOJIEMOJI_CACHE_FILE")
-    if env_override:
-        return env_override
-    data_home = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
-    return str(Path(data_home) / "mojiemoji-plugin" / "usage.jsonl")
 
 
 _IDENT_RE = re.compile(r"\A[a-zA-Z][a-zA-Z0-9_]*\Z")
