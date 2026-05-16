@@ -133,7 +133,7 @@ skip 判断が曖昧なら装飾する(後述「飽和モード」参照、迷�
 
 ### 緊急 bypass
 
-gate 自体を一時的に黙らせたい場合は Bash command 先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める(PreToolUse hook がこの marker を見ると素通しする)。乱用しない — 1 投稿 1 bypass の最小スコープに留める。旧名 `HOOK_DISABLE=1` も当面動くが deprecation warning を吐くので、新名を使うこと。
+gate 自体を一時的に黙らせたい場合は Bash command 先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める(PreToolUse hook がこの marker を見ると素通しする)。乱用しない — 1 投稿 1 bypass の最小スコープに留める。旧名 `HOOK_DISABLE=1` は v1.0.0 までの互換として動くが deprecation warning を吐き、v1.0.0 で削除予定。新規コードへの追加は PR CI で block されるので、新名を使うこと。
 
 ### Reviews API の structural distinction(`body` vs `comments[]`)
 
