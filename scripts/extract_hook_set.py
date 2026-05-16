@@ -28,7 +28,6 @@ def extract(name: str, path: str) -> set[str]:
             if not (isinstance(target, ast.Name) and target.id == name):
                 continue
             value = node.value
-            elts = None
             if isinstance(value, ast.Set):
                 elts = value.elts
             elif (
@@ -39,12 +38,22 @@ def extract(name: str, path: str) -> set[str]:
                 and isinstance(value.args[0], ast.Set)
             ):
                 elts = value.args[0].elts
-            if elts is None:
-                continue
-            return {
-                elt.value for elt in elts
-                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-            }
+            else:
+                raise SystemExit(
+                    f"{name} in {path} is not a set/frozenset literal "
+                    f"(got {type(value).__name__}); only `{{...}}` and "
+                    f"`frozenset({{...}})` are supported"
+                )
+            result: set[str] = set()
+            for elt in elts:
+                if not (isinstance(elt, ast.Constant) and isinstance(elt.value, str)):
+                    raise SystemExit(
+                        f"{name} in {path} contains non-string element "
+                        f"at line {getattr(elt, 'lineno', '?')}: "
+                        f"{ast.unparse(elt) if hasattr(ast, 'unparse') else elt!r}"
+                    )
+                result.add(elt.value)
+            return result
     raise SystemExit(f"missing {name} in {path}")
 
 

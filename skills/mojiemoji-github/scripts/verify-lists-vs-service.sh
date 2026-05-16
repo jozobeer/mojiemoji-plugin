@@ -83,11 +83,15 @@ compare() {
     printf '[drift] %s — service=%s hook=%s\n' "$label" "$sc" "$hc"
     if [[ -n "$only_service" ]]; then
         printf '  missing from hook (service adds):\n'
-        printf '    + %s\n' $only_service
+        while IFS= read -r entry; do
+            printf '    + %s\n' "$entry"
+        done <<< "$only_service"
     fi
     if [[ -n "$only_hook" ]]; then
         printf '  unknown to service (hook stale):\n'
-        printf '    - %s\n' $only_hook
+        while IFS= read -r entry; do
+            printf '    - %s\n' "$entry"
+        done <<< "$only_hook"
     fi
 }
 
