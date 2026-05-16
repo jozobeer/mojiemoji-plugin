@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck scripts/verify-lists-vs-docs.sh skills/mojiemoji-github/scripts/verify-lists-vs-service.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh
+      - run: shellcheck scripts/verify-lists-vs-docs.sh skills/mojiemoji-github/scripts/verify-lists-vs-service.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh scripts/audit-harness-skills.sh
 
   version-bump:
     name: Plugin version bump check
