@@ -27,18 +27,29 @@ from lib.constants import (
     CANONICAL_ANIMATIONS,
     CANONICAL_FONTS,
     COLOR_SHIFTING_ANIMATIONS,
+    FORBIDDEN_COLORS,
     INLINE_PROBLEMATIC_ANIMATIONS,
     ROTATIONAL_ANIMATIONS,
 )
+from lib.flavor import Flavor
 
 
-TAILWIND_PALETTE = (
-    "ef4444", "dc2626", "f97316", "ea580c", "f59e0b", "d97706",
-    "eab308", "ca8a04", "22c55e", "16a34a", "34d399", "10b981",
-    "06b6d4", "0891b2", "3b82f6", "2563eb", "60a5fa", "8b5cf6",
+# Tailwind palette used for variant generation. Curated to exclude
+# hook-forbidden colors (Tailwind 600+ on red/orange/yellow/green/blue
+# that render black-on-dark in GitHub's dark theme). The runtime
+# `FORBIDDEN_COLORS` filter is a defense in depth — kept so that any
+# future palette regression still gets sanitized — but the source
+# pool is the single provenance.
+# `scripts/verify-canonical-lists.sh` enforces
+# `_RAW_TAILWIND_PALETTE ∩ FORBIDDEN_COLORS = ∅`.
+_RAW_TAILWIND_PALETTE = (
+    "ef4444", "f97316", "ea580c", "f59e0b", "d97706",
+    "eab308", "22c55e", "34d399", "10b981",
+    "06b6d4", "0891b2", "3b82f6", "60a5fa", "8b5cf6",
     "7c3aed", "a855f7", "c084fc", "d946ef", "ec4899", "db2777",
     "f472b6", "fb7185", "f43f5e", "fdba74",
 )
+TAILWIND_PALETTE = tuple(c for c in _RAW_TAILWIND_PALETTE if c not in FORBIDDEN_COLORS)
 
 POOLED_ANIMATIONS = tuple(a for a in CANONICAL_ANIMATIONS if a not in INLINE_PROBLEMATIC_ANIMATIONS)
 
@@ -194,18 +205,7 @@ def yaml_safe_key(term: str) -> str:
 
 
 def render_variant(variant: dict, indent: str) -> str:
-    lines = [
-        f"{indent}- font: {variant['font']}",
-        f'{indent}  color: "{variant["color"]}"',
-    ]
-    if variant.get("outline"):
-        lines.append(f'{indent}  outline: "{variant["outline"]}"')
-    if variant.get("outline_width"):
-        lines.append(f'{indent}  outline_width: "{variant["outline_width"]}"')
-    lines.append(f"{indent}  animation: {variant['animation']}")
-    if variant.get("speed"):
-        lines.append(f"{indent}  speed: {variant['speed']}")
-    return "\n".join(lines)
+    return "\n".join(Flavor.from_dict(variant).to_yaml_lines(indent=indent))
 
 
 def render_compound_variant(variant: dict, indent: str) -> str:

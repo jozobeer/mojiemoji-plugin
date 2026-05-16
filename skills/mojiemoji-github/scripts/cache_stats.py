@@ -21,33 +21,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Optional
 
 from lib.cache_path import default_cache_file
-
-
-_IDENT_RE = re.compile(r"\A[a-zA-Z][a-zA-Z0-9_]*\Z")
-_HEX6_RE = re.compile(r"\A[0-9a-f]{6}\Z")
-_LEADING_DIGIT_RE = re.compile(r"\A\d")
-
-
-def yaml_value(value: object) -> str:
-    if isinstance(value, int) and not isinstance(value, bool):
-        return str(value)
-    s = str(value)
-    if _IDENT_RE.match(s) and not _LEADING_DIGIT_RE.match(s) and not _HEX6_RE.match(s):
-        return s
-    return f'"{s}"'
-
-
-def yaml_term_key(term: str) -> str:
-    """Always quote — term keys may contain YAML-significant characters
-    (`:`, `>`, `#`, leading symbols, etc.)."""
-    escaped = str(term).replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
+from lib.flavor import Flavor
+from lib.yaml_helpers import yaml_term_key
 
 
 def aggregate(cache_path: Path, threshold: int) -> tuple[dict[str, list[dict]], int]:
@@ -93,15 +73,7 @@ def render(candidates: dict[str, list[dict]]) -> str:
     for term in sorted(candidates.keys()):
         out.append(f"  {yaml_term_key(term)}:")
         for flavor in candidates[term]:
-            out.append(f"    - font: {flavor['font']}")
-            out.append(f"      color: {yaml_value(flavor['color'])}")
-            if flavor.get("outline"):
-                out.append(f"      outline: {yaml_value(flavor['outline'])}")
-            if flavor.get("outline_width"):
-                out.append(f"      outline_width: {yaml_value(flavor['outline_width'])}")
-            out.append(f"      animation: {flavor['animation']}")
-            if flavor.get("speed"):
-                out.append(f"      speed: {flavor['speed']}")
+            out.extend(Flavor.from_dict(flavor).to_yaml_lines(indent="    "))
     return "\n".join(out)
 
 

@@ -31,6 +31,8 @@ from typing import Optional
 import yaml
 
 from lib.cache_path import default_cache_file
+from lib.flavor import Flavor
+from lib.yaml_helpers import emit_term_key
 
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -40,41 +42,8 @@ DEFAULT_PLUGIN_JSON = REPO_ROOT / ".claude-plugin" / "plugin.json"
 CACHE_STATS_SCRIPT = SCRIPTS_DIR / "cache_stats.py"
 
 
-_IDENT_RE = re.compile(r"\A[a-zA-Z][a-zA-Z0-9_]*\Z")
-_HEX6_RE = re.compile(r"\A[0-9a-f]{6}\Z")
-_LEADING_DIGIT_RE = re.compile(r"\A\d")
-_SAFE_TERM_KEY_RE = re.compile(r"\A[㐀-䶿一-鿿豈-﫿぀-ゟ゠-ヿA-Za-z0-9_]+\Z")
-
-
-def yaml_value(value: object) -> str:
-    s = str(value)
-    if _IDENT_RE.match(s) and not _LEADING_DIGIT_RE.match(s) and not _HEX6_RE.match(s):
-        return s
-    return f'"{s}"'
-
-
 def render_variant_lines(flavor: dict, indent: str = "    ") -> list[str]:
-    lines = [
-        f"{indent}- font: {flavor['font']}",
-        f"{indent}  color: {yaml_value(flavor['color'])}",
-    ]
-    if flavor.get("outline"):
-        lines.append(f"{indent}  outline: {yaml_value(flavor['outline'])}")
-    if flavor.get("outline_width"):
-        lines.append(f"{indent}  outline_width: {yaml_value(flavor['outline_width'])}")
-    lines.append(f"{indent}  animation: {flavor['animation']}")
-    if flavor.get("speed"):
-        lines.append(f"{indent}  speed: {flavor['speed']}")
-    return lines
-
-
-def emit_term_key(term: str) -> str:
-    """Quote term keys defensively — selectors may record any phrase."""
-    s = str(term)
-    if _SAFE_TERM_KEY_RE.match(s) and not _LEADING_DIGIT_RE.match(s):
-        return s
-    escaped = s.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
+    return Flavor.from_dict(flavor).to_yaml_lines(indent=indent)
 
 
 def flavor_fingerprint(flavor: dict, defaults: dict) -> tuple:

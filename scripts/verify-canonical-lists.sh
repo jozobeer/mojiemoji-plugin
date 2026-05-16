@@ -15,13 +15,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HOOK="$REPO_ROOT/hooks/mojiemoji-japanese-gate.py"
 PARAMS="$REPO_ROOT/skills/mojiemoji-github/references/parameters.md"
+GENERATOR="$REPO_ROOT/skills/mojiemoji-github/scripts/generate_catalog.py"
 
-python3 - "$HOOK" "$PARAMS" <<'PY'
+python3 - "$HOOK" "$PARAMS" "$GENERATOR" <<'PY'
 import ast
 import re
 import sys
 
-hook_path, params_path = sys.argv[1], sys.argv[2]
+hook_path, params_path, generator_path = sys.argv[1], sys.argv[2], sys.argv[3]
 
 # --- Extract from hook (Python set literals) ------------------------------
 hook_src = open(hook_path, encoding="utf-8").read()
@@ -32,15 +33,51 @@ def find_set_literal(name):
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name) and target.id == name:
+                    # Plain `{...}` set literal.
                     if isinstance(node.value, ast.Set):
                         return {
                             elt.value for elt in node.value.elts
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                        }
+                    # `frozenset({...})` — first positional arg is the set.
+                    if (
+                        isinstance(node.value, ast.Call)
+                        and isinstance(node.value.func, ast.Name)
+                        and node.value.func.id == "frozenset"
+                        and node.value.args
+                        and isinstance(node.value.args[0], ast.Set)
+                    ):
+                        return {
+                            elt.value for elt in node.value.args[0].elts
                             if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
                         }
     raise SystemExit(f"missing {name} in {hook_path}")
 
 hook_fonts = find_set_literal("CANONICAL_FONTS")
 hook_anims = find_set_literal("CANONICAL_ANIMATIONS")
+hook_forbidden = find_set_literal("FORBIDDEN_COLORS")
+
+# --- Extract from generate_catalog (Python tuple literal) -----------------
+# `_RAW_TAILWIND_PALETTE` is the unfiltered Tailwind palette the
+# generator picks from. We verify its intersection with the hook's
+# `FORBIDDEN_COLORS` so the generator never emits values the hook
+# would block.
+gen_src = open(generator_path, encoding="utf-8").read()
+gen_tree = ast.parse(gen_src)
+
+def find_tuple_literal(tree, name):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    if isinstance(node.value, ast.Tuple):
+                        return {
+                            elt.value for elt in node.value.elts
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                        }
+    raise SystemExit(f"missing {name} in {generator_path}")
+
+raw_palette = find_tuple_literal(gen_tree, "_RAW_TAILWIND_PALETTE")
 
 # --- Extract from parameters.md (fenced code blocks under headers) --------
 params_src = open(params_path, encoding="utf-8").read()
@@ -80,6 +117,20 @@ if errors:
           "code block so the two agree, then re-run this script.", file=sys.stderr)
     sys.exit(1)
 
+# --- FORBIDDEN ∩ TAILWIND drift -------------------------------------------
+overlap = raw_palette & hook_forbidden
+if overlap:
+    print(
+        f"[drift] _RAW_TAILWIND_PALETTE ∩ FORBIDDEN_COLORS = "
+        f"{sorted(overlap)}\n"
+        f"  These colors are in generate_catalog's raw palette but the "
+        f"hook rejects them; runtime filter currently strips them, but "
+        f"the source pool should be the single provenance.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 print(f"OK: CANONICAL_FONTS ({len(hook_fonts)}) and CANONICAL_ANIMATIONS "
-      f"({len(hook_anims)}) match between hook and parameters.md")
+      f"({len(hook_anims)}) match between hook and parameters.md; "
+      f"FORBIDDEN_COLORS ∩ TAILWIND palette = ∅")
 PY
