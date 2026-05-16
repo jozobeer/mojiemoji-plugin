@@ -21,6 +21,11 @@ from urllib.parse import quote, urlencode
 import yaml
 
 from lib.constants import DEFAULT_BASE_URL
+from lib.term_boundaries import (
+    ASCII_KEY_RE,
+    ASCII_LEFT_GUARD,
+    ASCII_RIGHT_GUARD,
+)
 
 
 DEFAULT_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "prestamp-catalog.yml"
@@ -108,11 +113,6 @@ def load_catalog(path: Path = DEFAULT_CATALOG_PATH) -> tuple[dict, dict]:
         # the catalog regex (which is built over .keys()) works uniformly.
         terms[str(key)] = [dict(v) for v in (variants or [])]
     return defaults, terms
-
-
-ASCII_KEY_RE = re.compile(r"\A[A-Za-z0-9_]+\Z")
-ASCII_LEFT_GUARD = r"(?<![A-Za-z0-9_])"
-ASCII_RIGHT_GUARD = r"(?![A-Za-z0-9_])"
 
 
 def build_term_re(terms: dict) -> Optional[re.Pattern[str]]:

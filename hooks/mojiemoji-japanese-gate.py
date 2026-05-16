@@ -43,6 +43,18 @@ import sys
 import urllib.parse
 from pathlib import Path
 
+# Reach into the skill's script lib for shared boundary helpers. The
+# hook is loaded outside that package (Claude Code invokes it from
+# `hooks/`), so we splice the script directory onto sys.path before
+# importing. Resolved against __file__ so test subprocess runs and
+# user-installed plugin loads both work without CLAUDE_PLUGIN_ROOT.
+_SCRIPTS_DIR = (
+    Path(__file__).resolve().parent.parent / "skills" / "mojiemoji-github" / "scripts"
+)
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from lib.term_boundaries import count_occurrences  # noqa: E402
+
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # High-level `gh` commands that publish bodies.
 GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review|edit)")
@@ -773,7 +785,11 @@ def validate_catalog_leftovers(text: str) -> int:
     stripped = _strip_decoration(text)
     hits: list[tuple[str, int]] = []
     for term in catalog:
-        n = stripped.count(term)
+        # ASCII keys (URL, PR, OS, CI, …) need word boundaries so
+        # `POST` doesn't false-count as an `OS` hit. Non-ASCII keys
+        # use plain substring matching — see lib/term_boundaries.py
+        # for the boundary contract shared with prestamp.py.
+        n = count_occurrences(stripped, term)
         if n > 0:
             hits.append((term, n))
     total = sum(n for _, n in hits)
