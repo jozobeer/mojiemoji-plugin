@@ -42,12 +42,18 @@ MAX_EMOJI_RUN = 2
 # Single-char catalog entries need boundary assertions or they over-match.
 # Single kanji (e.g. 月 / 火 / 後): block when preceded by another Han char,
 # which would indicate the entry is the tail of a compound (e.g. `先月`).
+# The guard also blocks adjacency to an underscore, which is the trailing
+# character of the `__MOJIEMOJI_MASK_<n>__` sentinel that _Masker leaves
+# in place of `<img>` stamps emitted by a previous pass. Without `_` in
+# the negative class, a second prestamp run sees `編集` already masked and
+# stamps the dangling `後` — breaking the idempotency that the catalog
+# drift check and test_prestamp_is_idempotent_for_emoji_pass both rely on.
 # Single ASCII digit (1-9): only stamp when embedded in Japanese flow —
 # preceded by kana/kanji AND followed by a non-ASCII-identifier char.
 HAN_RANGE = "㐀-䶿一-鿿豈-﫿"
 HIRAGANA_RANGE = "぀-ゟ"
 KATAKANA_RANGE = "゠-ヿ"
-SINGLE_HAN_LEFT_GUARD = f"(?<![{HAN_RANGE}])"
+SINGLE_HAN_LEFT_GUARD = f"(?<![{HAN_RANGE}_])"
 SINGLE_DIGIT_LEFT_GUARD = f"(?<=[{HAN_RANGE}{HIRAGANA_RANGE}{KATAKANA_RANGE}])"
 SINGLE_DIGIT_RIGHT_GUARD = r"(?![A-Za-z0-9_.])"
 
@@ -79,6 +85,17 @@ LINK_TARGET = r"(?:[^()\s]|\([^()]*\))+"
 # determine the closing fence — track both.
 FENCE_RE = re.compile(r"^(\s{0,3})(`{3,}|~{3,})")
 
+# Author-controlled escape. `<!-- mojiemoji:off -->` on its own line
+# (whitespace allowed) freezes both passes verbatim until a matching
+# `<!-- mojiemoji:on -->` line or EOF. Evaluated before fence detection
+# so off-regions can quarantine entire sections including code fences
+# and before/after examples (#91). Nesting is flat: redundant off
+# inside an already-off region and redundant on outside any off region
+# are both no-ops. Markers themselves are HTML comments — GitHub
+# renders nothing for them, so they leave no visible trace.
+DISABLE_OPEN_LINE_RE = re.compile(r"^\s*<!--\s*mojiemoji:off\s*-->\s*$")
+DISABLE_CLOSE_LINE_RE = re.compile(r"^\s*<!--\s*mojiemoji:on\s*-->\s*$")
+
 
 def load_catalog(path: Path = DEFAULT_CATALOG_PATH) -> tuple[dict, dict]:
     """Return (defaults, terms) from a prestamp-catalog YAML file."""
@@ -93,18 +110,40 @@ def load_catalog(path: Path = DEFAULT_CATALOG_PATH) -> tuple[dict, dict]:
     return defaults, terms
 
 
+ASCII_KEY_RE = re.compile(r"\A[A-Za-z0-9_]+\Z")
+ASCII_LEFT_GUARD = r"(?<![A-Za-z0-9_])"
+ASCII_RIGHT_GUARD = r"(?![A-Za-z0-9_])"
+
+
 def build_term_re(terms: dict) -> Optional[re.Pattern[str]]:
-    """Compile the 3-tier alternation pattern (multi / kanji / digit)."""
-    multi_keys = sorted(
+    """Compile the 4-tier alternation pattern (ascii / multi / kanji / digit).
+
+    Multi-char ASCII-only keys (``URL``, ``PR``, ``API``, ``OS`` …)
+    need word boundaries — without them ``OS`` matches inside ``POST``
+    and ``CI`` matches inside ``ASCII``, splitting identifiers into
+    ``P<OS>T`` / ``AS<CI>I``. Non-ASCII multi-char keys (Kanji /
+    Katakana compounds) don't need this guard because they can't
+    appear inside ASCII identifiers anyway, and adding boundaries
+    there would over-block legitimate Japanese contexts.
+    """
+    multi_keys_all = sorted(
         (k for k in terms if len(k) > 1),
         key=lambda t: (-len(t), t),
     )
+    ascii_keys = [k for k in multi_keys_all if ASCII_KEY_RE.match(k)]
+    other_multi_keys = [k for k in multi_keys_all if not ASCII_KEY_RE.match(k)]
     kanji_keys = [k for k in terms if len(k) == 1 and HAN_CHAR_RE.match(k)]
     digit_keys = [k for k in terms if len(k) == 1 and DIGIT_CHAR_RE.match(k)]
 
     parts = []
-    if multi_keys:
-        parts.append("(?:" + "|".join(re.escape(k) for k in multi_keys) + ")")
+    if ascii_keys:
+        parts.append(
+            f"(?:{ASCII_LEFT_GUARD}(?:"
+            + "|".join(re.escape(k) for k in ascii_keys)
+            + f"){ASCII_RIGHT_GUARD})"
+        )
+    if other_multi_keys:
+        parts.append("(?:" + "|".join(re.escape(k) for k in other_multi_keys) + ")")
     if kanji_keys:
         parts.append(
             f"(?:{SINGLE_HAN_LEFT_GUARD}(?:"
@@ -157,15 +196,42 @@ def build_emoji_re(emojis: dict) -> Optional[re.Pattern[str]]:
     return re.compile("|".join(re.escape(k) + r"️?" for k in keys))
 
 
+# Tailwind 600+ values currently present in prestamp-catalog.yml that
+# render black-on-black under GitHub's dark theme. The gate hook
+# (mojiemoji-japanese-gate.py) rejects a subset of these on submission;
+# until the catalog itself is cleaned (TODO follow-up), we normalize
+# to the matching 400-series at variant-render time so prestamp output
+# is always safe to ship into in-tree docs that bypass the gate.
+FORBIDDEN_COLOR_REPLACEMENTS = {
+    "ca8a04": "facc15", "16a34a": "4ade80", "c026d3": "e879f9",
+    "d97706": "fbbf24", "9333ea": "c084fc", "e11d48": "fb7185",
+    "0891b2": "22d3ee", "2563eb": "60a5fa", "7c3aed": "a78bfa",
+    "db2777": "f472b6", "dc2626": "f87171", "4f46e5": "818cf8",
+    "0d9488": "2dd4bf", "059669": "34d399", "65a30d": "a3e635",
+    "ea580c": "fb923c", "525252": "a3a3a3", "475569": "94a3b8",
+    "4b5563": "9ca3af", "52525b": "a1a1aa", "57534e": "a8a29e",
+    "b91c1c": "f87171", "991b1b": "f87171", "c2410c": "fb923c",
+    "15803d": "4ade80", "0e7490": "22d3ee", "1d4ed8": "60a5fa",
+    "4338ca": "818cf8", "7e22ce": "c084fc", "be185d": "f472b6",
+}
+
+
+def _normalize_color_value(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    key = value.lstrip("#").lower()
+    return FORBIDDEN_COLOR_REPLACEMENTS.get(key, value)
+
+
 def _build_url(base_url: str, text: str, flavor: dict, defaults: dict) -> str:
     merged = {**defaults, **flavor}
     params = [
         ("font", merged.get("font")),
-        ("color", merged.get("color")),
+        ("color", _normalize_color_value(merged.get("color"))),
         ("animation", merged.get("animation")),
         ("speed", merged.get("speed")),
         ("background", merged.get("background")),
-        ("outline", merged.get("outline")),
+        ("outline", _normalize_color_value(merged.get("outline"))),
         ("outline_width", merged.get("outline_width")),
     ]
     params = [(k, v) for k, v in params if v is not None]
@@ -447,16 +513,29 @@ def _emoji_transform_line(
 
 
 def _walk_lines_outside_fences(text: str):
-    """Yield (line, is_outside_fence) tuples while tracking CommonMark fences.
+    """Yield (line, is_prose) tuples for the transform passes.
 
-    Centralizes the fence-state machine so both passes (text + emoji)
-    follow the same definition of "in code block" — the fence marker
-    line itself is reported as inside (it's structural code-block
-    syntax, not prose).
+    Tracks three forms of "skip this line": CommonMark fences,
+    fence-marker lines themselves, and the author-controlled
+    ``<!-- mojiemoji:off/on -->`` escape (#91). Off-regions take
+    precedence over fence state — a fence opened inside an off-region
+    stays raw without flipping ``in_fence`` so the on-marker reliably
+    resumes prose handling no matter what shape the disabled body has.
     """
     in_fence = False
     fence_marker: Optional[str] = None
+    in_disabled = False
     for line in text.splitlines(keepends=True):
+        if in_disabled:
+            if DISABLE_CLOSE_LINE_RE.match(line):
+                in_disabled = False
+            yield line, False
+            continue
+        if DISABLE_OPEN_LINE_RE.match(line):
+            in_disabled = True
+            yield line, False
+            continue
+
         m = FENCE_RE.match(line)
         if m:
             marker = m.group(2)

@@ -1,0 +1,88 @@
+name: md-drift-check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Local `*.md` edits never traverse the gh / MCP gate, so README / docs /
+# SKILL.md / agents prompts can silently drift away from prestamp output
+# between bumps. The PostToolUse warn hook is the in-loop signal; this
+# workflow is the hard gate. The `<!-- mojiemoji:off -->` escape (#91)
+# lets authors quarantine before/after examples and raw quotes so the
+# drift check has zero false positives.
+#
+# All event-payload values flow through env: vars rather than direct
+# interpolation per the security guideline in CLAUDE.md. base/head SHAs
+# are 40-char hex and cannot carry shell metacharacters, but the env-var
+# pattern stays uniform across workflows for habit.
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+
+      - name: List changed documentation *.md
+        id: changed
+        run: |
+          set -euo pipefail
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- \
+            'README.md' \
+            'CHANGELOG.md' \
+            'docs/**/*.md' \
+            'agents/**/*.md' \
+            'skills/**/SKILL.md' \
+            > /tmp/changed.txt || true
+          COUNT=$(grep -c . /tmp/changed.txt || true)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Changed docs:" >> "$GITHUB_STEP_SUMMARY"
+            sed 's/^/  - /' /tmp/changed.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No documentation *.md changed in this PR." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run prestamp drift check
+        if: steps.changed.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          STATUS=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            [ ! -f "$f" ] && continue
+            python3 skills/mojiemoji-github/scripts/prestamp.py < "$f" > /tmp/restamped.md
+            if ! diff -q "$f" /tmp/restamped.md > /dev/null; then
+              STATUS=1
+              {
+                echo ""
+                echo "### prestamp drift: \`$f\`"
+                echo ""
+                echo "Either re-run prestamp on this file, or wrap the intentional"
+                echo "raw region in \`<!-- mojiemoji:off -->\` ... \`<!-- mojiemoji:on -->\`."
+                echo ""
+                echo '<details><summary>diff (original vs prestamp output)</summary>'
+                echo ""
+                echo '```diff'
+                diff -u "$f" /tmp/restamped.md | head -300 || true
+                echo '```'
+                echo ""
+                echo '</details>'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done < /tmp/changed.txt
+          if [ "$STATUS" -ne 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Documentation *.md drift detected. See diffs above." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "All changed documentation *.md are prestamp-clean." >> "$GITHUB_STEP_SUMMARY"
