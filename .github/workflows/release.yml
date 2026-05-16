@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run only prepares notes; publish creates the GitHub Release"
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - publish
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Prepare or publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject publish outside main
+        if: inputs.mode == 'publish' && github.ref != 'refs/heads/main'
+        run: |
+          echo "publish mode must run from main"
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release notes
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          OUTPUT_FILE: ${{ runner.temp }}/release-notes.md
+          RELEASE_MODE: ${{ inputs.mode }}
+        run: bash scripts/prepare-release-notes.sh
+
+      - name: Upload generated notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ steps.release.outputs.tag }}
+          path: ${{ steps.release.outputs.notes_file }}
+          if-no-files-found: error
+
+      - name: Write job summary
+        run: |
+          {
+            echo "## Release"
+            echo
+            echo "- mode: ${{ inputs.mode }}"
+            echo "- tag: ${{ steps.release.outputs.tag }}"
+            echo "- previous tag: ${{ steps.release.outputs.previous_tag || '<none>' }}"
+            echo "- release exists: ${{ steps.release.outputs.release_exists }}"
+            echo "- target sha: ${{ steps.release.outputs.target_sha }}"
+            if [ -n "${{ steps.release.outputs.release_url }}" ]; then
+              echo "- release: ${{ steps.release.outputs.release_url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

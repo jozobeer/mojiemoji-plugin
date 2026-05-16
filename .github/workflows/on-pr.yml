@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: PR validation
 
 on:
@@ -51,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck scripts/verify-canonical-lists.sh scripts/check-version-bump.sh
+      - run: shellcheck scripts/verify-canonical-lists.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh
 
   version-bump:
     name: Plugin version bump check

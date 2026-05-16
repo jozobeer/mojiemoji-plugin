@@ -218,6 +218,21 @@ Claude Code の `/plugin` メニューで disable するか、`hooks/hooks.json`
 
 ---
 
+## 🚢 リリース運用
+
+GitHub Actions の `Release` workflow は、`.claude-plugin/plugin.json` の `version` から tag 名を <img src="https://mojiemoji.jozo.beer/emoji/%E6%B1%BA%E5%AE%9A?font=maru-bold&color=60a5fa&animation=yurayura&background=transparent&outline=darker&outline_width=2" alt="決定" height="24" align="absmiddle"> し、前回 tag 以降の GitHub generated notes を badge first な release notes に <img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=maru-bold&color=38bdf8&animation=kirari&background=transparent&outline=darker&outline_width=2" alt="生成" height="24" align="absmiddle"> します。
+
+まず `workflow_dispatch` の `dry-run` で notes artifact を確認し、問題なければ `publish` を main branch から実行します。既に同じ tag の GitHub Release がある場合、workflow は二重作成せず <img src="https://mojiemoji.jozo.beer/emoji/%E7%9C%81%E7%95%A5?font=maru-bold&color=f59e0b&animation=patapata&background=transparent&outline=darker&outline_width=2" alt="省略" height="24" align="absmiddle"> します。
+
+ローカルで本文だけ確認する場合:
+
+```bash
+OUTPUT_FILE=/tmp/mojiemoji-release-notes.md \
+  bash scripts/prepare-release-notes.sh --mode dry-run
+```
+
+---
+
 ## 🔗 関連リンク
 
 - mojiemoji 本体サービス: https://mojiemoji.jozo.beer
