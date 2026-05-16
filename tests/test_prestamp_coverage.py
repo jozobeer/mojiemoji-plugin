@@ -262,6 +262,148 @@ def test_prestamp_skips_details_summary_but_stamps_details_body() -> None:
     assert 'align="absmiddle"' in proc.stdout
 
 
+def test_prestamp_is_idempotent_for_compound_with_single_kanji_tail() -> None:
+    # `編集後` mixes a 2-char multi-key (`編集`) with a single-kanji tail
+    # (`後`). First pass: regex sees `編集後`, longest-match takes `編集`,
+    # leaves `後` blocked by SINGLE_HAN_LEFT_GUARD because `集` (Han) sits
+    # to the left. Second pass: `編集` is now a `__MOJIEMOJI_MASK_N__`
+    # sentinel — the char left of `後` is `_`, not Han. Without the `_`
+    # in the negative lookbehind, `後` would stamp on the second pass and
+    # break idempotency / the CI drift check.
+    once = run_py(PRESTAMP, "編集後の確認。\n", "--seed", "6")
+    twice = run_py(PRESTAMP, once.stdout, "--seed", "6")
+
+    assert once.returncode == 0
+    assert twice.returncode == 0
+    assert once.stdout == twice.stdout
+
+
+def test_prestamp_does_not_split_ascii_identifiers_with_short_keys() -> None:
+    # `OS`, `CI`, `PR`, `API`, `URL` etc. are catalog entries — when they
+    # sit inside another ASCII identifier (POST / ASCII / PROCESS /
+    # APIDocs / URLencoded) prestamp must NOT split them. Standalone
+    # tokens with non-alpha boundaries still get stamped.
+    body = (
+        "POST と PATCH は ASCII 識別子。standalone な PR と URL は対象。\n"
+        "PROCESS / APIDocs / URLencoded は触らない。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "7")
+
+    assert proc.returncode == 0
+    # No alt="OS" inside a "P...T" sequence — verify the literal POST survived.
+    assert "POST" in proc.stdout
+    assert "PATCH" in proc.stdout
+    assert "ASCII" in proc.stdout
+    assert "PROCESS" in proc.stdout
+    assert "APIDocs" in proc.stdout
+    assert "URLencoded" in proc.stdout
+    # Standalone PR + URL still get stamped (alt attrs present somewhere).
+    assert 'alt="PR"' in proc.stdout
+    assert 'alt="URL"' in proc.stdout
+
+
+def test_prestamp_normalizes_tailwind_600_colors_in_output() -> None:
+    # Catalog entries still carry some Tailwind 600+ values (e.g. db2777 /
+    # 2563eb / ca8a04) which are unreadable on GitHub's dark theme. The
+    # render layer must downgrade them to the matching 400-series so
+    # output ships safe regardless of catalog state.
+    proc = run_py(PRESTAMP, "修正の確認、対応も含めて全体の構造。\n", "--seed", "9")
+
+    assert proc.returncode == 0
+    forbidden = (
+        "color=ca8a04", "color=16a34a", "color=dc2626", "color=2563eb",
+        "color=7c3aed", "color=db2777", "color=0891b2", "color=d97706",
+        "color=ea580c", "color=525252",
+    )
+    for needle in forbidden:
+        assert needle not in proc.stdout, f"{needle} should be normalized away"
+
+
+def test_prestamp_skips_transform_inside_off_on_markers() -> None:
+    body = (
+        "修正の確認。\n"
+        "\n"
+        "<!-- mojiemoji:off -->\n"
+        "> プレーンな例: これは修正と確認と対応がそのまま。\n"
+        "<!-- mojiemoji:on -->\n"
+        "\n"
+        "ここからまた修正。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "3")
+
+    assert proc.returncode == 0
+    before, rest = proc.stdout.split("<!-- mojiemoji:off -->", 1)
+    disabled, after = rest.split("<!-- mojiemoji:on -->", 1)
+
+    assert "<img" in before  # pre-off stamped
+    assert "<img" not in disabled  # disabled body untouched
+    assert "修正" in disabled and "確認" in disabled and "対応" in disabled
+    assert "<img" in after  # post-on resumed
+
+
+def test_prestamp_off_without_on_extends_to_eof() -> None:
+    body = (
+        "修正前のスタンプ。\n"
+        "<!-- mojiemoji:off -->\n"
+        "ここから先は修正も確認も対応もスタンプにならない。\n"
+        "ファイル末尾まで継続。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "1")
+
+    assert proc.returncode == 0
+    _, disabled = proc.stdout.split("<!-- mojiemoji:off -->", 1)
+    assert "<img" not in disabled
+
+
+def test_prestamp_redundant_off_and_on_are_no_ops() -> None:
+    body = (
+        "<!-- mojiemoji:off -->\n"
+        "内側 off も no-op、確認 raw。\n"
+        "<!-- mojiemoji:off -->\n"
+        "ここも修正 raw。\n"
+        "<!-- mojiemoji:on -->\n"
+        "ここから修正は stamp。\n"
+        "<!-- mojiemoji:on -->\n"
+        "redundant on の後も対応はそのまま stamp。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "2")
+
+    assert proc.returncode == 0
+    head, tail = proc.stdout.split("<!-- mojiemoji:on -->", 1)
+    assert "<img" not in head
+    assert "<img" in tail
+
+
+def test_prestamp_off_on_freezes_emoji_pass_too() -> None:
+    body = (
+        "🎉 はスタンプされる\n"
+        "<!-- mojiemoji:off -->\n"
+        "🎉 はそのまま\n"
+        "<!-- mojiemoji:on -->\n"
+        "🎉 もう一度スタンプ\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "4")
+
+    assert proc.returncode == 0
+    # 2 stamps total — outside the off-region only.
+    assert proc.stdout.count("<img") == 2
+
+
+def test_prestamp_off_on_markers_render_invisibly() -> None:
+    # GitHub renders HTML comments as nothing — the markers must survive
+    # verbatim in the output so author intent is preserved.
+    body = (
+        "<!-- mojiemoji:off -->\n"
+        "raw line\n"
+        "<!-- mojiemoji:on -->\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "1")
+
+    assert proc.returncode == 0
+    assert "<!-- mojiemoji:off -->" in proc.stdout
+    assert "<!-- mojiemoji:on -->" in proc.stdout
+
+
 def test_prestamp_reports_unstamped_japanese_runs(tmp_path: Path) -> None:
     body = "これは特殊用語と未収録単語のテストです。特殊用語が再度登場。\n"
     proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")

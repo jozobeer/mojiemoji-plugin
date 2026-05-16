@@ -10,6 +10,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/mojiemoji-md-edit-warn.py\""
+          }
+        ]
+      }
     ]
   }
 }
