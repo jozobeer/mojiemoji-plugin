@@ -10,7 +10,7 @@ hook decomposition (issue #54 Step 4) lands.
 Canonical font / animation values mirror what
 `hooks/mojiemoji-japanese-gate.py` validates against and what
 `skills/mojiemoji-github/references/parameters.md` documents. Drift is
-caught by `scripts/verify-canonical-lists.sh`.
+caught by `scripts/verify-lists-vs-docs.sh`.
 """
 
 from __future__ import annotations

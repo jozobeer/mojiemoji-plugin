@@ -141,7 +141,7 @@ disco, psycho, kage_kaiten, kage_bokashi, kage_neon
 script (`scripts/mojiemoji_markdown.py`) は `--animation kaiten` /
 `--animation kage_kaiten` を受け取って `--speed` 未指定なら自動で
 `speed=slow` を注入するので、helper 経由なら気にしなくて良い。名前が
-現行か怪しいときは `scripts/verify-canonical-lists.sh` を走らせる —
+現行か怪しいときは `skills/mojiemoji-github/scripts/verify-lists-vs-service.sh` を走らせる —
 hook の allowlist とライブサービスを diff し、ドリフトがあれば非ゼロで
 終了する(§ パラメータが効かなくなったとき を参照)。
 
@@ -228,7 +228,7 @@ kurobara, hachimaru, chikara, tamanegi, pixel, toge, rampart, noto
 避けるべきよくあるタイポ: `della`(正: `dela`)、`fude`(存在しない —
 無音でデフォルトの mplus にフォールバック)、`noto-sans-jp`(サービスには
 `noto` しかない)。ライブリストは 16 エントリ。このリストとライブ
-サービス間のドリフトを検出するには `scripts/verify-canonical-lists.sh`
+サービス間のドリフトを検出するには `skills/mojiemoji-github/scripts/verify-lists-vs-service.sh`
 を走らせる(ドリフトがあれば非ゼロで終了)。ディスプレイ系フォント
 (`akzk`、`zero`、`kurobara`、`hachimaru`、`chikara`、`tamanegi`、
 `toge`、`rampart`) は一番うるさい語に向く; `gothic-bold` /

@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# verify-canonical-lists.sh — diff hook canonical lists against the live
-# mojiemoji service. If the service adds a new font/animation or
-# renames one, the hook's allowlist will silently reject it, so we
+# verify-lists-vs-service.sh — diff hook canonical lists against the
+# live mojiemoji service HTML. If the service adds a new font/animation
+# or renames one, the hook's allowlist will silently reject it, so we
 # need a way to detect drift.
+#
+# Renamed from verify-canonical-lists.sh in #54 item 7 — sibling
+# `scripts/verify-lists-vs-docs.sh` checks the hook against the
+# in-repo parameters.md; this one checks against the live service.
 #
 # Exit 0 if both lists match the service exactly.
 # Exit 1 if any drift is found (missing or unknown values).
@@ -11,10 +15,17 @@
 set -euo pipefail
 
 SERVICE_URL="${MOJIEMOJI_BASE_URL:-https://mojiemoji.jozo.beer/}"
-HOOK_PATH="${HOOK_PATH:-${CLAUDE_PLUGIN_ROOT:-$(dirname "$0")/../../..}/hooks/mojiemoji-japanese-gate.py}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="${CLAUDE_PLUGIN_ROOT:-$SCRIPT_DIR/../../..}"
+HOOK_PATH="${HOOK_PATH:-$REPO_ROOT/hooks/mojiemoji-japanese-gate.py}"
+EXTRACT="${EXTRACT_HOOK_SET:-$REPO_ROOT/scripts/extract_hook_set.py}"
 
 if [[ ! -f "$HOOK_PATH" ]]; then
     printf 'hook not found: %s\n' "$HOOK_PATH" >&2
+    exit 2
+fi
+if [[ ! -f "$EXTRACT" ]]; then
+    printf 'extract_hook_set.py not found: %s\n' "$EXTRACT" >&2
     exit 2
 fi
 
@@ -43,29 +54,6 @@ extract_options() {
     ' "$html" | sort -u
 }
 
-# Extract the Python set literal `NAME = { ... }` from the hook by
-# AST-walking string constants inside the matching Assign node, then
-# printing one identifier per line, sorted unique.
-extract_set() {
-    local set_name="$1" file="$2"
-    python3 - "$set_name" "$file" <<'PYEOF'
-import ast, sys
-name, path = sys.argv[1], sys.argv[2]
-tree = ast.parse(open(path).read())
-for node in ast.walk(tree):
-    if isinstance(node, ast.Assign):
-        for tgt in node.targets:
-            if isinstance(tgt, ast.Name) and tgt.id == name:
-                vals = sorted({
-                    e.value for e in node.value.elts
-                    if isinstance(e, ast.Constant) and isinstance(e.value, str)
-                })
-                print("\n".join(vals))
-                sys.exit(0)
-sys.exit(1)
-PYEOF
-}
-
 service_fonts="$tmpdir/service-fonts.txt"
 service_anims="$tmpdir/service-anims.txt"
 hook_fonts="$tmpdir/hook-fonts.txt"
@@ -73,8 +61,8 @@ hook_anims="$tmpdir/hook-anims.txt"
 
 extract_options font-select      "$tmpdir/form.html" > "$service_fonts"
 extract_options animation-select "$tmpdir/form.html" > "$service_anims"
-extract_set CANONICAL_FONTS      "$HOOK_PATH" | sort -u > "$hook_fonts"
-extract_set CANONICAL_ANIMATIONS "$HOOK_PATH" | sort -u > "$hook_anims"
+python3 "$EXTRACT" CANONICAL_FONTS      "$HOOK_PATH" | sort -u > "$hook_fonts"
+python3 "$EXTRACT" CANONICAL_ANIMATIONS "$HOOK_PATH" | sort -u > "$hook_anims"
 
 drift=0
 
@@ -95,11 +83,15 @@ compare() {
     printf '[drift] %s — service=%s hook=%s\n' "$label" "$sc" "$hc"
     if [[ -n "$only_service" ]]; then
         printf '  missing from hook (service adds):\n'
-        printf '    + %s\n' $only_service
+        while IFS= read -r entry; do
+            printf '    + %s\n' "$entry"
+        done <<< "$only_service"
     fi
     if [[ -n "$only_hook" ]]; then
         printf '  unknown to service (hook stale):\n'
-        printf '    - %s\n' $only_hook
+        while IFS= read -r entry; do
+            printf '    - %s\n' "$entry"
+        done <<< "$only_hook"
     fi
 }
 
