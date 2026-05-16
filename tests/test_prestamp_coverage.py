@@ -262,6 +262,101 @@ def test_prestamp_skips_details_summary_but_stamps_details_body() -> None:
     assert 'align="absmiddle"' in proc.stdout
 
 
+def test_prestamp_reports_unstamped_japanese_runs(tmp_path: Path) -> None:
+    body = "これは特殊用語と未収録単語のテストです。特殊用語が再度登場。\n"
+    proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")
+
+    assert proc.returncode == 0
+    import json
+    report = json.loads(proc.stdout)
+    terms = {entry["term"]: entry for entry in report["unstamped"]}
+
+    assert "特殊用語" in terms
+    assert terms["特殊用語"]["count"] == 2
+    assert "未収録単語" in terms
+    # catalog hits (テスト, 登場) must NOT appear — they got <img>-stamped.
+    assert "テスト" not in terms
+    assert "登場" not in terms
+    # contexts are clean — no mask token fragments left.
+    for entry in report["unstamped"]:
+        for ctx in entry["contexts"]:
+            assert "MOJIEMOJI" not in ctx
+            assert "__" not in ctx
+
+
+def test_prestamp_unstamped_report_excludes_safe_zones() -> None:
+    body = (
+        "本文では未収録単語を扱う。\n"
+        "\n"
+        "```python\n"
+        "# 漢字の固有名詞は code fence なので対象外\n"
+        "```\n"
+        "\n"
+        "`inline_漢字_inline` も対象外。\n"
+        "[リンク先](https://example.com/専門用語) のリンク target も対象外。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")
+
+    assert proc.returncode == 0
+    import json
+    terms = {entry["term"] for entry in json.loads(proc.stdout)["unstamped"]}
+
+    assert "未収録単語" in terms
+    assert "固有名詞" not in terms
+    assert "専門用語" not in terms
+
+
+def test_prestamp_unstamped_report_skips_summary_content() -> None:
+    body = (
+        "本文の未収録語は対象。\n"
+        "<details>\n"
+        "<summary>サマリ部分の漢字は対象外</summary>\n"
+        "詳細の漢字は対象。\n"
+        "</details>\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")
+
+    assert proc.returncode == 0
+    import json
+    terms = {entry["term"] for entry in json.loads(proc.stdout)["unstamped"]}
+
+    assert "未収録語" in terms
+    # 詳細の漢字は対象 → 詳細 と 漢字 が出るかもしれないが、サマリ部分の語は出ないこと。
+    assert "対象外" not in terms
+
+
+def test_prestamp_unstamped_report_excludes_pure_hiragana() -> None:
+    body = "ひらがな ばかり と かんじが まじる いっぽうで 漢字熟語 は 対象。\n"
+    proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")
+
+    assert proc.returncode == 0
+    import json
+    terms = {entry["term"] for entry in json.loads(proc.stdout)["unstamped"]}
+
+    # No pure-hiragana run should be reported (regex excludes hiragana).
+    for term in terms:
+        assert not all("぀" <= ch <= "ゟ" for ch in term)
+
+
+def test_prestamp_unstamped_to_file_writes_json_and_keeps_markdown(tmp_path: Path) -> None:
+    body = "未収録単語のテスト。\n"
+    report_path = tmp_path / "report.json"
+    proc = run_py(
+        PRESTAMP, body, "--seed", "1",
+        "--report-unstamped-to", str(report_path),
+    )
+
+    assert proc.returncode == 0
+    # Markdown still goes to stdout.
+    assert "align=\"absmiddle\"" in proc.stdout
+    # JSON report on disk.
+    assert report_path.exists()
+    import json
+    data = json.loads(report_path.read_text())
+    terms = {entry["term"] for entry in data["unstamped"]}
+    assert "未収録単語" in terms
+
+
 def test_coverage_counts_japanese_characters_and_warn_mode() -> None:
     body = (
         '<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=gothic-bold&color=3b82f6&animation=bane&background=transparent&outline=darker&outline_width=2" alt="修正">'

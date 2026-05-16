@@ -55,7 +55,9 @@ mojiemoji-plugin が掛かった世界:
 |---|---|---|
 | Skill | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
 | Subagent | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
-| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語と Unicode 絵文字 (`🎉` / `⚠️` 等カタログ 162 種) を決定論的に先置換(variant 抽選 + safe-zone 保護 + 連続絵文字は 2 連までで打ち切り)、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
+| Skill | `mojiemoji-propose` | prestamp で `<img>` 化されなかった 2-8 字日本語連続を抽出し `mojiemoji-selector` に flavor を選ばせて `usage.jsonl` に追記(catalog 育成パイプライン #46 の入力補充、#92 の構造問題への Phase 1 対応) |
+| Skill | `bump-catalog` | `usage.jsonl` に貯まった variant を閾値判定して `prestamp-catalog.yml` に昇格 PR を自動作成 |
+| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語と Unicode 絵文字 (`🎉` / `⚠️` 等カタログ 162 種) を決定論的に先置換(variant 抽選 + safe-zone 保護 + 連続絵文字は 2 連までで打ち切り)、`--report-unstamped` で素通し語の JSON 出力も可能、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
 | Hook (PreToolUse / Bash + MCP) | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review\|edit)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
 ---
