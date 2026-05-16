@@ -119,8 +119,12 @@ def measure(text: str, emoji_catalog: Optional[set[str]] = None) -> dict[str, ob
     japanese_char_count = len(_JAPANESE_CHAR_RE.findall(text))
     density = 0.0 if japanese_char_count == 0 else stamp_count * 100.0 / japanese_char_count
 
-    sentences = [s for s in (s.strip() for s in _SENTENCE_SEP_RE.split(text)) if s]
-    sentence_hits = sum(1 for s in sentences if _STAMP_URL_RE.search(s))
+    # Replace stamp URLs with a placeholder before sentence splitting so the
+    # `?` in `?font=...` query strings does not fragment sentences (which
+    # would also break the per-sentence stamp-hit check below).
+    text_for_sentences = _STAMP_URL_RE.sub(" __STAMP__ ", text)
+    sentences = [s for s in (s.strip() for s in _SENTENCE_SEP_RE.split(text_for_sentences)) if s]
+    sentence_hits = sum(1 for s in sentences if "__STAMP__" in s)
     sentence_hit_rate = 0.0 if not sentences else sentence_hits / len(sentences)
 
     paragraphs = [p for p in (p.strip() for p in re.split(r"\n{2,}", text)) if p]
