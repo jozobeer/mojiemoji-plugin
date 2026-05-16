@@ -104,11 +104,11 @@ mkdir -p "$(dirname "$output_file")"
     printf '![source](https://img.shields.io/badge/source-plugin_json-60a5fa) '
     printf '![mode](https://img.shields.io/badge/mode-%s-22c55e)\n\n' "$mode"
     printf '## 概要\n\n'
-    printf 'この release は plugin version `%s` の変更を ' "$tag"
+    printf 'この release は plugin version %s の変更を ' "\`$tag\`"
     printf '<img src="https://mojiemoji.jozo.beer/emoji/%%E8%%87%%AA%%E5%%8B%%95?font=maru-bold&color=a78bfa&animation=bane&background=transparent&outline=darker&outline_width=2" alt="自動" height="24" align="absmiddle"> '
     printf 'でまとめたものです。'
     if [ -n "$previous_tag" ]; then
-        printf '`%s` 以降の PR / issue / commit から ' "$previous_tag"
+        printf '%s 以降の PR / issue / commit から ' "\`$previous_tag\`"
     else
         printf '既存 tag が無いため、repository history から '
     fi
