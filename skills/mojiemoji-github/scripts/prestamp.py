@@ -124,11 +124,20 @@ def load_emoji_catalog(path: Path = DEFAULT_EMOJI_CATALOG_PATH) -> tuple[dict, d
 
 
 def build_emoji_re(emojis: dict) -> Optional[re.Pattern[str]]:
-    """Compile an alternation regex matching any catalog emoji."""
+    """Compile an alternation regex matching any catalog emoji.
+
+    Each key is followed by an optional ``️`` (VS16) so the same
+    pattern catches both bare (`⚠`) and VS16-suffixed (`⚠️`) inputs —
+    catalog keys are always stored bare per the
+    ``test_vs16_emoji_keys_use_base_codepoint`` convention. Consuming
+    VS16 *only when it follows a catalog hit* preserves VS16 on
+    catalog-miss glyphs like `❤️` / `☀️`, which would otherwise
+    silently drop their emoji presentation selector.
+    """
     keys = sorted(emojis.keys(), key=lambda k: (-len(k), k))
     if not keys:
         return None
-    return re.compile("|".join(re.escape(k) for k in keys))
+    return re.compile("|".join(re.escape(k) + r"️?" for k in keys))
 
 
 def _build_url(base_url: str, text: str, flavor: dict, defaults: dict) -> str:
@@ -279,11 +288,6 @@ def _emoji_replace_line(
     masker = _Masker()
     line = _mask_safe_zones(line, masker)
 
-    # Strip VS16 only outside masked spans — masked tokens preserve
-    # their original VS16 sequences inside <img alt=...> / URL params.
-    # Doing this after masking keeps that intent.
-    line = line.replace(VS16, "")
-
     run_state = {"last_end": -1, "run": 0}
 
     def _replace_emoji(m: re.Match) -> str:
@@ -296,7 +300,12 @@ def _emoji_replace_line(
         if run_state["run"] > MAX_EMOJI_RUN:
             return m.group(0)
 
-        emoji = m.group(0)
+        # The regex absorbs an optional trailing VS16, but the catalog
+        # is keyed by the bare base codepoint. Strip VS16 for lookup
+        # and for the stamp's alt text — catalog-miss emoji never enter
+        # this branch because their codepoint is not in the alternation,
+        # so their VS16 is preserved by the regex never matching them.
+        emoji = m.group(0).replace(VS16, "")
         variants = emojis[emoji]
         crc_input = f"{seed}:{emoji}:{state['occurrence']}"
         state["occurrence"] += 1
@@ -340,16 +349,19 @@ def _find_real_summary_tag(pattern: re.Pattern[str], line: str, start: int) -> O
         cursor = m.end()
 
 
-def _transform_line(
-    line: str,
-    *,
-    term_re: Optional[re.Pattern[str]],
-    terms: dict,
-    defaults: dict,
-    base_url: str,
-    seed: str,
-    state: dict,
-) -> str:
+def _scan_summary_aware(line: str, state: dict, prose_handler) -> str:
+    """Process a line, calling ``prose_handler`` on prose segments.
+
+    Content inside ``<summary>…</summary>`` is preserved verbatim —
+    summary text is a heading that the user wrote intentionally, and
+    stamping into it both visually conflicts with the disclosure-widget
+    UX and would have to be reapplied on every fold/unfold.
+
+    ``state["in_summary"]`` carries the open/close state across lines.
+    Used by both the text-catalog pass and the emoji-catalog pass so
+    the two stay symmetric (codex P2 found that the emoji pass alone
+    was stamping inside ``<summary>``, breaking that symmetry).
+    """
     out = []
     cursor = 0
     while True:
@@ -366,23 +378,55 @@ def _transform_line(
         open_match = _find_real_summary_tag(_SUMMARY_OPEN_RE, line, cursor)
         if open_match:
             segment = line[cursor : open_match.start()]
-            out.append(_protect_and_replace(
-                segment,
-                term_re=term_re, terms=terms, defaults=defaults,
-                base_url=base_url, seed=seed, state=state,
-            ))
+            out.append(prose_handler(segment))
             out.append(open_match.group(0))
             cursor = open_match.end()
             state["in_summary"] = True
             continue
 
-        out.append(_protect_and_replace(
-            line[cursor:],
-            term_re=term_re, terms=terms, defaults=defaults,
-            base_url=base_url, seed=seed, state=state,
-        ))
+        out.append(prose_handler(line[cursor:]))
         break
     return "".join(out)
+
+
+def _transform_line(
+    line: str,
+    *,
+    term_re: Optional[re.Pattern[str]],
+    terms: dict,
+    defaults: dict,
+    base_url: str,
+    seed: str,
+    state: dict,
+) -> str:
+    def handler(segment: str) -> str:
+        return _protect_and_replace(
+            segment,
+            term_re=term_re, terms=terms, defaults=defaults,
+            base_url=base_url, seed=seed, state=state,
+        )
+
+    return _scan_summary_aware(line, state, handler)
+
+
+def _emoji_transform_line(
+    line: str,
+    *,
+    emoji_re: re.Pattern[str],
+    emojis: dict,
+    defaults: dict,
+    base_url: str,
+    seed: str,
+    state: dict,
+) -> str:
+    def handler(segment: str) -> str:
+        return _emoji_replace_line(
+            segment,
+            emoji_re=emoji_re, emojis=emojis, defaults=defaults,
+            base_url=base_url, seed=seed, state=state,
+        )
+
+    return _scan_summary_aware(line, state, handler)
 
 
 def _walk_lines_outside_fences(text: str):
@@ -469,10 +513,14 @@ def transform(
 
     # Pass 2 — emoji catalog. Walks the pass-1 output with the same
     # fence semantics so emoji inside ```fenced code``` is left alone.
+    # state["in_summary"] is reset because pass 1 already consumed
+    # its open/close pairs; for well-formed input it ends back at
+    # False, but reset defensively so pass 2 starts clean.
+    state["in_summary"] = False
     pass2 = []
     for line, is_prose in _walk_lines_outside_fences("".join(pass1)):
         if is_prose:
-            pass2.append(_emoji_replace_line(
+            pass2.append(_emoji_transform_line(
                 line,
                 emoji_re=emoji_re, emojis=emojis, defaults=emoji_defaults,
                 base_url=base_url, seed=seed, state=state,

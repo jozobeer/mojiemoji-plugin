@@ -5,10 +5,13 @@ Reads markdown from stdin, computes per-surface density / sentence-hit /
 paragraph-hit / consecutive-unstamped-paragraph metrics, prints them,
 and (in --mode block) exits 2 when any threshold is breached.
 
-Trailing-decoration violations (heading / paragraph lacks trailing
-stamp, or uses a Unicode emoji that has a mojiemoji catalog variant)
-are reported as **warnings**, never as block failures — they are a
-soft guideline from issue #60 Option 1.
+Trailing-decoration violations (heading / paragraph lacks a trailing
+stamp) are reported as **warnings**, never as block failures — they
+are a soft guideline from issue #60 Option 1. The previous "uses a
+Unicode emoji that has a mojiemoji catalog variant" warning was
+removed in #89: prestamp.py now auto-substitutes catalog emoji during
+its emoji pass, so a Unicode emoji surviving into this check is always
+intentional (catalog-miss or safe-zone) and should not nag.
 """
 
 from __future__ import annotations

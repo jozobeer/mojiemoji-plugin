@@ -201,6 +201,47 @@ def test_prestamp_does_not_flip_state_on_backticked_summary_tag() -> None:
     assert "`<details>/<summary>`" in proc.stdout
 
 
+def test_prestamp_preserves_vs16_on_uncatalogued_emoji() -> None:
+    # ❤️ (U+2764 U+FE0F) and ☀️ (U+2600 U+FE0F) are not currently in
+    # emoji-catalog.yml (verified at test time so it auto-skips if the
+    # catalog grows). Their VS16 must round-trip — stripping it would
+    # silently change emoji-presentation to text-presentation in user
+    # content. Regression for codex P1 / Copilot review on PR #90.
+    import yaml as _yaml
+    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml"
+    with open(catalog_path, encoding="utf-8") as f:
+        catalog = (_yaml.safe_load(f) or {}).get("emojis") or {}
+    candidates = ["❤", "☀", "🏗", "🛡", "⚙"]
+    miss = next((c for c in candidates if c not in catalog), None)
+    if miss is None:
+        pytest.skip("no uncatalogued VS16 emoji available — catalog grew")
+
+    body = f"{miss}️ は装飾外。"
+    proc = run_py(PRESTAMP, body, "--seed", "11")
+
+    assert proc.returncode == 0
+    # The exact VS16 sequence must survive untouched.
+    assert f"{miss}️" in proc.stdout
+    # No <img> was inserted for this emoji.
+    assert f'alt="{miss}"' not in proc.stdout
+
+
+def test_prestamp_skips_emoji_inside_summary() -> None:
+    # codex P2: the emoji pass used to bypass <summary> entirely,
+    # producing a stamped emoji inside a summary heading. Pin
+    # symmetry with the text pass — both must leave summary content
+    # alone.
+    body = "<details>\n<summary>祝賀 🎉 メモ</summary>\n本文に 🎊 も出る。\n</details>\n"
+    proc = run_py(PRESTAMP, body, "--seed", "12")
+
+    assert proc.returncode == 0
+    # Summary 🎉 stays raw, summary 祝賀 also stays raw (text pass
+    # already pins this).
+    assert "<summary>祝賀 🎉 メモ</summary>" in proc.stdout
+    # Body 🎊 outside the summary still gets stamped.
+    assert 'alt="🎊"' in proc.stdout
+
+
 def test_prestamp_is_idempotent_for_emoji_pass() -> None:
     # Running prestamp twice must not double-stamp emoji that the first
     # pass already converted into <img> tags.
