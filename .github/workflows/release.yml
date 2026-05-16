@@ -12,6 +12,14 @@ on:
         options:
           - dry-run
           - publish
+  # Auto-publish on every main push that touches the plugin version file.
+  # `prepare-release-notes.sh` is idempotent: if the resolved tag already
+  # has a release, the script silently exits 0 — so unrelated edits to
+  # plugin.json (description, author, etc.) that keep the version the
+  # same are safe no-ops.
+  push:
+    branches: [main]
+    paths: ['.claude-plugin/plugin.json']
 
 permissions:
   contents: read
@@ -23,7 +31,7 @@ concurrency:
 jobs:
   dry-run:
     name: Prepare release notes
-    if: inputs.mode == 'dry-run'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,7 +83,7 @@ jobs:
 
   reject-publish-ref:
     name: Reject publish outside main
-    if: inputs.mode == 'publish' && github.ref != 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -86,7 +94,13 @@ jobs:
 
   publish:
     name: Publish release
-    if: inputs.mode == 'publish' && github.ref == 'refs/heads/main'
+    # Runs on (a) manual workflow_dispatch with mode=publish from main, OR
+    # (b) push to main that touched .claude-plugin/plugin.json. Both paths
+    # invoke the same idempotent prepare-release-notes.sh — version
+    # already released → silent skip; new version → tag + release created.
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && github.ref == 'refs/heads/main')
+      || github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
