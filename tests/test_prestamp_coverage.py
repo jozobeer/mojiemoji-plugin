@@ -169,6 +169,38 @@ def test_prestamp_strips_vs16_when_matching_emoji_catalog() -> None:
     assert "⚠️" not in proc.stdout
 
 
+def test_prestamp_does_not_flip_state_on_backticked_summary_tag() -> None:
+    # `<summary>` inside inline code is documentation, not a real tag.
+    # Regression: a backticked `<summary>` used to flip the state
+    # machine and silently skip everything until a real `</summary>`
+    # appeared (which can be never), dropping all subsequent stamps.
+    #
+    # Two representative shapes — `<summary>` alone and the trickier
+    # `<details>/<summary>` combo. The latter is what the issue body
+    # for #91 hit: a `/` sits between the opening backtick and the
+    # `<summary>` token, defeating a naive lookbehind-on-backtick.
+    body = (
+        "前段で修正が走る。\n"
+        "- 仕様は `<summary>` と同じ state machine で扱う。\n"
+        "- `<details>/<summary>` の対応も同じ実装で扱う。\n"
+        "- 末尾の確認も対応する。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "9")
+
+    assert proc.returncode == 0
+    # All four lines have catalog-hit terms and must all be stamped —
+    # none should be lost to the phantom summary region.
+    assert 'alt="修正"' in proc.stdout
+    assert 'alt="仕様"' in proc.stdout
+    assert 'alt="実装"' in proc.stdout
+    assert 'alt="確認"' in proc.stdout
+    # 対応 appears twice in the source.
+    assert proc.stdout.count('alt="対応"') == 2
+    # The backticked literals must round-trip intact.
+    assert "`<summary>`" in proc.stdout
+    assert "`<details>/<summary>`" in proc.stdout
+
+
 def test_prestamp_is_idempotent_for_emoji_pass() -> None:
     # Running prestamp twice must not double-stamp emoji that the first
     # pass already converted into <img> tags.

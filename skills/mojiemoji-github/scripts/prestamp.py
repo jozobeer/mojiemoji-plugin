@@ -311,6 +311,35 @@ _SUMMARY_OPEN_RE = re.compile(r"<summary\b[^>]*>")
 _SUMMARY_CLOSE_RE = re.compile(r"</summary>")
 
 
+def _inside_inline_code(line: str, pos: int) -> bool:
+    """Return True if ``line[pos]`` falls inside an inline code span.
+
+    Approximate: counts unescaped backticks before ``pos`` on the same
+    line — odd count = inside. Handles the common `<details>/<summary>`
+    documentation case (e.g. ``the `<details>/<summary>` element``)
+    where a literal `<summary>` token sits between matched backticks but
+    is not preceded by a backtick directly. Without this check the
+    state machine flips into "skip until </summary>" mode and silently
+    drops every catalog hit until a real `</summary>` shows up (which
+    can be never — the issue body for #91 lost 58 stamps to this).
+    """
+    return line[:pos].count("`") % 2 == 1
+
+
+def _find_real_summary_tag(pattern: re.Pattern[str], line: str, start: int) -> Optional[re.Match]:
+    """Like ``pattern.search(line, start)`` but skips matches inside
+    inline code spans.
+    """
+    cursor = start
+    while True:
+        m = pattern.search(line, cursor)
+        if m is None:
+            return None
+        if not _inside_inline_code(line, m.start()):
+            return m
+        cursor = m.end()
+
+
 def _transform_line(
     line: str,
     *,
@@ -325,7 +354,7 @@ def _transform_line(
     cursor = 0
     while True:
         if state["in_summary"]:
-            close = _SUMMARY_CLOSE_RE.search(line, cursor)
+            close = _find_real_summary_tag(_SUMMARY_CLOSE_RE, line, cursor)
             if close:
                 out.append(line[cursor : close.end()])
                 cursor = close.end()
@@ -334,7 +363,7 @@ def _transform_line(
             out.append(line[cursor:])
             break
 
-        open_match = _SUMMARY_OPEN_RE.search(line, cursor)
+        open_match = _find_real_summary_tag(_SUMMARY_OPEN_RE, line, cursor)
         if open_match:
             segment = line[cursor : open_match.start()]
             out.append(_protect_and_replace(
