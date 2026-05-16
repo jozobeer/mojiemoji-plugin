@@ -401,6 +401,60 @@ def test_coverage_counts_img_wrapped_stamps_only() -> None:
     assert "stamps=1" in proc.stdout
 
 
+def test_sentence_hit_rate_not_fragmented_by_stamp_url_query(tmp_path: Path) -> None:
+    # Regression for issue #78: `?` in mojiemoji `<img>` URL query strings
+    # (e.g. `?font=...`) used to be treated as a sentence separator, which
+    # both fragmented the sentence count AND broke per-sentence stamp
+    # detection. A single stamped sentence must measure as 1 sentence with
+    # full hit rate, regardless of how many `?` appear inside stamp URLs.
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("coverage_script", COVERAGE)
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+
+    stamp = (
+        '<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3'
+        '?font=gothic-bold&color=3b82f6&animation=bane'
+        '&background=transparent&outline=darker&outline_width=2" alt="修正">'
+    )
+    body = f"本文に{stamp}が含まれます。"
+
+    metrics = mod.measure(body)
+
+    assert metrics["sentence_total"] == 1, metrics
+    assert metrics["sentence_hits"] == 1, metrics
+    assert metrics["sentence_hit_rate"] == 1.0, metrics
+
+
+def test_sentence_hit_rate_monotonic_with_stamp_count(tmp_path: Path) -> None:
+    # Acceptance criterion for issue #78: adding stamps must never DECREASE
+    # sentence_hit_rate. Before the fix, more stamps meant more `?` in
+    # URLs, fragmenting more sentences and tanking the rate — the opposite
+    # of the 下処理 first principle.
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("coverage_script", COVERAGE)
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+
+    stamp = (
+        '<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3'
+        '?font=gothic-bold&color=3b82f6&animation=bane'
+        '&background=transparent&outline=darker&outline_width=2" alt="修正">'
+    )
+    one_stamp = f"これは{stamp}を含む文です。"
+    three_stamps = f"これは{stamp}{stamp}{stamp}を含む文です。"
+
+    rate_one = mod.measure(one_stamp)["sentence_hit_rate"]
+    rate_three = mod.measure(three_stamps)["sentence_hit_rate"]
+
+    assert rate_three >= rate_one, (rate_one, rate_three)
+    assert rate_three == 1.0, rate_three
+
+
 def test_coverage_detects_paragraph_bias() -> None:
     body = """<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=gothic-bold&color=60a5fa&animation=tate_scroll&background=transparent&outline=darker&outline_width=2" alt="確認"> 段落1
 
