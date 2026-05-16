@@ -82,6 +82,8 @@ prestamp.py < draft.md | gh pr create --body-file -
 
 `prestamp.py` は `data/prestamp-catalog.yml` の全 `terms` キー (447+ entries) を 1 単語ずつ最長一致で `<img>` 置換する。catalog 外の語は素通し。冪等 (再実行で副作用無し)。
 
+`--report-unstamped` フラグで、prestamp 後も `<img>` 化されなかった 2-8 字 Kanji / Katakana 連続を JSON で出力できる。`/mojiemoji-propose` skill (#93) がこれを selector 起動の入口に使い、`bump-catalog` (#46) の入力枯渇 (#92) を解消する。
+
 ### よくあるアンチパターン
 
 | アンチパターン | なぜダメ |

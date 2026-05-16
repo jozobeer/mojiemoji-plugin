@@ -85,3 +85,12 @@ flavor を選定したとき、`cache_record.py` が JSONL に追記する。
   必須** — auto-merge は禁止。
 - スクリプトは Phase 1 実装(参照: GitHub Issue #46)。今後の Phase で
   GitHub Actions による週次 cron、公開 cache 集約方法などを追加する予定。
+
+## 入力枯渇時 (#92 / #93)
+
+`usage.jsonl` が空 / ほぼ空のときは `bump-catalog` を回しても "no
+new variants to add" しか出ない。これは selector subagent が
+起動していないサイン (prestamp 過剰効率化による)。draft markdown が
+あるなら `/mojiemoji-propose <path>` を先に回して、未 stamp の 2-8 字
+日本語連続を selector に投げて cache に追記してから `bump-catalog` を
+呼ぶ。

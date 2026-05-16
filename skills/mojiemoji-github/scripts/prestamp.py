@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import sys
 import zlib
@@ -52,6 +53,22 @@ SINGLE_DIGIT_RIGHT_GUARD = r"(?![A-Za-z0-9_.])"
 
 HAN_CHAR_RE = re.compile(f"[{HAN_RANGE}]")
 DIGIT_CHAR_RE = re.compile(r"\A[0-9]\Z")
+
+# Catalog growth signal — see #92 / #93. After prestamp finishes, any
+# 2-8 char contiguous run of Kanji or Katakana that survived in prose is
+# a candidate for catalog promotion (the term was either novel, too long
+# for the sliding window, or simply uncatalogued). Hiragana is excluded
+# because solo hiragana runs are dominated by 助詞/助動詞 noise; mixed
+# runs naturally break at hiragana boundaries.
+JAPANESE_RUN_RE = re.compile(f"[{HAN_RANGE}{KATAKANA_RANGE}]{{2,8}}")
+UNSTAMPED_CONTEXT_RADIUS = 20
+UNSTAMPED_MAX_CONTEXTS_PER_TERM = 3
+# When a context window slice cuts a `__MOJIEMOJI_MASK_<n>__` token at
+# either edge, the partial fragment fails to restore. Render restored
+# `<img>` stamps and orphan fragments as a single ellipsis so the user
+# sees the term in clean surrounding prose, not URL-laden HTML.
+_PARTIAL_MASK_RE = re.compile(r"[A-Z0-9_]*__[A-Z0-9_]*")
+_RESTORED_IMG_RE = re.compile(r"<img [^>]+>")
 
 # Match a markdown link target, allowing one level of nested parens
 # (e.g. https://en.wikipedia.org/wiki/Foo_(disambiguation)).
@@ -457,6 +474,57 @@ def _walk_lines_outside_fences(text: str):
             yield line, True
 
 
+def report_unstamped(text: str) -> dict:
+    """Find prose Japanese runs that survived the prestamp transform.
+
+    Walks the (typically transformed) text fence-aware and summary-aware,
+    masks the same safe zones as the transform passes — including the
+    `<img>` stamps emitted by prestamp — then scans the remaining prose
+    for ``[Kanji|Katakana]{2,8}`` runs. Each surviving run is a candidate
+    for catalog growth (#92 / #93): the term was either novel,
+    longer than the sliding window, or simply uncatalogued.
+
+    Returns ``{"unstamped": [{"term", "count", "contexts"}, ...]}`` sorted
+    by descending count, then term ascending. ``contexts`` is a list of
+    up to ``UNSTAMPED_MAX_CONTEXTS_PER_TERM`` snippets with ~20 chars on
+    either side of each occurrence (mask tokens restored).
+    """
+    candidates: dict[str, dict] = {}
+
+    def observe(segment: str) -> str:
+        masker = _Masker()
+        masked = _mask_safe_zones(segment, masker)
+        for m in JAPANESE_RUN_RE.finditer(masked):
+            term = m.group(0)
+            start, end = m.start(), m.end()
+            ctx_start = max(0, start - UNSTAMPED_CONTEXT_RADIUS)
+            ctx_end = min(len(masked), end + UNSTAMPED_CONTEXT_RADIUS)
+            context = masker.restore(masked[ctx_start:ctx_end])
+            context = _RESTORED_IMG_RE.sub("…", context)
+            context = _PARTIAL_MASK_RE.sub("…", context)
+            context = context.strip()
+            entry = candidates.setdefault(term, {"count": 0, "contexts": []})
+            entry["count"] += 1
+            if len(entry["contexts"]) < UNSTAMPED_MAX_CONTEXTS_PER_TERM:
+                entry["contexts"].append(context)
+        return segment
+
+    state = {"in_summary": False}
+    for line, is_prose in _walk_lines_outside_fences(text):
+        if is_prose:
+            _scan_summary_aware(line, state, observe)
+
+    return {
+        "unstamped": [
+            {"term": t, "count": v["count"], "contexts": v["contexts"]}
+            for t, v in sorted(
+                candidates.items(),
+                key=lambda kv: (-kv[1]["count"], kv[0]),
+            )
+        ]
+    }
+
+
 def transform(
     text: str,
     *,
@@ -549,6 +617,26 @@ def main(argv: Optional[list[str]] = None) -> int:
         type=Path,
         help="Override the emoji catalog path (default: <skill>/data/emoji-catalog.yml)",
     )
+    parser.add_argument(
+        "--report-unstamped",
+        action="store_true",
+        help=(
+            "Emit a JSON report of 2-8 char Japanese (Kanji/Katakana) runs "
+            "that survived the transform in prose. Suppresses the markdown "
+            "output. Used by /mojiemoji-propose to seed selector input "
+            "(#92 / #93)."
+        ),
+    )
+    parser.add_argument(
+        "--report-unstamped-to",
+        default=None,
+        type=Path,
+        help=(
+            "Write the unstamped JSON report to PATH and emit the "
+            "transformed markdown to stdout as usual. Composable form of "
+            "--report-unstamped for pipelines that need both outputs."
+        ),
+    )
     args = parser.parse_args(argv)
 
     text = sys.stdin.read()
@@ -559,6 +647,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         base_url=args.base_url,
         seed=args.seed,
     )
+
+    if args.report_unstamped:
+        report = report_unstamped(output)
+        json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if args.report_unstamped_to is not None:
+        report = report_unstamped(output)
+        with open(args.report_unstamped_to, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+
     sys.stdout.write(output)
     return 0
 
