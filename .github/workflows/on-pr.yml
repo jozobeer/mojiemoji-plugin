@@ -47,6 +47,32 @@ jobs:
           python-version: "3.12"
       - run: bash scripts/verify-lists-vs-docs.sh
 
+  forbid-legacy-bypass:
+    name: Forbid legacy bypass marker in new code
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check diff for legacy bypass marker
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -o pipefail
+          legacy_marker="HOOK""_DISABLE=1"
+          if git diff --diff-filter=AM "$BASE_SHA...$HEAD_SHA" -- \
+              . \
+              ':!README.md' \
+              ':!skills/mojiemoji-github/SKILL.md' \
+              ':!hooks/mojiemoji-japanese-gate.py' \
+              ':!tests/**' \
+            | grep -nE "^\+.*${legacy_marker}" ; then
+            echo "::error::${legacy_marker} is deprecated. Use MOJIEMOJI_HOOK_DISABLED=1." >&2
+            exit 1
+          fi
+
   shell:
     name: shellcheck
     runs-on: ubuntu-latest

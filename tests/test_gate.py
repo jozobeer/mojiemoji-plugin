@@ -160,7 +160,7 @@ class TestBypass:
         assert result.returncode == 2, "bypass marker leaked from body file"
 
     def test_legacy_hook_disable_still_works_with_deprecation_warning(self, run_hook):
-        # Legacy name `HOOK_DISABLE=1` continues to bypass (no breaking change)
+        # Legacy name `HOOK_DISABLE=1` continues to bypass until v1.0.0,
         # but emits a deprecation notice to stderr so callers can migrate.
         result = run_hook(
             {
@@ -177,6 +177,7 @@ class TestBypass:
         assert "MOJIEMOJI_HOOK_DISABLED=1" in result.stderr, (
             "deprecation warning must point to new name"
         )
+        assert "v1.0.0" in result.stderr, "deprecation warning must pin removal milestone"
 
     def test_new_marker_emits_no_deprecation_warning(self, run_hook):
         # The new marker must NOT trigger the legacy warning — that would

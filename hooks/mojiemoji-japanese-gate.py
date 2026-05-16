@@ -36,7 +36,7 @@ stderr so Claude sees it before submission. Bypass: include
 that's the command line (prefix idiom matches the git pre-commit hook),
 for MCP that's the body itself. The legacy name `HOOK_DISABLE=1` is
 still honored for now but emits a deprecation notice; it will be
-removed in a future minor release.
+removed in v1.0.0.
 """
 import json
 import os
@@ -57,7 +57,7 @@ GH_API_RE = re.compile(
 STAMP_MARKER = "mojiemoji.jozo.beer"
 BYPASS_MARKER = "MOJIEMOJI_HOOK_DISABLED=1"
 # Legacy bypass marker. Honored for now but emits a deprecation notice
-# on use; will be removed in a future minor release (target: 1.0).
+# on use; will be removed in v1.0.0.
 LEGACY_BYPASS_MARKER = "HOOK_DISABLE=1"
 
 
@@ -71,7 +71,7 @@ def _has_bypass(text: str) -> bool:
         sys.stderr.write(
             "mojiemoji-japanese-gate: `HOOK_DISABLE=1` is deprecated. "
             "Use `MOJIEMOJI_HOOK_DISABLED=1` instead — the legacy name "
-            "will be removed in a future release.\n"
+            "will be removed in v1.0.0.\n"
         )
         return True
     return False
