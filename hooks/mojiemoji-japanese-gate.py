@@ -34,9 +34,7 @@ When triggered, blocks the tool call (exit 2) and prints reminder to
 stderr so Claude sees it before submission. Bypass: include
 `MOJIEMOJI_HOOK_DISABLED=1` anywhere in the inspected text — for Bash
 that's the command line (prefix idiom matches the git pre-commit hook),
-for MCP that's the body itself. The legacy name `HOOK_DISABLE=1` is
-still honored for now but emits a deprecation notice; it will be
-removed in v1.0.0.
+for MCP that's the body itself.
 """
 import json
 import os
@@ -56,25 +54,11 @@ GH_API_RE = re.compile(
 )
 STAMP_MARKER = "mojiemoji.jozo.beer"
 BYPASS_MARKER = "MOJIEMOJI_HOOK_DISABLED=1"
-# Legacy bypass marker. Honored for now but emits a deprecation notice
-# on use; will be removed in v1.0.0.
-LEGACY_BYPASS_MARKER = "HOOK_DISABLE=1"
 
 
 def _has_bypass(text: str) -> bool:
-    """Return True if any bypass marker is present in `text`. Prints a
-    deprecation notice to stderr when only the legacy marker is found,
-    so callers can migrate before legacy support is dropped."""
-    if BYPASS_MARKER in text:
-        return True
-    if LEGACY_BYPASS_MARKER in text:
-        sys.stderr.write(
-            "mojiemoji-japanese-gate: `HOOK_DISABLE=1` is deprecated. "
-            "Use `MOJIEMOJI_HOOK_DISABLED=1` instead — the legacy name "
-            "will be removed in v1.0.0.\n"
-        )
-        return True
-    return False
+    """Return True if the bypass marker is present in `text`."""
+    return BYPASS_MARKER in text
 # Match every mojiemoji URL up to the first URL/HTML delimiter so we can
 # verify per-URL query parameters. Delimiters: whitespace, `"`, `<`, `>`, `)`.
 MOJI_URL_RE = re.compile(r"https?://mojiemoji\.jozo\.beer/[^\s\"<>)]+")
