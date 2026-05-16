@@ -3,11 +3,17 @@ on:
   pull_request:
     types: [opened, edited, synchronize]
 
+# Forks の PR は GITHUB_TOKEN が read-only。label / comment の write 系は
+# Skip し drift 検出だけ走らせる (出力は step summary に残す)。
 jobs:
   check:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
+      issues: write
+    env:
+      IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,41 +26,74 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          # 1. Fetch current body
+          set -euo pipefail
+
           gh pr view "$PR" --json body -q .body > /tmp/body.md
-          
-          # 2. Re-apply prestamp (idempotent check)
           python3 skills/mojiemoji-github/scripts/prestamp.py < /tmp/body.md > /tmp/restamped.md
-          
-          # 3. Check for drift
-          if ! diff -q /tmp/body.md /tmp/restamped.md > /dev/null; then
-            echo "Drift detected!"
-            diff /tmp/body.md /tmp/restamped.md > /tmp/drift.diff || true
-            
-            # Add label
-            gh pr edit "$PR" --add-label catalog-drift || true
-            
-            # Prepare comment
-            {
-              echo "### ⚠️ catalog drift 検出"
-              echo "このPRの本文は最新の catalog 内容と乖離しています。以下を re-apply して同期してください。"
-              echo ""
-              echo "<details><summary>diff (original vs restamped)</summary>"
-              echo ""
-              echo '```diff'
-              cat /tmp/drift.diff
-              echo '```'
-              echo ""
-              echo "</details>"
-            } > /tmp/drift.comment.md
-            
-            # Dedupe comment: only post if not already present
-            HAS_COMMENT=$(gh pr view "$PR" --json comments -q '.comments[] | select(.body | contains("catalog drift 検出")) | .id' | head -1)
-            if [ -z "$HAS_COMMENT" ]; then
-              gh pr comment "$PR" --body-file /tmp/drift.comment.md
+
+          if diff -q /tmp/body.md /tmp/restamped.md > /dev/null; then
+            echo "No drift detected." >> "$GITHUB_STEP_SUMMARY"
+            if [ "$IS_FORK" != "true" ]; then
+              gh pr edit "$PR" --remove-label catalog-drift 2>/dev/null || true
             fi
-          else
-            echo "No drift detected."
-            # Remove label if it exists
-            gh pr edit "$PR" --remove-label catalog-drift || true
+            exit 0
+          fi
+
+          echo "Drift detected." >> "$GITHUB_STEP_SUMMARY"
+          diff /tmp/body.md /tmp/restamped.md > /tmp/drift.diff || true
+
+          # Truncate diff to keep comment within GitHub size limit.
+          # 1 comment body cap is ~64KB; cap raw diff at 8000 lines + 50KB.
+          DIFF_BYTES=$(wc -c < /tmp/drift.diff)
+          head -8000 /tmp/drift.diff | head -c 50000 > /tmp/drift.diff.trunc
+          if [ "$DIFF_BYTES" -gt 50000 ] || [ "$(wc -l < /tmp/drift.diff)" -gt 8000 ]; then
+            printf '\n... (diff truncated; %d bytes original)\n' "$DIFF_BYTES" >> /tmp/drift.diff.trunc
+          fi
+
+          {
+            echo "### ⚠️ catalog drift 検出"
+            echo "このPRの本文は最新の catalog 内容と乖離しています。以下を re-apply して同期してください。"
+            echo ""
+            echo '```bash'
+            echo 'gh pr view '"$PR"' --json body -q .body | python3 skills/mojiemoji-github/scripts/prestamp.py'
+            echo '```'
+            echo ""
+            echo "<details><summary>diff (original vs restamped)</summary>"
+            echo ""
+            echo '```diff'
+            cat /tmp/drift.diff.trunc
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > /tmp/drift.comment.md
+
+          # Always print drift to step summary, even on fork PRs where write
+          # operations skip (visibility for the PR author).
+          {
+            echo ""
+            echo '<details><summary>drift diff</summary>'
+            echo ""
+            echo '```diff'
+            cat /tmp/drift.diff.trunc
+            echo '```'
+            echo ""
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$IS_FORK" = "true" ]; then
+            echo "Fork PR detected — skipping label/comment writes (token is read-only). Drift visible in step summary." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          gh pr edit "$PR" --add-label catalog-drift || true
+
+          # Best-effort dedupe: skip posting if an existing drift comment from
+          # this workflow is already present. Race window between read and
+          # write is acceptable — at worst, 2 concurrent runs each post once,
+          # which is preferable to atomic locks for a non-blocking advisory.
+          HAS_COMMENT=$(gh pr view "$PR" --json comments \
+            -q '.comments[] | select(.body | startswith("### ⚠️ catalog drift 検出")) | .id' \
+            | head -1)
+          if [ -z "$HAS_COMMENT" ]; then
+            gh pr comment "$PR" --body-file /tmp/drift.comment.md
           fi
