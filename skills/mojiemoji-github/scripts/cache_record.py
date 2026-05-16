@@ -23,18 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-
-# Color-shifting animations render their own per-frame colors, so the
-# plugin contract allows omitting outline for these.
-COLOR_SHIFT_ANIMATIONS = frozenset({"disco", "psycho", "kira"})
-
-
-def default_cache_file() -> str:
-    env_override = os.environ.get("MOJIEMOJI_CACHE_FILE")
-    if env_override:
-        return env_override
-    data_home = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
-    return str(Path(data_home) / "mojiemoji-plugin" / "usage.jsonl")
+from lib.cache_path import default_cache_file
+from lib.constants import COLOR_SHIFTING_ANIMATIONS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,7 +56,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    outline_required = args.animation not in COLOR_SHIFT_ANIMATIONS
+    outline_required = args.animation not in COLOR_SHIFTING_ANIMATIONS
     required = ["term", "font", "color", "animation"]
     if outline_required:
         required.append("outline")

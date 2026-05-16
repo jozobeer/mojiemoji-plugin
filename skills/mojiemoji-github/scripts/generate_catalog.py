@@ -23,21 +23,14 @@ import re
 import sys
 from typing import Iterable, Optional
 
-
-CANONICAL_FONTS = (
-    "akzk", "chikara", "dela", "gothic", "gothic-bold", "hachimaru",
-    "kurobara", "maru", "maru-bold", "mincho", "noto", "pixel",
-    "rampart", "tamanegi", "toge", "zero",
+from lib.constants import (
+    CANONICAL_ANIMATIONS,
+    CANONICAL_FONTS,
+    COLOR_SHIFTING_ANIMATIONS,
+    INLINE_PROBLEMATIC_ANIMATIONS,
+    ROTATIONAL_ANIMATIONS,
 )
 
-CANONICAL_ANIMATIONS = (
-    "bakusan", "bane", "bure", "chirichiri", "chuuou_zoom", "disco",
-    "ekken", "gatagata", "kage_bokashi", "kage_kaiten", "kage_neon",
-    "kaiten", "kira", "kirari", "mabataki", "mochimochi", "mozaiku",
-    "nami", "neruneru", "norinori", "patapata", "poyoon", "psycho",
-    "shuchusen", "tate_ekken", "tate_scroll", "tatemoya", "tenmetsu",
-    "yatta", "yoko_scroll", "yokomoya", "yurayura", "zairu", "zanzo",
-)
 
 TAILWIND_PALETTE = (
     "ef4444", "dc2626", "f97316", "ea580c", "f59e0b", "d97706",
@@ -46,13 +39,6 @@ TAILWIND_PALETTE = (
     "7c3aed", "a855f7", "c084fc", "d946ef", "ec4899", "db2777",
     "f472b6", "fb7185", "f43f5e", "fdba74",
 )
-
-COLOR_SHIFTING_ANIMATIONS = frozenset({"kira", "disco", "psycho"})
-ROTATIONAL_ANIMATIONS = frozenset({"kaiten", "kage_kaiten"})
-
-# Inline-problematic animations: block-only or obscure letterforms at body
-# height. Excluded from the generated pool.
-INLINE_PROBLEMATIC_ANIMATIONS = frozenset({"bakusan", "chuuou_zoom"})
 
 POOLED_ANIMATIONS = tuple(a for a in CANONICAL_ANIMATIONS if a not in INLINE_PROBLEMATIC_ANIMATIONS)
 

@@ -9,9 +9,8 @@ import sys
 from typing import Optional
 from urllib.parse import quote, urlencode
 
+from lib.constants import COLOR_SHIFTING_ANIMATIONS, DEFAULT_BASE_URL, ROTATIONAL_ANIMATIONS
 
-COLOR_SHIFTING_ANIMATIONS = frozenset({"disco", "psycho", "kira"})
-ROTATIONAL_ANIMATIONS = frozenset({"kaiten", "kage_kaiten"})
 
 HEX6_RE = re.compile(r"\A#?[0-9a-fA-F]{6}\Z")
 
@@ -101,7 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--alt", help="Alt text; defaults to --text")
     parser.add_argument(
         "--base-url",
-        default="https://mojiemoji.jozo.beer",
+        default=DEFAULT_BASE_URL,
         help="Base URL for the mojiemoji service",
     )
     mode = parser.add_mutually_exclusive_group()

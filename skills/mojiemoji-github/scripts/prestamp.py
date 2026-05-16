@@ -19,8 +19,9 @@ from urllib.parse import quote, urlencode
 
 import yaml
 
+from lib.constants import DEFAULT_BASE_URL
 
-DEFAULT_BASE_URL = "https://mojiemoji.jozo.beer"
+
 DEFAULT_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "prestamp-catalog.yml"
 
 # Single-char catalog entries need boundary assertions or they over-match.
