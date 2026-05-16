@@ -665,8 +665,28 @@ scripts/mojiemoji_markdown.py --text 'マジで' --inline \
 
 <!--
   mojiemoji-schema-version: 2.0.0
-  Forward-compat marker for issue #60 Option B: the hook will eventually
-  parse this to detect stale skill caches and warn the agent. Currently
-  unused — placed here so future hook releases can rely on its presence.
+  The hook (hooks/mojiemoji-japanese-gate.py § validate_schema_version)
+  reads this marker AND each harness-local copy under
+  $HOME/.config/<harness>/skills/mojiemoji-github/SKILL.md. When a
+  harness copy is behind the host, the hook emits a warning to stderr
+  (rc=0 by default; MOJIEMOJI_STRICT_VERSION=1 upgrades to block rc=2).
+
+  When to bump:
+
+    MAJOR (X.0.0)  — breaking changes to the skill contract (URL pattern
+                     change, new mandatory parameter, removed parameter,
+                     renamed canonical animation/font value, etc.).
+                     Old harness copies *will* produce broken output
+                     against the new hook — bump and treat drift as a
+                     hard re-install requirement.
+
+    MINOR (0.X.0)  — additive canonical changes (new animation, new
+                     font, new optional parameter). Old harness copies
+                     still produce valid output; they just miss the new
+                     options.
+
+    PATCH (0.0.X)  — wording / clarification / typo fixes. No drift
+                     concern; ideally don't bump for these, but bumping
+                     forces a re-pull and clears stale guidance.
 -->
 <!-- mojiemoji-schema-version: 2.0.0 -->
