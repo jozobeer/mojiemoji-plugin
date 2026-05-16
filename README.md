@@ -197,9 +197,6 @@ skills:
 
 MCP 経路で `MOJIEMOJI_HOOK_DISABLED=1` を使う場合、`body` テキストならコメントや脚注に紛れさせても hook が走査するので効く。乱用は厳禁 — 1 投稿 1 bypass の最小スコープで使うこと(hook が騒いだ箇所はだいたい本物の問題である)。
 
-> [!NOTE]
-> `MOJIEMOJI_HOOK_DISABLED` の旧名 `HOOK_DISABLE=1` も v1.0.0 までは互換として動くが、検出時に stderr に deprecation warning を出力する。v1.0.0 で削除予定なので新名へ移行してほしい。新規コードへの追加は PR CI で block する。`MOJIEMOJI_*` 接頭辞に揃える方針 ([#50](https://github.com/jozobeer/mojiemoji-plugin/issues/50))。
-
 #### 参照する外部変数
 
 | 変数 | 用途 |

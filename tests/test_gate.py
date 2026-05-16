@@ -159,9 +159,10 @@ class TestBypass:
         )
         assert result.returncode == 2, "bypass marker leaked from body file"
 
-    def test_legacy_hook_disable_still_works_with_deprecation_warning(self, run_hook):
-        # Legacy name `HOOK_DISABLE=1` continues to bypass until v1.0.0,
-        # but emits a deprecation notice to stderr so callers can migrate.
+    def test_legacy_hook_disable_no_longer_bypasses(self, run_hook):
+        # The legacy `HOOK_DISABLE=1` name was deprecated in v0.x and
+        # removed in v0.21.0. It must now be treated as plain text and
+        # therefore NOT bypass the gate.
         result = run_hook(
             {
                 "tool_name": "Bash",
@@ -170,28 +171,7 @@ class TestBypass:
                 },
             }
         )
-        assert result.returncode == 0, "legacy HOOK_DISABLE=1 must still bypass"
-        assert "HOOK_DISABLE=1" in result.stderr and "deprecated" in result.stderr, (
-            "legacy marker must emit deprecation warning"
-        )
-        assert "MOJIEMOJI_HOOK_DISABLED=1" in result.stderr, (
-            "deprecation warning must point to new name"
-        )
-        assert "v1.0.0" in result.stderr, "deprecation warning must pin removal milestone"
-
-    def test_new_marker_emits_no_deprecation_warning(self, run_hook):
-        # The new marker must NOT trigger the legacy warning — that would
-        # train callers to ignore the notice.
-        result = run_hook(
-            {
-                "tool_name": "Bash",
-                "tool_input": {
-                    "command": f'MOJIEMOJI_HOOK_DISABLED=1 gh pr create --title "x" --body "{JP_BODY}"'
-                },
-            }
-        )
-        assert result.returncode == 0
-        assert "deprecated" not in result.stderr
+        assert result.returncode == 2, "legacy HOOK_DISABLE=1 must no longer bypass"
 
 
 # --- Bash happy path & blocking ------------------------------------------

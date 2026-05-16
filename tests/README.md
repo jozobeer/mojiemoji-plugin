@@ -17,7 +17,7 @@ python3 -m pytest
 - `test_gate.py` — クラス単位でゲートの段階別にケースをグループ化:
   - `TestToolFiltering` — 対象外ツールはすべて exit 0
   - `TestLanguageFiltering` — 英語 body はパス
-  - `TestBypass` — `MOJIEMOJI_HOOK_DISABLED=1` の Bash プレフィックス / MCP body 内、旧名 `HOOK_DISABLE=1` の v1.0.0 deprecation 警告
+  - `TestBypass` — `MOJIEMOJI_HOOK_DISABLED=1` の Bash プレフィックス / MCP body 内、旧名 `HOOK_DISABLE=1` がもう bypass しないこと
   - `TestBashHappyPath` — 装飾完備の `gh pr create` / `gh api .../reviews` はパス
   - `TestBashBlocking` — zero stamps / 必須パラ欠落 / 非 canonical font / 非 canonical animation / named color
   - `TestAnimationConflicts` — disco × outline / kaiten + 速度
