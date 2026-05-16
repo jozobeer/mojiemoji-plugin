@@ -8,7 +8,7 @@
 
 [**mojiemoji.jozo.beer**](https://mojiemoji.jozo.beer) のスタンプ画像で日本語の GitHub Markdown (issue / PR / レビュー / リプライ / リリースノート) を <img src="https://mojiemoji.jozo.beer/emoji/%E8%A1%A8%E6%83%85?font=pixel&color=60a5fa&animation=kirari&background=transparent&outline=fa60a5&outline_width=2" alt="表情" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E8%B1%8A%E3%81%8B?font=maru-bold&color=4ade80&animation=mochimochi&background=transparent&outline=804ade&outline_width=2" alt="豊か" height="24" align="absmiddle"> に — `これは【マジで】やばい【バグ】ですね` のように **キーワードだけスタンプ化** する mid-sentence インライン強調を **自動で適切に埋め込む** Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=maru-bold&color=8b5cf6&animation=patapata&background=transparent&outline=f68b5c&outline_width=2" alt="プラグ" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%A4%E3%83%B3?font=maru-bold&color=8b5cf6&animation=patapata&background=transparent&outline=f68b5c&outline_width=2" alt="イン" height="24" align="absmiddle"> 🚀
 
-<img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B7%E3%83%A7%E3%83%BC?font=toge&color=fbbf24&animation=tate_ekken&background=transparent&outline=24fbbf&outline_width=2" alt="ショー" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B1%E3%83%BC%E3%82%B9?font=rampart&color=f472b6&animation=kage_kaiten&speed=slow&background=transparent&outline=b6f472&outline_width=2" alt="ケース" height="24" align="absmiddle"> 的にはこの README 自体が dogfooding なので、上から下までスタンプまみれ ✨
+<img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B7%E3%83%A7%E3%83%BC?font=toge&color=fbbf24&animation=tate_ekken&background=transparent&outline=24fbbf&outline_width=2" alt="ショー" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B1%E3%83%BC%E3%82%B9?font=rampart&color=f472b6&animation=kage_kaiten&speed=slow&background=transparent&outline=b6f472&outline_width=2" alt="ケース" height="24" align="absmiddle"> 的にはこの README 自体が dogfooding なので、上から下までスタンプまみれ <img src="https://mojiemoji.jozo.beer/emoji/%E2%9C%A8?font=noto&amp;color=ec4899&amp;animation=kira&amp;background=transparent&amp;outline_width=0" alt="✨" height="24" align="absmiddle">
 
 ---
 
@@ -29,6 +29,24 @@ mojiemoji-plugin が掛かった世界:
 
 ---
 
+## 🎴 絵文字も自動でアニメ化
+
+文字スタンプだけでなく、**Unicode 絵文字 162 種** (`🎉` / `⚠️` / `✅` / `❌` / `🎊` 等) も `prestamp.py` が自動で animated `<img>` に置換します。`emoji-catalog.yml` に登録された絵文字なら手書きの URL 組み立て不要。
+
+| 入力 | プラグイン通過後 |
+|---|---|
+| `やった 🎉 完成！` | やった <img src="https://mojiemoji.jozo.beer/emoji/%F0%9F%8E%89?font=hachimaru&color=f472b6&animation=bane&background=transparent&outline=b6f472&outline_width=2" alt="🎉" height="24" align="absmiddle"> 完成！ |
+| `注意 ⚠️ してください` | 注意 <img src="https://mojiemoji.jozo.beer/emoji/%E2%9A%A0?font=dela&color=ef4444&animation=tenmetsu&background=transparent&outline=44ef44&outline_width=2" alt="⚠" height="24" align="absmiddle"> してください |
+
+ガード:
+
+- **連続絵文字は 2 連まで** — `🎉🎊🎁🎀` の 3 つ目以降は生の Unicode のまま残す(視覚的に潰し合うため)。空白を挟めば run がリセットされ全部スタンプ化される
+- **VS16 (`U+FE0F`) は剥がして lookup** — `⚠️` (U+26A0 U+FE0F) も `⚠` (素の U+26A0) もどちらも同じカタログキーにヒット
+- **safe-zone は不可侵** — code span / fenced block / `<img>` 内 / URL 内の絵文字には触らない
+- **カタログ外の絵文字は触らない** — `🚀` のように upstream に asset が無いものは plain Unicode で残す(`emoji-catalog.yml` を読めば対応一覧が分かる)
+
+---
+
 ## 📦 同梱されるもの
 
 3 層構造で <img src="https://mojiemoji.jozo.beer/emoji/%E7%B5%B1%E5%90%88?font=maru-bold&color=3b82f6&animation=tate_ekken&background=transparent&outline=f63b82&outline_width=2" alt="統合" height="24" align="absmiddle"> されています。
@@ -37,7 +55,7 @@ mojiemoji-plugin が掛かった世界:
 |---|---|---|
 | Skill | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
 | Subagent | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
-| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語を決定論的に先置換(variant 抽選 + safe-zone 保護)、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
+| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語と Unicode 絵文字 (`🎉` / `⚠️` 等カタログ 162 種) を決定論的に先置換(variant 抽選 + safe-zone 保護 + 連続絵文字は 2 連までで打ち切り)、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
 | Hook (PreToolUse / Bash + MCP) | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review\|edit)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
 ---
@@ -53,7 +71,7 @@ Claude Code 内で:
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
 
-これで <img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E6%88%90?font=hachimaru&color=10b981&animation=disco&background=transparent" alt="完成" height="24" align="absmiddle"> 🎉
+これで <img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E6%88%90?font=hachimaru&color=10b981&animation=disco&background=transparent" alt="完成" height="24" align="absmiddle"> <img src="https://mojiemoji.jozo.beer/emoji/%F0%9F%8E%89?font=pixel&amp;color=ec4899&amp;animation=kirari&amp;background=transparent&amp;outline=99ec48&amp;outline_width=2" alt="🎉" height="24" align="absmiddle">
 
 ### ローカルチェックアウトから
 
@@ -76,11 +94,11 @@ Claude Code 内で:
 /plugin
 ```
 
-で `mojiemoji-github` が `enabled` になっていれば <img src="https://mojiemoji.jozo.beer/emoji/%E5%B0%8E%E5%85%A5?font=chikara&color=a855f7&animation=zanzo&background=transparent&outline=f7a855&outline_width=2" alt="導入" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E4%BA%86?font=hachimaru&color=10b981&animation=yatta&background=transparent&outline=8110b9&outline_width=2" alt="完了" height="24" align="absmiddle"> 🎊
+で `mojiemoji-github` が `enabled` になっていれば <img src="https://mojiemoji.jozo.beer/emoji/%E5%B0%8E%E5%85%A5?font=chikara&color=a855f7&animation=zanzo&background=transparent&outline=f7a855&outline_width=2" alt="導入" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E4%BA%86?font=hachimaru&color=10b981&animation=yatta&background=transparent&outline=8110b9&outline_width=2" alt="完了" height="24" align="absmiddle"> <img src="https://mojiemoji.jozo.beer/emoji/%F0%9F%8E%8A?font=maru-bold&amp;color=fbbf24&amp;animation=patapata&amp;background=transparent&amp;outline=24fbbf&amp;outline_width=2" alt="🎊" height="24" align="absmiddle">
 
 ---
 
-## 🏗️ 仕組み — 3 層構造
+## 🏗 仕組み — 3 層構造
 
 ```mermaid
 flowchart TD
@@ -115,11 +133,11 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 | パラメータ | 必須値 | 欠落時の影響 | 致命度 |
 |---|---|---|:---:|
 | `color` | 明るめの hex (例: `#a855f7` / `#22c55e` — Tailwind パレットの 300〜500 帯が目安として便利) または `vivid-blue` 等のサービスプリセット名。**サービスは Tailwind クラス名は受け付けない**、hex か名前付きプリセットのみ | サービスデフォルトが黒 → **dark mode で完全不可視** | 💀 致命 |
-| `background` | `transparent` | dark mode で白ブロックが本文を切り裂く | ⚠️ 大 |
-| `animation` | 34 種の正準アニメから選ぶ。rotational 系 (`kaiten` / `kage_kaiten`) は **`speed=step` または `slow` の時のみ可読** — `normal` / `fast` / 省略 (デフォルト fast) は回転が早すぎて読めない streak になる (hook で reject、helper は速度未指定なら自動で `slow` を注入) | 欠落時は静止画 → スタンプとしての視覚的 punch が消える | ⚠️ 中 |
-| `font` | 17 種の正準フォント | サービスデフォルトの素フォント → body 高さで読みづらい | ⚠️ 中 |
-| `outline` | `triadic` 推奨 / `complement` / `darker` / `lighter` / 6-hex | 字形が背景と融合してぼやける | ⚠️ 中 |
-| `outline_width` | `2` | 1px は線が細すぎ、3px+ は字形が潰れる | 💡 小 |
+| `background` | `transparent` | dark mode で白ブロックが本文を切り裂く | <img src="https://mojiemoji.jozo.beer/emoji/%E2%9A%A0?font=gothic-bold&amp;color=f59e0b&amp;animation=gatagata&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="⚠" height="24" align="absmiddle"> 大 |
+| `animation` | 34 種の正準アニメから選ぶ。rotational 系 (`kaiten` / `kage_kaiten`) は **`speed=step` または `slow` の時のみ可読** — `normal` / `fast` / 省略 (デフォルト fast) は回転が早すぎて読めない streak になる (hook で reject、helper は速度未指定なら自動で `slow` を注入) | 欠落時は静止画 → スタンプとしての視覚的 punch が消える | <img src="https://mojiemoji.jozo.beer/emoji/%E2%9A%A0?font=chikara&amp;color=fbbf24&amp;animation=shuchusen&amp;background=transparent&amp;outline=24fbbf&amp;outline_width=2" alt="⚠" height="24" align="absmiddle"> 中 |
+| `font` | 17 種の正準フォント | サービスデフォルトの素フォント → body 高さで読みづらい | <img src="https://mojiemoji.jozo.beer/emoji/%E2%9A%A0?font=chikara&amp;color=fbbf24&amp;animation=shuchusen&amp;background=transparent&amp;outline=24fbbf&amp;outline_width=2" alt="⚠" height="24" align="absmiddle"> 中 |
+| `outline` | `triadic` 推奨 / `complement` / `darker` / `lighter` / 6-hex | 字形が背景と融合してぼやける | <img src="https://mojiemoji.jozo.beer/emoji/%E2%9A%A0?font=chikara&amp;color=fbbf24&amp;animation=shuchusen&amp;background=transparent&amp;outline=24fbbf&amp;outline_width=2" alt="⚠" height="24" align="absmiddle"> 中 |
+| `outline_width` | `2` | 1px は線が細すぎ、3px+ は字形が潰れる | <img src="https://mojiemoji.jozo.beer/emoji/%F0%9F%92%A1?font=hachimaru&amp;color=fbbf24&amp;animation=kirari&amp;background=transparent&amp;outline=24fbbf&amp;outline_width=2" alt="💡" height="24" align="absmiddle"> 小 |
 
 特に `color` 欠落 → dark mode 黒不可視は **3 回ユーザにフラグされた <img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%9F%E5%AE%B3?font=zero&color=f59e0b&animation=gatagata&background=transparent&outline=0bf59e&outline_width=2" alt="実害" height="24" align="absmiddle"> 事例**（直近: cross-repo-review 2026-05-12 で 7 レビュー分のスタンプが全部見えない状態で投稿された 💣）。LLM が手書きで URL を組み立てると `background=transparent` だけ付けて他を忘れる事故が頻発する。このプラグインは:
 
@@ -127,7 +145,7 @@ mojiemoji の画像 URL を生で組み立てると、**色だけで dark mode �
 2. **Subagent** に丸投げして手書きを回避
 3. **Hook** で「もし手書きで送信しようとしたら止める」 last-mile gate を実装
 
-の 3 段で防ぐ 🛡️
+の 3 段で防ぐ 🛡
 
 ---
 
@@ -181,7 +199,7 @@ skills:
 
 ---
 
-## ⚙️ 設定
+## ⚙ 設定
 
 ### 環境変数
 

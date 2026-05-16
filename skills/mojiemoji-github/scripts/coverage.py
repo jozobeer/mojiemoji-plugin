@@ -5,10 +5,13 @@ Reads markdown from stdin, computes per-surface density / sentence-hit /
 paragraph-hit / consecutive-unstamped-paragraph metrics, prints them,
 and (in --mode block) exits 2 when any threshold is breached.
 
-Trailing-decoration violations (heading / paragraph lacks trailing
-stamp, or uses a Unicode emoji that has a mojiemoji catalog variant)
-are reported as **warnings**, never as block failures — they are a
-soft guideline from issue #60 Option 1.
+Trailing-decoration violations (heading / paragraph lacks a trailing
+stamp) are reported as **warnings**, never as block failures — they
+are a soft guideline from issue #60 Option 1. The previous "uses a
+Unicode emoji that has a mojiemoji catalog variant" warning was
+removed in #89: prestamp.py now auto-substitutes catalog emoji during
+its emoji pass, so a Unicode emoji surviving into this check is always
+intentional (catalog-miss or safe-zone) and should not nag.
 """
 
 from __future__ import annotations
@@ -63,28 +66,6 @@ _LIST_LINE_RE = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
 _PURE_HTML_RE = re.compile(r"^\s*<")
 _MIN_JAPANESE_CHARS_FOR_TRAILING_CHECK = 10
 
-DEFAULT_EMOJI_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "emoji-catalog.yml"
-
-
-def load_emoji_catalog(path: Path = DEFAULT_EMOJI_CATALOG_PATH) -> set[str]:
-    """Return the set of Unicode emojis present in the mojiemoji catalog.
-
-    Missing file → empty set (catalog is optional). Malformed YAML →
-    write diagnostic to stderr and return empty set (degrade to no-op
-    rather than crashing the warn path), but still surface the error so
-    the maintainer notices.
-    """
-    if not path.exists():
-        return set()
-    try:
-        with open(path, encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-        return set((data.get("emojis") or {}).keys())
-    except yaml.YAMLError as exc:
-        print(f"coverage: failed to parse {path}: {exc}", file=sys.stderr)
-        return set()
-
-
 def _is_prose_paragraph(paragraph: str) -> bool:
     """True if the paragraph should be subject to trailing-deco check.
 
@@ -111,10 +92,7 @@ def _strip_fenced_code(text: str) -> str:
     return _FENCED_CODE_RE.sub("", text)
 
 
-def measure(text: str, emoji_catalog: Optional[set[str]] = None) -> dict[str, object]:
-    if emoji_catalog is None:
-        emoji_catalog = set()
-
+def measure(text: str) -> dict[str, object]:
     stamp_count = len(_STAMP_URL_RE.findall(text))
     japanese_char_count = len(_JAPANESE_CHAR_RE.findall(text))
     density = 0.0 if japanese_char_count == 0 else stamp_count * 100.0 / japanese_char_count
@@ -163,11 +141,11 @@ def measure(text: str, emoji_catalog: Optional[set[str]] = None) -> dict[str, ob
         if not _TRAILING_DECO_RE.search(heading_text):
             heading_warnings.append(f"line {i}: heading lacks trailing decoration")
             continue
-        for emoji in _EMOJI_RE.findall(heading_text):
-            if emoji in emoji_catalog:
-                heading_warnings.append(
-                    f"line {i}: heading uses Unicode {emoji} but mojiemoji variant exists in catalog"
-                )
+        # Note: "Unicode emoji has a catalog variant" used to warn here,
+        # but prestamp.py now auto-substitutes catalog emoji during the
+        # emoji pass (#89). If a plain Unicode emoji survives prestamp,
+        # it is either catalog-miss (no asset) or inside a safe-zone
+        # (code/img/url/fence) — either way, intentional. Don't nag.
 
     paragraph_warnings: list[str] = []
     for i, p in enumerate(inspect_paragraphs, 1):
@@ -176,11 +154,9 @@ def measure(text: str, emoji_catalog: Optional[set[str]] = None) -> dict[str, ob
         if not _TRAILING_DECO_RE.search(p):
             paragraph_warnings.append(f"paragraph {i} lacks trailing decoration")
             continue
-        for emoji in _EMOJI_RE.findall(p):
-            if emoji in emoji_catalog:
-                paragraph_warnings.append(
-                    f"paragraph {i} uses Unicode {emoji} but mojiemoji variant exists in catalog"
-                )
+        # See heading note above — catalog-hit Unicode emoji are now
+        # handled by prestamp.py's emoji pass, so any survivor here is
+        # intentional and shouldn't trigger a warning.
 
     return {
         "stamp_count": stamp_count,
@@ -256,9 +232,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     text = sys.stdin.read()
-    emoji_catalog = load_emoji_catalog()
     threshold = SURFACE_THRESHOLDS[args.surface]
-    metrics = measure(text, emoji_catalog)
+    metrics = measure(text)
 
     print(
         f"surface={args.surface} "
