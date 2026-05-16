@@ -329,189 +329,207 @@ def collect_body_text(obj, target_keys):
     return pieces
 
 
-def main() -> int:
-    try:
-        data = json.load(sys.stdin)
-    except Exception:
-        return 0
+def _route_bash(data: dict):
+    """Return `inspect_text` for a Bash tool call, or `None` to skip the gate.
 
+    Bypass marker is scoped to the command line, not the merged body/
+    script text — the original idiom (matching the git pre-commit
+    `MOJIEMOJI_HOOK_DISABLED=1 git commit ...` style) is an opt-in by
+    the *invocation*, not by something happening to appear inside a
+    referenced file. Once file/script bodies are merged into
+    `inspect_text`, documentation prose or test fixtures that mention
+    the literal marker would silently disable the gate — accidental
+    bypass via benign mention. Keep the bypass check on `command` only.
+
+    File-routed posts (`--body-file PATH` / `--input PATH` /
+    `-F body=@PATH`) and interpreter-invoked scripts (`python3 X.py`
+    etc.) are merged into `inspect_text` so dynamically-built bodies
+    cannot bypass the regex inspection. See `read_body_files` /
+    `read_script_files` for the file-side cwd resolution.
+    """
+    command = (data.get("tool_input", {}) or {}).get("command", "")
+    if not command:
+        return None
+    if _has_bypass(command):
+        return None
+    if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
+        return None
+    cwd = data.get("cwd", "")
+    file_body, _ = read_body_files(command, cwd)
+    script_body = read_script_files(command, cwd)
+    extras = "\n".join(p for p in (file_body, script_body) if p)
+    return command + ("\n" + extras if extras else "")
+
+
+def _route_mcp(tool_input: dict):
+    """Return `inspect_text` for an MCP GitHub tool call, or `None` to skip.
+
+    Multiple body pieces (e.g., `pull_request_review_write` with a
+    top-level `body` summary plus `comments[].body` inline findings)
+    are joined into a single `inspect_text` *on purpose*: the SKILL.md
+    surface policy is "summary body decorated, inline findings
+    un-stamped". A per-piece zero-stamp check would force stamps on
+    each finding, contradicting that policy. Aggregating means a
+    stamped summary covers un-stamped findings (correct), and a fully
+    un-stamped submission still trips the aggregate zero-stamp check
+    (correct). Each URL is still validated individually for required
+    params / canonical values, so the aggregation only relaxes the
+    zero-stamp coarse gate, not the per-URL fine gates.
+
+    Bypass marker check happens AFTER body assembly because MCP path
+    has no shell prefix; the only place a caller can legitimately opt
+    out is inside the body text itself. The rule still parallels Bash
+    (bypass on the surface the caller directly controls), just adapted
+    to structured input.
+    """
+    pieces = collect_body_text(tool_input, BODY_FIELDS)
+    if not pieces:
+        return None
+    inspect_text = "\n".join(pieces)
+    if _has_bypass(inspect_text):
+        return None
+    return inspect_text
+
+
+def extract_inspect_text(data: dict):
+    """Dispatch to Bash / MCP routing. Returns inspect_text or `None`.
+
+    Read-only MCP tools (get_*, list_*, search_*) match `MCP_GH_RE`
+    too but carry no body field — `_route_mcp` returns `None` for
+    them, which exits the gate cleanly without further inspection.
+    """
     tool_name = data.get("tool_name", "")
     tool_input = data.get("tool_input", {}) or {}
-
     if tool_name == "Bash":
-        command = tool_input.get("command", "")
-        if not command:
-            return 0
-        # Bypass marker is scoped to the command line, not the merged
-        # body/script text. The original idiom (matching the git
-        # pre-commit `MOJIEMOJI_HOOK_DISABLED=1 git commit ...` style)
-        # is an opt-in by the *invocation*, not by something happening
-        # to appear inside a referenced file. Once file/script bodies
-        # were merged into `inspect_text`, documentation prose or
-        # test fixtures that mention the literal marker would silently
-        # disable the gate — accidental bypass via benign mention.
-        # Keep the bypass check on `command` only.
-        if _has_bypass(command):
-            return 0
-        if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
-            return 0
-        # Combine the command line with any referenced body files so
-        # file-routed posting paths (`--body-file PATH` / `--input
-        # PATH` / `-F body=@PATH`) are subject to the same regex
-        # inspection as inline `--body` heredocs. Also inspect script
-        # files invoked by interpreter (`python3 X.py` etc.) — the
-        # 2026-05-12 triage-review bypass embedded hand-crafted URLs
-        # in a Python helper that wrote the JSON body in the same
-        # bash call as the `gh api --input` POST.
-        cwd = data.get("cwd", "")
-        file_body, _ = read_body_files(command, cwd)
-        script_body = read_script_files(command, cwd)
-        extras = "\n".join(p for p in (file_body, script_body) if p)
-        inspect_text = command + ("\n" + extras if extras else "")
-    elif MCP_GH_RE.match(tool_name):
-        # MCP GitHub tools deliver structured input — extract `body`
-        # fields directly. Title / commit_message / file content /
-        # description are intentionally not inspected (see BODY_FIELDS
-        # docstring). Read-only MCP tools (get_*, list_*, search_*)
-        # match the regex but carry no body field, so this returns
-        # empty and the gate exits.
-        #
-        # Multiple body pieces (e.g., `pull_request_review_write` with
-        # a top-level `body` summary plus `comments[].body` inline
-        # findings) are joined into a single `inspect_text` *on
-        # purpose*: the SKILL.md surface policy is "summary body
-        # decorated, inline findings un-stamped". A per-piece zero-
-        # stamp check would force stamps on each finding, contradicting
-        # that policy. Aggregating means a stamped summary covers
-        # un-stamped findings (correct), and a fully un-stamped
-        # submission still trips the aggregate zero-stamp check
-        # (correct). Each URL is still validated individually for
-        # required params / canonical values, so the aggregation only
-        # relaxes the zero-stamp coarse gate, not the per-URL fine
-        # gates.
-        pieces = collect_body_text(tool_input, BODY_FIELDS)
-        if not pieces:
-            return 0
-        inspect_text = "\n".join(pieces)
-        # MCP path has no shell prefix, so the only place a caller can
-        # legitimately opt out is inside the body text itself. The
-        # rule still parallels Bash (bypass on the surface the caller
-        # directly controls), just adapted to structured input.
-        if _has_bypass(inspect_text):
-            return 0
-    else:
+        return _route_bash(data)
+    if MCP_GH_RE.match(tool_name):
+        return _route_mcp(tool_input)
+    return None
+
+
+def validate_url_presence(urls) -> int:
+    """Stage 1 — body must contain ≥1 mojiemoji URL."""
+    if urls:
         return 0
+    sys.stderr.write(
+        "🚧 mojiemoji-github skill未適用のまま日本語GitHub bodyを送ろうとしています\n"
+        "\n"
+        "検出: 日本語 GitHub body に `mojiemoji.jozo.beer` の stamp が 0 個。\n"
+        "autonomous実行 / subagent内 / skill chain漏れの典型パターン。\n"
+        "\n"
+        "## 推奨経路 (skill access があるなら)\n"
+        "1. `mojiemoji-github` スキルを `Skill` ツールで明示的に呼び出す\n"
+        "2. body全体に inline-saturated でrender (1〜2 stamps/段落, grammatically natural)\n"
+        "3. animation 12+ distinct values, 同一値≤2×, color 4+ distinct, dark-mode-safe (Tailwind 300–500 — 600+ は禁止)\n"
+        "4. API名 / 英識別子 / file path / version string / コードシンボル はstamp化しない\n"
+        "5. shields.io badges を line 1 に置く (stampはその下)\n"
+        "6. 再render後に同じ投稿経路 (gh / MCP) を再実行\n"
+        "\n"
+        "## subagent 経路 (Skill ツール非サポート時 / skill 未登録時)\n"
+        "subagent 隔離で `Skill` ツールが使えないなら、helper script を直接叩いて URL を生成し本文に embed:\n"
+        "\n"
+        "```bash\n"
+        "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py\" \\\n"
+        "  --text 修正 --inline \\\n"
+        "  --font gothic-bold --color 22c55e --animation bane \\\n"
+        "  --outline triadic --outline-width 2\n"
+        "```\n"
+        "\n"
+        "(`--inline` で `<img ... height=\"24\" align=\"absmiddle\">` 形式を出力。background はデフォルトで `transparent`、outline は明示指定が必要。font / color / animation の正準値は\n"
+        "`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md` 参照。)\n"
+        "\n"
+        "## skip 正当ケース\n"
+        "English-only / apology / security / legal / compliance / acceptance criteria\n"
+        "緊急bypass: Bash なら command 先頭、MCP なら body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
+        "\n"
+        "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
+    )
+    return 2
 
-    if not JP_RE.search(inspect_text):
-        return 0
 
-    urls = MOJI_URL_RE.findall(inspect_text)
-    if not urls:
-        sys.stderr.write(
-            "🚧 mojiemoji-github skill未適用のまま日本語GitHub bodyを送ろうとしています\n"
-            "\n"
-            "検出: 日本語 GitHub body に `mojiemoji.jozo.beer` の stamp が 0 個。\n"
-            "autonomous実行 / subagent内 / skill chain漏れの典型パターン。\n"
-            "\n"
-            "## 推奨経路 (skill access があるなら)\n"
-            "1. `mojiemoji-github` スキルを `Skill` ツールで明示的に呼び出す\n"
-            "2. body全体に inline-saturated でrender (1〜2 stamps/段落, grammatically natural)\n"
-            "3. animation 12+ distinct values, 同一値≤2×, color 4+ distinct, dark-mode-safe (Tailwind 300–500 — 600+ は禁止)\n"
-            "4. API名 / 英識別子 / file path / version string / コードシンボル はstamp化しない\n"
-            "5. shields.io badges を line 1 に置く (stampはその下)\n"
-            "6. 再render後に同じ投稿経路 (gh / MCP) を再実行\n"
-            "\n"
-            "## subagent 経路 (Skill ツール非サポート時 / skill 未登録時)\n"
-            "subagent 隔離で `Skill` ツールが使えないなら、helper script を直接叩いて URL を生成し本文に embed:\n"
-            "\n"
-            "```bash\n"
-            "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py\" \\\n"
-            "  --text 修正 --inline \\\n"
-            "  --font gothic-bold --color 22c55e --animation bane \\\n"
-            "  --outline triadic --outline-width 2\n"
-            "```\n"
-            "\n"
-            "(`--inline` で `<img ... height=\"24\" align=\"absmiddle\">` 形式を出力。background はデフォルトで `transparent`、outline は明示指定が必要。font / color / animation の正準値は\n"
-            "`${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md` 参照。)\n"
-            "\n"
-            "## skip 正当ケース\n"
-            "English-only / apology / security / legal / compliance / acceptance criteria\n"
-            "緊急bypass: Bash なら command 先頭、MCP なら body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
-            "\n"
-            "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
-        )
-        return 2
+def _required_params_for(url) -> list:
+    """Pick the per-URL required-param set based on animation kind.
 
-    # Every mojiemoji URL MUST carry the full styling param set.
-    # `scripts/mojiemoji_markdown.py` is the only sanctioned construction
-    # path — hand-crafted URLs systematically miss color/font/animation/
-    # outline and ship as invisible black-on-dark stamps. Block here so the
-    # agent learns the lesson at submission time, not when the user opens
-    # the rendered PR.
-    #
-    # Outline params are exempt when the animation cycles colors
-    # (`disco` / `psycho` / `kira`) because a fixed-color outline fights
-    # the rainbow effect. The helper script `--outline triadic|complement`
-    # auto-drops outline + outline_width on those animations.
-    def required_for(url):
-        # Determine if this URL's animation is in the color-shifting set.
-        anim_match = re.search(r"(?:&amp;|&|\?)animation=([a-z0-9_-]+)", url, re.IGNORECASE)
-        anim = anim_match.group(1).lower() if anim_match else ""
-        if anim in COLOR_SHIFTING_ANIMATIONS:
-            return REQUIRED_PARAMS_ALWAYS
-        return REQUIRED_PARAMS_ALWAYS + REQUIRED_PARAMS_OUTLINE
+    Outline params are exempt when the animation cycles colors
+    (`disco` / `psycho` / `kira`) because a fixed-color outline
+    fights the rainbow effect; the helper script
+    `--outline triadic|complement` auto-drops outline + outline_width
+    on those animations.
+    """
+    anim_match = re.search(r"(?:&amp;|&|\?)animation=([a-z0-9_-]+)", url, re.IGNORECASE)
+    anim = anim_match.group(1).lower() if anim_match else ""
+    if anim in COLOR_SHIFTING_ANIMATIONS:
+        return REQUIRED_PARAMS_ALWAYS
+    return REQUIRED_PARAMS_ALWAYS + REQUIRED_PARAMS_OUTLINE
 
+
+def validate_required_params(urls) -> int:
+    """Stage 2 — every mojiemoji URL MUST carry the full styling param set.
+
+    `scripts/mojiemoji_markdown.py` is the only sanctioned construction
+    path — hand-crafted URLs systematically miss color / font /
+    animation / outline and ship as invisible black-on-dark stamps.
+    Block here so the agent learns the lesson at submission time, not
+    when the user opens the rendered PR.
+    """
     violations = []  # list of (url, [missing_param_label, ...])
     for u in urls:
-        required = required_for(u)
+        required = _required_params_for(u)
         missing = [label for label, _ in required if label not in u]
         if missing:
             violations.append((u, missing))
 
-    if violations:
-        preview_lines = []
-        for u, missing in violations[:5]:
-            short = u[:140] + ("…" if len(u) > 140 else "")
-            preview_lines.append(f"  - {short}\n    missing: {', '.join(missing)}")
-        preview = "\n".join(preview_lines)
-        more = f"\n  …他 {len(violations) - 5} 件" if len(violations) > 5 else ""
-        param_reference = "\n".join(
-            f"  - `{label}` — {why}"
-            for label, why in (REQUIRED_PARAMS_ALWAYS + REQUIRED_PARAMS_OUTLINE)
-        )
-        sys.stderr.write(
-            "🚧 mojiemoji URL に必須スタイルパラメータが欠落しています\n"
-            "\n"
-            f"検出: 計 {len(urls)} 件のうち {len(violations)} 件で必須パラメータ欠落。\n"
-            "ダークモード GitHub では文字色が黒のまま表示されて読めません。\n"
-            "\n"
-            "## 必須パラメータ一覧\n"
-            f"{param_reference}\n"
-            "  (※ animation=disco/psycho/kira は色循環するため outline 系を省略可)\n"
-            "\n"
-            "## 欠落URL (最初の5件)\n"
-            f"{preview}{more}\n"
-            "\n"
-            "## 対応\n"
-            "1. **絶対にURLを手書きしない** — `mojiemoji-github` スキル経由か\n"
-            "   `mojiemoji-selector` subagent に投げて、ヘルパースクリプト\n"
-            "   `scripts/mojiemoji_markdown.py` 経由で全パラメータ付きでレンダー\n"
-            "2. 既存 URL を直すなら参考形 (triadic outline 自動算出):\n"
-            "   https://mojiemoji.jozo.beer/emoji/<text>?font=gothic-bold\n"
-            "     &color=3b82f6&animation=bane&speed=normal\n"
-            "     &background=transparent&outline=triadic&outline_width=2\n"
-            "3. font / color / animation のリストは\n"
-            "   `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
-            "4. 再投稿前に `references/verification.md` の grep #2〜#5 で全件確認\n"
-            "\n"
-            "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める (推奨しない、ダーク不可視のまま投稿される)\n"
-        )
-        return 2
+    if not violations:
+        return 0
 
-    # Outline value validity: when outline IS present, the value must be
-    # `darker`, `lighter`, or a 6-hex value (the latter is what triadic /
-    # complement modes in the helper script emit). Uppercase hex / non-hex
-    # garbage is rejected to keep URLs canonicalized.
+    preview_lines = []
+    for u, missing in violations[:5]:
+        short = u[:140] + ("…" if len(u) > 140 else "")
+        preview_lines.append(f"  - {short}\n    missing: {', '.join(missing)}")
+    preview = "\n".join(preview_lines)
+    more = f"\n  …他 {len(violations) - 5} 件" if len(violations) > 5 else ""
+    param_reference = "\n".join(
+        f"  - `{label}` — {why}"
+        for label, why in (REQUIRED_PARAMS_ALWAYS + REQUIRED_PARAMS_OUTLINE)
+    )
+    sys.stderr.write(
+        "🚧 mojiemoji URL に必須スタイルパラメータが欠落しています\n"
+        "\n"
+        f"検出: 計 {len(urls)} 件のうち {len(violations)} 件で必須パラメータ欠落。\n"
+        "ダークモード GitHub では文字色が黒のまま表示されて読めません。\n"
+        "\n"
+        "## 必須パラメータ一覧\n"
+        f"{param_reference}\n"
+        "  (※ animation=disco/psycho/kira は色循環するため outline 系を省略可)\n"
+        "\n"
+        "## 欠落URL (最初の5件)\n"
+        f"{preview}{more}\n"
+        "\n"
+        "## 対応\n"
+        "1. **絶対にURLを手書きしない** — `mojiemoji-github` スキル経由か\n"
+        "   `mojiemoji-selector` subagent に投げて、ヘルパースクリプト\n"
+        "   `scripts/mojiemoji_markdown.py` 経由で全パラメータ付きでレンダー\n"
+        "2. 既存 URL を直すなら参考形 (triadic outline 自動算出):\n"
+        "   https://mojiemoji.jozo.beer/emoji/<text>?font=gothic-bold\n"
+        "     &color=3b82f6&animation=bane&speed=normal\n"
+        "     &background=transparent&outline=triadic&outline_width=2\n"
+        "3. font / color / animation のリストは\n"
+        "   `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
+        "4. 再投稿前に `references/verification.md` の grep #2〜#5 で全件確認\n"
+        "\n"
+        "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める (推奨しない、ダーク不可視のまま投稿される)\n"
+    )
+    return 2
+
+
+def validate_outline_values(urls) -> int:
+    """Stage 3 — outline value must be `darker` / `lighter` / 6-hex.
+
+    Uppercase hex / non-hex garbage is rejected to keep URLs
+    canonicalized. `triadic` / `complement` aren't valid runtime
+    values — those are helper-script directives that get resolved to
+    a literal hex before URL emission.
+    """
     outline_invalid = []
     for u in urls:
         m = re.search(r"(?:&amp;|&|\?)outline=([^&\"\s]+)", u)
@@ -520,158 +538,203 @@ def main() -> int:
         val = m.group(1)
         if not OUTLINE_VALUE_RE.match(val):
             outline_invalid.append((u, val))
-    if outline_invalid:
-        preview_lines = []
-        for u, val in outline_invalid[:5]:
-            short = u[:140] + ("…" if len(u) > 140 else "")
-            preview_lines.append(f"  - {short}\n    outline={val!r} (allowed: darker | lighter | 6-hex)")
-        preview = "\n".join(preview_lines)
-        sys.stderr.write(
-            "🚧 mojiemoji URL の outline 値が不正です\n"
-            "\n"
-            "outline は `darker` / `lighter` (service auto) または 6-digit hex のみ\n"
-            "(triadic / complement モードは helper script が hex に変換)\n"
-            "\n"
-            "## 違反URL\n"
-            f"{preview}\n"
-            "\n"
-            "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
-        )
-        return 2
+    if not outline_invalid:
+        return 0
 
-    # Value canonicality: the service silently falls back to default
-    # (or static rendering) when font/animation aren't recognized.
-    # `font=fude`, `animation=poyon` (typo), `animation=funwari`
-    # (invented) all PASS the substring presence check above but defeat
-    # the styling intent. Catch them here against the canonical
-    # allowlists.
+    preview_lines = []
+    for u, val in outline_invalid[:5]:
+        short = u[:140] + ("…" if len(u) > 140 else "")
+        preview_lines.append(f"  - {short}\n    outline={val!r} (allowed: darker | lighter | 6-hex)")
+    preview = "\n".join(preview_lines)
+    sys.stderr.write(
+        "🚧 mojiemoji URL の outline 値が不正です\n"
+        "\n"
+        "outline は `darker` / `lighter` (service auto) または 6-digit hex のみ\n"
+        "(triadic / complement モードは helper script が hex に変換)\n"
+        "\n"
+        "## 違反URL\n"
+        f"{preview}\n"
+        "\n"
+        "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
+    )
+    return 2
+
+
+def _scan_canonical_violations(url) -> list:
+    """Return list of (label, value) tuples describing per-URL bad values.
+
+    Walks `PARAM_VALUE_RE` matches and adds violations for:
+    - non-canonical font / animation
+    - non-hex / Tailwind-600+ color
+    - 3-kanji single stamp (split required as 2+1)
+    - color-shifting animation paired with explicit outline
+    - rotational animation without `speed=step|slow`
+    """
+    bads = []
+    anim_value = ""
+    for param, value in PARAM_VALUE_RE.findall(url):
+        param_l = param.lower()
+        value_l = value.lower()
+        if param_l == "animation":
+            anim_value = value_l
+        if param_l == "font" and value_l not in CANONICAL_FONTS:
+            bads.append((param_l, value))
+        elif param_l == "animation" and value_l not in CANONICAL_ANIMATIONS:
+            bads.append((param_l, value))
+        elif param_l == "color" and not COLOR_VALUE_RE.match(value_l):
+            bads.append((param_l, value))
+        elif param_l == "color" and value_l.lstrip("#") in FORBIDDEN_COLORS:
+            bads.append((
+                "color-tailwind-600+",
+                f"{value} (Tailwind 600+ — invisible on dark mode; swap to 300–500)",
+            ))
+    # 3-kanji single stamp — selector contract + verification.md
+    # spotcheck #16 require `2+1` split because 3+ kanji at inline
+    # height (h=24) get visually crushed. `urllib.parse.unquote`
+    # handles `%E…` UTF-8 byte sequences cleanly. `%0A` (newline)
+    # inside the path = 2-line stamp for hiragana; split on it and
+    # check the first segment only — kanji words don't use `%0A`
+    # per SKILL.md, so a 3+ kanji string in any segment is the
+    # single-stamp violation.
+    emoji_match = EMOJI_PATH_RE.search(url)
+    if emoji_match:
+        decoded = urllib.parse.unquote(emoji_match.group(1))
+        first_segment = decoded.split("\n", 1)[0]
+        if KANJI_ONLY_RE.match(first_segment) and len(first_segment) >= 3:
+            bads.append((
+                "3-kanji-single",
+                f"'{first_segment}' (split as 2+1 — e.g., 致命傷 → 致命 + 傷)",
+            ))
+    # Color-shifting animations cycle the fill through rainbow / strobe
+    # colors. A fixed-color outline halo fights the cycle and produces
+    # a dirty composite. The helper script auto-drops outline +
+    # outline_width for these; hand-crafted URLs keep them and look
+    # wrong. Flag the combination as invalid.
+    if anim_value in COLOR_SHIFTING_ANIMATIONS and "outline=" in url:
+        bads.append(("animation+outline", f"{anim_value} with outline"))
+    # Rotational animations are only readable at speed=step|slow.
+    # Capture the full value up to the next URL/HTML delimiter — not
+    # just the leading alphabetic prefix — otherwise typos like
+    # `speed=step2` or partially-encoded `speed=slow%20` would slice
+    # down to `step` / `slow` and pass the check while the actual
+    # service receives a non-canonical value that falls back to the
+    # unreadable default. Same delimiter set as MOJI_URL_RE so the
+    # capture stops at the URL boundary inside HTML attributes.
+    if anim_value in ROTATIONAL_ANIMATIONS:
+        speed_match = re.search(
+            r"(?:&amp;|&|\?)speed=([^&\s\"<>)]+)", url, re.IGNORECASE
+        )
+        speed = speed_match.group(1).lower() if speed_match else ""
+        if speed not in ROTATIONAL_OK_SPEEDS:
+            got = speed if speed else "(missing — defaults to fast)"
+            bads.append((
+                "animation+speed",
+                f"{anim_value} requires speed=step|slow, got {got}",
+            ))
+    return bads
+
+
+def validate_canonical_values(urls) -> int:
+    """Stage 4 — non-canonical fonts / animations / colors and related
+    composite-rule violations.
+
+    The mojiemoji service silently falls back to defaults (or static
+    rendering) when an unknown font/animation is passed — no error, no
+    visible signal. Substring presence checks pass these through; only
+    value allowlisting catches them. See `_scan_canonical_violations`
+    for the per-URL rule set.
+    """
     invalid = []  # list of (url, [(param, bad_value), ...])
     for u in urls:
-        bads = []
-        anim_value = ""
-        for param, value in PARAM_VALUE_RE.findall(u):
-            param_l = param.lower()
-            value_l = value.lower()
-            if param_l == "animation":
-                anim_value = value_l
-            if param_l == "font" and value_l not in CANONICAL_FONTS:
-                bads.append((param_l, value))
-            elif param_l == "animation" and value_l not in CANONICAL_ANIMATIONS:
-                bads.append((param_l, value))
-            elif param_l == "color" and not COLOR_VALUE_RE.match(value_l):
-                bads.append((param_l, value))
-            elif param_l == "color" and value_l.lstrip("#") in FORBIDDEN_COLORS:
-                bads.append((
-                    "color-tailwind-600+",
-                    f"{value} (Tailwind 600+ — invisible on dark mode; swap to 300–500)",
-                ))
-        # 3-kanji single stamp — selector contract + verification.md
-        # spotcheck #16 require `2+1` split because 3+ kanji at inline
-        # height (h=24) get visually crushed. `urllib.parse.unquote`
-        # handles `%E…` UTF-8 byte sequences cleanly. `%0A` (newline)
-        # inside the path = 2-line stamp for hiragana; split on it and
-        # check the first segment only — kanji words don't use `%0A`
-        # per SKILL.md, so a 3+ kanji string in any segment is the
-        # single-stamp violation.
-        emoji_match = EMOJI_PATH_RE.search(u)
-        if emoji_match:
-            decoded = urllib.parse.unquote(emoji_match.group(1))
-            first_segment = decoded.split("\n", 1)[0]
-            if KANJI_ONLY_RE.match(first_segment) and len(first_segment) >= 3:
-                bads.append((
-                    "3-kanji-single",
-                    f"'{first_segment}' (split as 2+1 — e.g., 致命傷 → 致命 + 傷)",
-                ))
-        # Color-shifting animations (disco/psycho/kira) cycle the fill
-        # through rainbow/strobe colors. A fixed-color outline halo fights
-        # the cycle and produces a dirty composite. The helper script
-        # auto-drops outline+outline_width for these; hand-crafted URLs
-        # keep them and look wrong. Flag the combination as invalid.
-        if anim_value in COLOR_SHIFTING_ANIMATIONS and "outline=" in u:
-            bads.append(("animation+outline", f"{anim_value} with outline"))
-        # Rotational animations are only readable at speed=step|slow.
-        # Missing speed (defaults to fast) and explicit normal/fast all
-        # render as an unreadable spinning streak. parameters.md § "有効な
-        # animation 値" documents this for `kaiten`; the helper script
-        # injects speed=slow when the user picks a rotation without a
-        # speed, but hand-crafted URLs trip on this regularly.
-        if anim_value in ROTATIONAL_ANIMATIONS:
-            # Capture the full value up to the next URL/HTML delimiter,
-            # not just the leading alphabetic prefix — otherwise typos
-            # like `speed=step2` or partially-encoded `speed=slow%20`
-            # would slice down to `step` / `slow` and pass the check
-            # while the actual service receives a non-canonical value
-            # that falls back to the unreadable default. Same delimiter
-            # set as MOJI_URL_RE so the capture stops at the URL
-            # boundary inside HTML attributes.
-            speed_match = re.search(
-                r"(?:&amp;|&|\?)speed=([^&\s\"<>)]+)", u, re.IGNORECASE
-            )
-            speed = speed_match.group(1).lower() if speed_match else ""
-            if speed not in ROTATIONAL_OK_SPEEDS:
-                got = speed if speed else "(missing — defaults to fast)"
-                bads.append((
-                    "animation+speed",
-                    f"{anim_value} requires speed=step|slow, got {got}",
-                ))
+        bads = _scan_canonical_violations(u)
         if bads:
             invalid.append((u, bads))
 
-    if invalid:
-        preview_lines = []
-        for u, bads in invalid[:5]:
-            short = u[:140] + ("…" if len(u) > 140 else "")
-            bad_str = ", ".join(f"{p}={v!r}" for p, v in bads)
-            preview_lines.append(f"  - {short}\n    invalid: {bad_str}")
-        preview = "\n".join(preview_lines)
-        more = f"\n  …他 {len(invalid) - 5} 件" if len(invalid) > 5 else ""
-        sys.stderr.write(
-            "🚧 mojiemoji URL に存在しない font/animation/color 値が指定されています\n"
-            "\n"
-            f"検出: 計 {len(urls)} 件のうち {len(invalid)} 件で canonical 外の値。\n"
-            "mojiemoji サービスは未知の値を silent fallback (デフォルト font /\n"
-            "static rendering / black color) するため、エラーは出ませんが意図した\n"
-            "スタイルで render されません。\n"
-            "\n"
-            f"## Canonical font 一覧 ({len(CANONICAL_FONTS)}種)\n"
-            f"  {', '.join(sorted(CANONICAL_FONTS))}\n"
-            "\n"
-            f"## Canonical animation 一覧 ({len(CANONICAL_ANIMATIONS)}種)\n"
-            f"  {', '.join(sorted(CANONICAL_ANIMATIONS))}\n"
-            "\n"
-            "## Color 形式\n"
-            "  6-digit hex (省略可な `#` prefix付き)、Tailwind 300-500 range 推奨。\n"
-            "  named palette (`vivid-purple`, `red` 等) はサービス側で silent\n"
-            "  fallback されダークモードで黒不可視になる。\n"
-            "\n"
-            "## 違反URL (最初の5件)\n"
-            f"{preview}{more}\n"
-            "\n"
-            "## 対応\n"
-            "1. `mojiemoji-selector` subagent または `mojiemoji_markdown.py`\n"
-            "   ヘルパー経由で render し直す (推奨)\n"
-            "2. URL を手で書き換える場合は上記 allowlist から選ぶ\n"
-            "3. typo の典型: `poyon` → `poyoon`, `funwari` (存在しない) →\n"
-            "   `yurayura` / `mochimochi`, `fude` (存在しない) → `mincho`\n"
-            "   / `noto`; `vivid-purple` (named) → `c084fc` (hex);\n"
-            "   `animation=kira`/`disco`/`psycho` は色循環するので outline\n"
-            "   と outline_width は付けない (rainbow vs fixed halo の競合);\n"
-            "   `animation=kaiten`/`kage_kaiten` は **必ず `speed=slow` か\n"
-            "   `speed=step` を付ける** (省略 / `normal` / `fast` は回転が\n"
-            "   速すぎて読めない streak になる — helper script は速度未指定時\n"
-            "   に自動で `slow` を注入する);\n"
-            "   color は **Tailwind 300–500 帯のみ** — `dc2626` (red-600) /\n"
-            "   `1d4ed8` (blue-700) / `000000` (黒) 等の 600+ や near-black は\n"
-            "   ダークモードで背景に溶けて読めなくなるため hook で reject;\n"
-            "   `/emoji/<text>` の text 部分は **漢字 2 字以下の単独 stamp** —\n"
-            "   `致命傷` のような 3 漢字単独は `致命` + `傷` の 2 stamp に分割\n"
-            "   (selector subagent と verification.md spotcheck #16 と同じ規約)\n"
-            "4. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
-            "\n"
-            "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
-        )
-        return 2
+    if not invalid:
+        return 0
 
+    preview_lines = []
+    for u, bads in invalid[:5]:
+        short = u[:140] + ("…" if len(u) > 140 else "")
+        bad_str = ", ".join(f"{p}={v!r}" for p, v in bads)
+        preview_lines.append(f"  - {short}\n    invalid: {bad_str}")
+    preview = "\n".join(preview_lines)
+    more = f"\n  …他 {len(invalid) - 5} 件" if len(invalid) > 5 else ""
+    sys.stderr.write(
+        "🚧 mojiemoji URL に存在しない font/animation/color 値が指定されています\n"
+        "\n"
+        f"検出: 計 {len(urls)} 件のうち {len(invalid)} 件で canonical 外の値。\n"
+        "mojiemoji サービスは未知の値を silent fallback (デフォルト font /\n"
+        "static rendering / black color) するため、エラーは出ませんが意図した\n"
+        "スタイルで render されません。\n"
+        "\n"
+        f"## Canonical font 一覧 ({len(CANONICAL_FONTS)}種)\n"
+        f"  {', '.join(sorted(CANONICAL_FONTS))}\n"
+        "\n"
+        f"## Canonical animation 一覧 ({len(CANONICAL_ANIMATIONS)}種)\n"
+        f"  {', '.join(sorted(CANONICAL_ANIMATIONS))}\n"
+        "\n"
+        "## Color 形式\n"
+        "  6-digit hex (省略可な `#` prefix付き)、Tailwind 300-500 range 推奨。\n"
+        "  named palette (`vivid-purple`, `red` 等) はサービス側で silent\n"
+        "  fallback されダークモードで黒不可視になる。\n"
+        "\n"
+        "## 違反URL (最初の5件)\n"
+        f"{preview}{more}\n"
+        "\n"
+        "## 対応\n"
+        "1. `mojiemoji-selector` subagent または `mojiemoji_markdown.py`\n"
+        "   ヘルパー経由で render し直す (推奨)\n"
+        "2. URL を手で書き換える場合は上記 allowlist から選ぶ\n"
+        "3. typo の典型: `poyon` → `poyoon`, `funwari` (存在しない) →\n"
+        "   `yurayura` / `mochimochi`, `fude` (存在しない) → `mincho`\n"
+        "   / `noto`; `vivid-purple` (named) → `c084fc` (hex);\n"
+        "   `animation=kira`/`disco`/`psycho` は色循環するので outline\n"
+        "   と outline_width は付けない (rainbow vs fixed halo の競合);\n"
+        "   `animation=kaiten`/`kage_kaiten` は **必ず `speed=slow` か\n"
+        "   `speed=step` を付ける** (省略 / `normal` / `fast` は回転が\n"
+        "   速すぎて読めない streak になる — helper script は速度未指定時\n"
+        "   に自動で `slow` を注入する);\n"
+        "   color は **Tailwind 300–500 帯のみ** — `dc2626` (red-600) /\n"
+        "   `1d4ed8` (blue-700) / `000000` (黒) 等の 600+ や near-black は\n"
+        "   ダークモードで背景に溶けて読めなくなるため hook で reject;\n"
+        "   `/emoji/<text>` の text 部分は **漢字 2 字以下の単独 stamp** —\n"
+        "   `致命傷` のような 3 漢字単独は `致命` + `傷` の 2 stamp に分割\n"
+        "   (selector subagent と verification.md spotcheck #16 と同じ規約)\n"
+        "4. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
+        "\n"
+        "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
+    )
+    return 2
+
+
+# Validation stage pipeline. Each stage returns 2 + writes stderr on
+# violation, 0 otherwise. First failure short-circuits.
+VALIDATION_PIPELINE = (
+    validate_url_presence,
+    validate_required_params,
+    validate_outline_values,
+    validate_canonical_values,
+)
+
+
+def main() -> int:
+    try:
+        data = json.load(sys.stdin)
+    except Exception:
+        return 0
+
+    inspect_text = extract_inspect_text(data)
+    if inspect_text is None:
+        return 0
+    if not JP_RE.search(inspect_text):
+        return 0
+
+    urls = MOJI_URL_RE.findall(inspect_text)
+    for stage in VALIDATION_PIPELINE:
+        rc = stage(urls)
+        if rc != 0:
+            return rc
     return 0
 
 
