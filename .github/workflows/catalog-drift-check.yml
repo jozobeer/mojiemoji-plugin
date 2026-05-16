@@ -2,9 +2,25 @@ name: catalog-drift-check
 on:
   pull_request:
     types: [opened, edited, synchronize]
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+  release:
+    types: [created, edited]
 
 # Forks の PR は GITHUB_TOKEN が read-only。label / comment の write 系は
 # Skip し drift 検出だけ走らせる (出力は step summary に残す)。
+#
+# All event-payload values are funneled through env: vars, not interpolated
+# directly into run: blocks, to prevent script injection through user-
+# controlled fields (release.tag_name, comment bodies via .body queries
+# downstream, etc.). See
+# https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -13,7 +29,17 @@ jobs:
       pull-requests: write
       issues: write
     env:
+      EVENT: ${{ github.event_name }}
+      REPO: ${{ github.repository }}
+      # Only pull_request payloads carry head.repo.fork; for other events
+      # fork detection is N/A and writes are always attempted.
       IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      COMMENT_ID: ${{ github.event.comment.id }}
+      REVIEW_ID: ${{ github.event.review.id }}
+      RELEASE_ID: ${{ github.event.release.id }}
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,25 +47,95 @@ jobs:
           python-version: '3.12'
       - run: pip install pyyaml
 
-      - name: Diff PR body vs prestamp output
+      - name: Extract body for the triggering surface
+        id: extract
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
+        # Resolve (surface kind, identifier, body source) from the event
+        # payload. Drift detection is the same for every surface — only
+        # the readback (label / comment) differs, so we centralise body
+        # extraction here and let the next step run the diff generically.
+        run: |
+          set -euo pipefail
+          case "$EVENT" in
+            pull_request)
+              echo "kind=pr" >>"$GITHUB_OUTPUT"
+              echo "ref=$PR_NUMBER" >>"$GITHUB_OUTPUT"
+              gh pr view "$PR_NUMBER" --json body -q .body > /tmp/body.md
+              ;;
+            issues)
+              echo "kind=issue" >>"$GITHUB_OUTPUT"
+              echo "ref=$ISSUE_NUMBER" >>"$GITHUB_OUTPUT"
+              gh issue view "$ISSUE_NUMBER" --json body -q .body > /tmp/body.md
+              ;;
+            issue_comment)
+              # `issue_comment` fires for both issue and PR comments. The
+              # comment id is the readback target; the issue/pr number is
+              # the surface the comment belongs to.
+              echo "kind=issue_comment" >>"$GITHUB_OUTPUT"
+              echo "ref=$COMMENT_ID" >>"$GITHUB_OUTPUT"
+              echo "parent=$ISSUE_NUMBER" >>"$GITHUB_OUTPUT"
+              gh api "repos/$REPO/issues/comments/$COMMENT_ID" -q .body > /tmp/body.md
+              ;;
+            pull_request_review)
+              echo "kind=pr_review" >>"$GITHUB_OUTPUT"
+              echo "ref=$REVIEW_ID" >>"$GITHUB_OUTPUT"
+              echo "parent=$PR_NUMBER" >>"$GITHUB_OUTPUT"
+              gh api "repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID" -q .body > /tmp/body.md
+              ;;
+            pull_request_review_comment)
+              echo "kind=pr_review_comment" >>"$GITHUB_OUTPUT"
+              echo "ref=$COMMENT_ID" >>"$GITHUB_OUTPUT"
+              echo "parent=$PR_NUMBER" >>"$GITHUB_OUTPUT"
+              gh api "repos/$REPO/pulls/comments/$COMMENT_ID" -q .body > /tmp/body.md
+              ;;
+            release)
+              echo "kind=release" >>"$GITHUB_OUTPUT"
+              echo "ref=$RELEASE_ID" >>"$GITHUB_OUTPUT"
+              # RELEASE_TAG is user-controlled (chosen by release author).
+              # We only surface it inside markdown later, never in a shell
+              # expansion — but pass through GITHUB_OUTPUT for clarity.
+              echo "tag=$RELEASE_TAG" >>"$GITHUB_OUTPUT"
+              gh api "repos/$REPO/releases/$RELEASE_ID" -q .body > /tmp/body.md
+              ;;
+            *)
+              echo "Unsupported event: $EVENT" >&2
+              exit 1
+              ;;
+          esac
+
+          # gh's `-q .body` prints the literal string "null" for missing
+          # fields; treat that as empty so the next step exits cleanly.
+          if [ "$(cat /tmp/body.md)" = "null" ]; then
+            : > /tmp/body.md
+          fi
+
+      - name: Diff body vs prestamp output
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KIND: ${{ steps.extract.outputs.kind }}
+          REF: ${{ steps.extract.outputs.ref }}
+          PARENT: ${{ steps.extract.outputs.parent }}
+          TAG: ${{ steps.extract.outputs.tag }}
         run: |
           set -euo pipefail
 
-          gh pr view "$PR" --json body -q .body > /tmp/body.md
+          if [ ! -s /tmp/body.md ]; then
+            echo "Empty body — nothing to check." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           python3 skills/mojiemoji-github/scripts/prestamp.py < /tmp/body.md > /tmp/restamped.md
 
           if diff -q /tmp/body.md /tmp/restamped.md > /dev/null; then
-            echo "No drift detected." >> "$GITHUB_STEP_SUMMARY"
-            if [ "$IS_FORK" != "true" ]; then
-              gh pr edit "$PR" --remove-label catalog-drift 2>/dev/null || true
+            echo "No drift detected on $KIND #$REF." >> "$GITHUB_STEP_SUMMARY"
+            if [ "$KIND" = "pr" ] && [ "$IS_FORK" != "true" ]; then
+              gh pr edit "$REF" --remove-label catalog-drift 2>/dev/null || true
             fi
             exit 0
           fi
 
-          echo "Drift detected." >> "$GITHUB_STEP_SUMMARY"
+          echo "Drift detected on $KIND #$REF." >> "$GITHUB_STEP_SUMMARY"
           diff /tmp/body.md /tmp/restamped.md > /tmp/drift.diff || true
 
           # Truncate diff to keep comment within GitHub size limit.
@@ -50,28 +146,11 @@ jobs:
             printf '\n... (diff truncated; %d bytes original)\n' "$DIFF_BYTES" >> /tmp/drift.diff.trunc
           fi
 
-          {
-            echo "### ⚠️ catalog drift 検出"
-            echo "このPRの本文は最新の catalog 内容と乖離しています。以下を re-apply して同期してください。"
-            echo ""
-            echo '```bash'
-            echo 'gh pr view '"$PR"' --json body -q .body | python3 skills/mojiemoji-github/scripts/prestamp.py'
-            echo '```'
-            echo ""
-            echo "<details><summary>diff (original vs restamped)</summary>"
-            echo ""
-            echo '```diff'
-            cat /tmp/drift.diff.trunc
-            echo '```'
-            echo ""
-            echo "</details>"
-          } > /tmp/drift.comment.md
-
-          # Always print drift to step summary, even on fork PRs where write
-          # operations skip (visibility for the PR author).
+          # Always print drift to step summary (visibility for the author
+          # on forks where write ops skip, AND for non-PR surfaces).
           {
             echo ""
-            echo '<details><summary>drift diff</summary>'
+            echo "<details><summary>drift diff ($KIND #$REF)</summary>"
             echo ""
             echo '```diff'
             cat /tmp/drift.diff.trunc
@@ -80,20 +159,91 @@ jobs:
             echo '</details>'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$IS_FORK" = "true" ]; then
-            echo "Fork PR detected — skipping label/comment writes (token is read-only). Drift visible in step summary." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          gh pr edit "$PR" --add-label catalog-drift || true
-
-          # Best-effort dedupe: skip posting if an existing drift comment from
-          # this workflow is already present. Race window between read and
-          # write is acceptable — at worst, 2 concurrent runs each post once,
-          # which is preferable to atomic locks for a non-blocking advisory.
-          HAS_COMMENT=$(gh pr view "$PR" --json comments \
-            -q '.comments[] | select(.body | startswith("### ⚠️ catalog drift 検出")) | .id' \
-            | head -1)
-          if [ -z "$HAS_COMMENT" ]; then
-            gh pr comment "$PR" --body-file /tmp/drift.comment.md
-          fi
+          # Readback strategy — varies by surface. The PR path keeps the
+          # original label-plus-comment flow (the most actionable signal).
+          # Other surfaces emit a single issue/PR-level advisory comment
+          # pointing at the offending sub-resource. Release bodies stay
+          # in step summary only — programmatic re-edits of a release are
+          # heavier than worth automating.
+          case "$KIND" in
+            pr)
+              if [ "$IS_FORK" = "true" ]; then
+                echo "Fork PR detected — skipping label/comment writes (token is read-only). Drift visible in step summary." >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              gh pr edit "$REF" --add-label catalog-drift || true
+              {
+                echo "### ⚠️ catalog drift 検出"
+                echo "このPRの本文は最新の catalog 内容と乖離しています。以下を re-apply して同期してください。"
+                echo ""
+                echo '```bash'
+                echo 'gh pr view '"$REF"' --json body -q .body | python3 skills/mojiemoji-github/scripts/prestamp.py'
+                echo '```'
+                echo ""
+                echo "<details><summary>diff (original vs restamped)</summary>"
+                echo ""
+                echo '```diff'
+                cat /tmp/drift.diff.trunc
+                echo '```'
+                echo ""
+                echo "</details>"
+              } > /tmp/drift.comment.md
+              HAS_COMMENT=$(gh pr view "$REF" --json comments \
+                -q '.comments[] | select(.body | startswith("### ⚠️ catalog drift 検出")) | .id' \
+                | head -1)
+              if [ -z "$HAS_COMMENT" ]; then
+                gh pr comment "$REF" --body-file /tmp/drift.comment.md
+              fi
+              ;;
+            issue)
+              gh issue edit "$REF" --add-label catalog-drift 2>/dev/null || true
+              {
+                echo "### ⚠️ catalog drift 検出"
+                echo "この issue 本文は最新の catalog 内容と乖離しています。"
+                echo ""
+                echo '```bash'
+                echo 'gh issue view '"$REF"' --json body -q .body | python3 skills/mojiemoji-github/scripts/prestamp.py'
+                echo '```'
+                echo ""
+                echo "<details><summary>diff</summary>"
+                echo ""
+                echo '```diff'
+                cat /tmp/drift.diff.trunc
+                echo '```'
+                echo ""
+                echo "</details>"
+              } > /tmp/drift.comment.md
+              # Dedupe: don't repost if a prior drift comment is already there.
+              HAS_COMMENT=$(gh issue view "$REF" --json comments \
+                -q '.comments[] | select(.body | startswith("### ⚠️ catalog drift 検出")) | .id' \
+                | head -1)
+              if [ -z "$HAS_COMMENT" ]; then
+                gh issue comment "$REF" --body-file /tmp/drift.comment.md
+              fi
+              ;;
+            issue_comment|pr_review_comment|pr_review)
+              # Sub-resource surfaces — post one advisory on the parent
+              # issue/PR pointing at the offending child so the author
+              # sees it without us amending their text.
+              {
+                echo "### ⚠️ catalog drift 検出 ($KIND #$REF)"
+                echo "コメント / レビュー本文が最新の catalog 内容と乖離しています。"
+                echo ""
+                echo "<details><summary>diff</summary>"
+                echo ""
+                echo '```diff'
+                cat /tmp/drift.diff.trunc
+                echo '```'
+                echo ""
+                echo "</details>"
+              } > /tmp/drift.comment.md
+              gh issue comment "$PARENT" --body-file /tmp/drift.comment.md || true
+              ;;
+            release)
+              # TAG is user-controlled — only echoed into step summary
+              # markdown, never into a shell expansion. (`echo "$TAG"` is
+              # safe because the value lives in an env var and never
+              # touches eval / `$(...)` / unquoted contexts.)
+              echo "Release drift detected on tag $TAG (#$REF). See step summary diff and re-edit the release body via 'gh release edit'." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+          esac
