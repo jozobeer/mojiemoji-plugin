@@ -36,6 +36,65 @@ allowed-tools:
 
 ユーザーが GitHub surface 向けの mojiemoji スニペットを欲しているときだけ起動する。Slack のカスタム絵文字、Notion、一般的な Web ページには起動しない — ここで規定するデフォルトはすべて GitHub のサニタイザを前提にしている。
 
+## 下処理 first — 機械的置換を最初に通す (本プロジェクトの中心原則)
+
+**日本語 markdown を扱うとき、AI が装飾判断を始める前に、必ず最初に `prestamp.py` で機械的置換を通す。** これは mojiemoji の中心的な設計原則であり、「高密度 stamp × 低コスト (token / time)」を両立させる唯一の経路。
+
+### なぜ必須か
+
+mojiemoji は本来「高密度 stamp (`inline-saturated`、1 段落最低 1〜2 個)」を理想とするが、AI が毎回 hand-craft で stamp URL を組むと:
+
+- **トークン**: 1 stamp ≈ 100+ token (`<img src="..." alt="..." height="24" align="absmiddle">` の長大 HTML)。15 stamp で **1500+ token / 投稿** が装飾だけで消費される
+- **時間**: catalog の語ごとに font / color / animation を選ぶ判断を都度行うため出力が遅い
+- **品質**: AI は気まぐれに stamp 対象を選ぶため catalog 登録済の頻出語を取りこぼす ([実例](https://github.com/jozobeer/mojiemoji-plugin/issues/70): PR #65 body で `重複`×4、`追加`×3 などが plain で残存)
+
+**下処理を最初に通せば catalog hit は AI トークン 0 で `<img>` に置換され、AI は catalog 外の語の装飾だけに集中できる。** catalog が育つほど (#46) AI の負荷は逓減する。
+
+### 正しいフロー
+
+```
+[1] plain markdown (人 or AI が起草)
+      ↓
+[2] prestamp.py で機械的下処理  <-- トークン 0 / 時間ほぼ 0 / 決定論的
+      ↓ pre-stamped markdown (catalog hit はすべて img 化済)
+[3] AI が catalog 外の語に追加装飾  <-- AI の判断はここだけ
+      ↓ final body
+[4] PreToolUse hook が最終 gate (catalog 残存も含めて検証)
+      ↓
+[5] 投稿 (gh / MCP github_*)
+```
+
+### 具体的な呼び方
+
+`gh pr create --body-file body.md` する直前に:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/prestamp.py" \
+  < body.md > body-pre.md
+gh pr create --body-file body-pre.md ...
+```
+
+stdin / stdout なので pipe でもよい:
+
+```bash
+prestamp.py < draft.md | gh pr create --body-file -
+```
+
+`prestamp.py` は `data/prestamp-catalog.yml` の全 `terms` キー (447+ entries) を 1 単語ずつ最長一致で `<img>` 置換する。catalog 外の語は素通し。冪等 (再実行で副作用無し)。
+
+### よくあるアンチパターン
+
+| アンチパターン | なぜダメ |
+|---|---|
+| AI が hand-craft で stamp URL を組み始める (下処理を経ずに) | catalog hit を取りこぼす、トークン消費が膨張 |
+| 下処理を「最後に通す」 | AI が既に同じ語を手動 stamp 化済 → 二重置換でリンク壊れ。AI の労力も無駄になる |
+| 「催促が無いから」と省略 | catalog 育成 (#46) の効果が活きない、`<img>` 大量生成が常態化してトークンが青天井 |
+| `prestamp.py` を通さずに hook bypass (`MOJIEMOJI_HOOK_DISABLED=1`) | 本来 hook が catch するべき残存も silent で通る、catalog hit ゼロ置換のまま投稿 |
+
+### Skill / subagent としての必須動作
+
+このスキル (および `mojiemoji-selector` subagent) が起動したら、装飾判断の前に **必ず** `prestamp.py` を呼ぶ。順序が逆になると上記アンチパターンに該当する。draft を作る前 / 編集中 / 投稿直前のいずれの段でも、AI が新しく日本語を書き加えたら下処理を通し直す。
+
 ## Hard pre-action gate
 
 **設計原則: gate は「投稿される *body* が日本語の GitHub markdown かどうか」で発火する — どの *コマンド* で投稿するかではない。** 失敗モードは「装飾なしで日本語を silently 投稿してしまう」こと。これを防ぐためなら、新しい投稿経路が増えてもこの原則は不変。
