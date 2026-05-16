@@ -54,6 +54,21 @@ jobs:
       - uses: actions/checkout@v4
       - run: shellcheck scripts/verify-lists-vs-docs.sh skills/mojiemoji-github/scripts/verify-lists-vs-service.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh scripts/audit-harness-skills.sh
 
+  catalog-colors:
+    name: Catalog forbidden-color guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip pyyaml
+      - name: Verify catalog has no Tailwind 600+ / dim 500-band colors
+        # Dry-run mode exits 1 when any forbidden color is still in the
+        # catalogs. Run with --apply locally to fix:
+        #   python3 skills/mojiemoji-github/scripts/normalize_catalog_colors.py --apply
+        run: python3 skills/mojiemoji-github/scripts/normalize_catalog_colors.py
+
   version-bump:
     name: Plugin version bump check
     runs-on: ubuntu-latest

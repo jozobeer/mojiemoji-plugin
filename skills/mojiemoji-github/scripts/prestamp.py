@@ -21,6 +21,10 @@ from urllib.parse import quote, urlencode
 import yaml
 
 from lib.constants import DEFAULT_BASE_URL
+from lib.forbidden_colors import (
+    FORBIDDEN_COLOR_REPLACEMENTS,
+    normalize_color_value as _normalize_color_value,
+)
 from lib.term_boundaries import (
     ASCII_KEY_RE,
     ASCII_LEFT_GUARD,
@@ -196,33 +200,13 @@ def build_emoji_re(emojis: dict) -> Optional[re.Pattern[str]]:
     return re.compile("|".join(re.escape(k) + r"️?" for k in keys))
 
 
-# Tailwind 600+ values currently present in prestamp-catalog.yml that
-# render black-on-black under GitHub's dark theme. The gate hook
-# (mojiemoji-japanese-gate.py) rejects a subset of these on submission;
-# until the catalog itself is cleaned (TODO follow-up), we normalize
-# to the matching 400-series at variant-render time so prestamp output
-# is always safe to ship into in-tree docs that bypass the gate.
-FORBIDDEN_COLOR_REPLACEMENTS = {
-    "ca8a04": "facc15", "16a34a": "4ade80", "c026d3": "e879f9",
-    "d97706": "fbbf24", "9333ea": "c084fc", "e11d48": "fb7185",
-    "0891b2": "22d3ee", "2563eb": "60a5fa", "7c3aed": "a78bfa",
-    "db2777": "f472b6", "dc2626": "f87171", "4f46e5": "818cf8",
-    "0d9488": "2dd4bf", "059669": "34d399", "65a30d": "a3e635",
-    "ea580c": "fb923c", "525252": "a3a3a3", "475569": "94a3b8",
-    "4b5563": "9ca3af", "52525b": "a1a1aa", "57534e": "a8a29e",
-    "b91c1c": "f87171", "991b1b": "f87171", "c2410c": "fb923c",
-    "15803d": "4ade80", "0e7490": "22d3ee", "1d4ed8": "60a5fa",
-    "4338ca": "818cf8", "7e22ce": "c084fc", "be185d": "f472b6",
-}
-
-
-def _normalize_color_value(value: Optional[str]) -> Optional[str]:
-    if value is None:
-        return None
-    key = value.lstrip("#").lower()
-    return FORBIDDEN_COLOR_REPLACEMENTS.get(key, value)
-
-
+# Tailwind 600+ values that render black-on-black under GitHub's
+# dark theme. After #97 the catalog itself is clean of these, but
+# we keep `_normalize_color_value` wired into `_build_url` as a
+# safety net for hand-written bodies that hit `mojiemoji-selector`
+# or skip the catalog entirely. The map and helper live in
+# `lib/forbidden_colors.py` (re-exported above) so the cleanup
+# script, CI guard, and renderer share the SSOT.
 def _build_url(base_url: str, text: str, flavor: dict, defaults: dict) -> str:
     merged = {**defaults, **flavor}
     params = [
