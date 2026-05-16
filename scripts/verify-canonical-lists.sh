@@ -16,19 +16,17 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HOOK="$REPO_ROOT/hooks/mojiemoji-japanese-gate.py"
 PARAMS="$REPO_ROOT/skills/mojiemoji-github/references/parameters.md"
 GENERATOR="$REPO_ROOT/skills/mojiemoji-github/scripts/generate_catalog.py"
+LIB_CONSTANTS="$REPO_ROOT/skills/mojiemoji-github/scripts/lib/constants.py"
 
-python3 - "$HOOK" "$PARAMS" "$GENERATOR" <<'PY'
+python3 - "$HOOK" "$PARAMS" "$GENERATOR" "$LIB_CONSTANTS" <<'PY'
 import ast
 import re
 import sys
 
-hook_path, params_path, generator_path = sys.argv[1], sys.argv[2], sys.argv[3]
+hook_path, params_path, generator_path, lib_path = sys.argv[1:5]
 
-# --- Extract from hook (Python set literals) ------------------------------
-hook_src = open(hook_path, encoding="utf-8").read()
-tree = ast.parse(hook_src)
-
-def find_set_literal(name):
+# --- AST helpers ---------------------------------------------------------
+def find_set_literal(tree, name, source_path):
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             for target in node.targets:
@@ -51,21 +49,30 @@ def find_set_literal(name):
                             elt.value for elt in node.value.args[0].elts
                             if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
                         }
-    raise SystemExit(f"missing {name} in {hook_path}")
+    raise SystemExit(f"missing {name} in {source_path}")
 
-hook_fonts = find_set_literal("CANONICAL_FONTS")
-hook_anims = find_set_literal("CANONICAL_ANIMATIONS")
-hook_forbidden = find_set_literal("FORBIDDEN_COLORS")
+
+# --- Extract from hook (Python set literals) ------------------------------
+hook_tree = ast.parse(open(hook_path, encoding="utf-8").read())
+hook_fonts = find_set_literal(hook_tree, "CANONICAL_FONTS", hook_path)
+hook_anims = find_set_literal(hook_tree, "CANONICAL_ANIMATIONS", hook_path)
+hook_forbidden = find_set_literal(hook_tree, "FORBIDDEN_COLORS", hook_path)
+
+# --- Extract from lib/constants.py (the copy generators actually use) -----
+# The generator filters with `lib.constants.FORBIDDEN_COLORS`, not the
+# hook's copy. If the two drift, the catalog can quietly include colors
+# the hook rejects (or exclude safe ones) without this script noticing.
+lib_tree = ast.parse(open(lib_path, encoding="utf-8").read())
+lib_forbidden = find_set_literal(lib_tree, "FORBIDDEN_COLORS", lib_path)
 
 # --- Extract from generate_catalog (Python tuple literal) -----------------
 # `_RAW_TAILWIND_PALETTE` is the unfiltered Tailwind palette the
 # generator picks from. We verify its intersection with the hook's
 # `FORBIDDEN_COLORS` so the generator never emits values the hook
 # would block.
-gen_src = open(generator_path, encoding="utf-8").read()
-gen_tree = ast.parse(gen_src)
+gen_tree = ast.parse(open(generator_path, encoding="utf-8").read())
 
-def find_tuple_literal(tree, name):
+def find_tuple_literal(tree, name, source_path):
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             for target in node.targets:
@@ -75,9 +82,9 @@ def find_tuple_literal(tree, name):
                             elt.value for elt in node.value.elts
                             if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
                         }
-    raise SystemExit(f"missing {name} in {generator_path}")
+    raise SystemExit(f"missing {name} in {source_path}")
 
-raw_palette = find_tuple_literal(gen_tree, "_RAW_TAILWIND_PALETTE")
+raw_palette = find_tuple_literal(gen_tree, "_RAW_TAILWIND_PALETTE", generator_path)
 
 # --- Extract from parameters.md (fenced code blocks under headers) --------
 params_src = open(params_path, encoding="utf-8").read()
@@ -117,6 +124,23 @@ if errors:
           "code block so the two agree, then re-run this script.", file=sys.stderr)
     sys.exit(1)
 
+# --- hook FORBIDDEN_COLORS ↔ lib FORBIDDEN_COLORS drift -------------------
+if hook_forbidden != lib_forbidden:
+    only_hook = hook_forbidden - lib_forbidden
+    only_lib = lib_forbidden - hook_forbidden
+    msg = ["[drift] FORBIDDEN_COLORS (hook vs lib/constants.py)"]
+    if only_hook:
+        msg.append(f"  only in hook: {sorted(only_hook)}")
+    if only_lib:
+        msg.append(f"  only in lib:  {sorted(only_lib)}")
+    msg.append(
+        "  Fix: update either hook or lib so the two sets agree. "
+        "The generator filters with the lib copy; drift means the "
+        "catalog can quietly include colors the hook rejects."
+    )
+    print("\n".join(msg), file=sys.stderr)
+    sys.exit(1)
+
 # --- FORBIDDEN ∩ TAILWIND drift -------------------------------------------
 overlap = raw_palette & hook_forbidden
 if overlap:
@@ -132,5 +156,6 @@ if overlap:
 
 print(f"OK: CANONICAL_FONTS ({len(hook_fonts)}) and CANONICAL_ANIMATIONS "
       f"({len(hook_anims)}) match between hook and parameters.md; "
+      f"FORBIDDEN_COLORS ({len(hook_forbidden)}) match between hook and lib; "
       f"FORBIDDEN_COLORS ∩ TAILWIND palette = ∅")
 PY
