@@ -8,7 +8,7 @@ name: Canonical list drift check
 # Security note: no user-controlled GitHub event inputs reach `run:`
 # scripts — only `github.repository` / `github.token` / `github.run_id`
 # (GitHub-controlled) and `steps.verify.outputs.output` (from our own
-# verify-canonical-lists.sh, no shell interpolation).
+# verify-lists-vs-docs.sh, no shell interpolation).
 
 on:
   schedule:
@@ -30,11 +30,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run verify-canonical-lists.sh
+      - name: Run verify-lists-vs-docs.sh
         id: verify
         run: |
           set +e
-          output=$(bash scripts/verify-canonical-lists.sh 2>&1)
+          output=$(bash scripts/verify-lists-vs-docs.sh 2>&1)
           status=$?
           {
             echo "status=$status"
@@ -61,7 +61,7 @@ jobs:
           # the comment branch with `existing="null"` — exactly the
           # first-detection failure mode this step is supposed to handle.
           existing=$(gh issue list --repo "$REPO" --state open --label drift --json number --jq '.[0].number // empty' || true)
-          body=$(printf '%s\n\n```\n%s\n```\n\n対応: `scripts/verify-canonical-lists.sh` の指示に従い、hook の set リテラルか parameters.md のコードブロックのいずれかを更新して両者を一致させる。\n\n- workflow run: %s\n' \
+          body=$(printf '%s\n\n```\n%s\n```\n\n対応: `scripts/verify-lists-vs-docs.sh` の指示に従い、hook の set リテラルか parameters.md のコードブロックのいずれかを更新して両者を一致させる。\n\n- workflow run: %s\n' \
             "週次 drift-check が hook の canonical 値リストと parameters.md の不整合を検出した。" \
             "$VERIFY_OUTPUT" \
             "$RUN_URL")

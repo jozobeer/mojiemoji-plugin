@@ -45,14 +45,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: bash scripts/verify-canonical-lists.sh
+      - run: bash scripts/verify-lists-vs-docs.sh
 
   shell:
     name: shellcheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck scripts/verify-canonical-lists.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh
+      - run: shellcheck scripts/verify-lists-vs-docs.sh skills/mojiemoji-github/scripts/verify-lists-vs-service.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh
 
   version-bump:
     name: Plugin version bump check
