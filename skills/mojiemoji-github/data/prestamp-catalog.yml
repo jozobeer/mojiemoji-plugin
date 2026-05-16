@@ -6705,6 +6705,105 @@ terms:
       outline: "fcc084"
       animation: patapata
 
+  内容:
+    - font: noto
+      color: "0891b2"
+      outline: "b20891"
+      animation: shuchusen
+    - font: maru-bold
+      color: "a855f7"
+      outline: "f7a855"
+      animation: mochimochi
+    - font: gothic
+      color: "fdba74"
+      outline_width: "0"
+      animation: kira
+
+  追記:
+    - font: zero
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: yatta
+    - font: hachimaru
+      color: "db2777"
+      outline: "77db27"
+      animation: tatemoya
+    - font: akzk
+      color: "c084fc"
+      outline: "fcc084"
+      animation: chirichiri
+
+  連結:
+    - font: kurobara
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: norinori
+    - font: maru
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: zairu
+    - font: pixel
+      color: "0891b2"
+      outline: "b20891"
+      animation: kage_neon
+
+  残存:
+    - font: dela
+      color: "d97706"
+      outline: "06d977"
+      animation: ekken
+    - font: toge
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: yurayura
+    - font: mincho
+      color: "fb7185"
+      outline_width: "0"
+      animation: disco
+
+  維持:
+    - font: maru-bold
+      color: "10b981"
+      outline: "8110b9"
+      animation: kaiten
+      speed: slow
+    - font: akzk
+      color: "d946ef"
+      outline: "efd946"
+      animation: neruneru
+    - font: noto
+      color: "fdba74"
+      outline: "74fdba"
+      animation: tate_scroll
+
+  放置:
+    - font: gothic-bold
+      color: "7c3aed"
+      outline: "ed7c3a"
+      animation: yokomoya
+    - font: pixel
+      color: "ea580c"
+      outline: "0cea58"
+      animation: mabataki
+    - font: chikara
+      color: "34d399"
+      outline: "9934d3"
+      animation: poyoon
+
+  通過:
+    - font: toge
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: yoko_scroll
+    - font: tamanegi
+      color: "ec4899"
+      outline: "99ec48"
+      animation: bure
+    - font: gothic
+      color: "f97316"
+      outline_width: "0"
+      animation: psycho
+
   後:
     - font: hachimaru
       color: "f472b6"
@@ -6732,6 +6831,20 @@ terms:
       color: "ec4899"
       outline: "99ec48"
       animation: poyoon
+
+  筋:
+    - font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+      animation: gatagata
+    - font: hachimaru
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: kirari
+    - font: maru
+      color: "a855f7"
+      outline_width: "0"
+      animation: kira
 
   月:
     - font: chikara
