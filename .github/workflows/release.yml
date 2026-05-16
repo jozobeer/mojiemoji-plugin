@@ -14,23 +14,20 @@ on:
           - publish
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Prepare or publish release
+  dry-run:
+    name: Prepare release notes
+    if: inputs.mode == 'dry-run'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Reject publish outside main
-        if: inputs.mode == 'publish' && github.ref != 'refs/heads/main'
-        run: |
-          echo "publish mode must run from main"
-          exit 1
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -42,7 +39,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
           OUTPUT_FILE: ${{ runner.temp }}/release-notes.md
-          RELEASE_MODE: ${{ inputs.mode }}
+          RELEASE_MODE: dry-run
         run: bash scripts/prepare-release-notes.sh
 
       - name: Upload generated notes
@@ -53,16 +50,88 @@ jobs:
           if-no-files-found: error
 
       - name: Write job summary
+        env:
+          MODE: dry-run
+          TAG: ${{ steps.release.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.release.outputs.previous_tag }}
+          TAG_EXISTS: ${{ steps.release.outputs.tag_exists }}
+          RELEASE_EXISTS: ${{ steps.release.outputs.release_exists }}
+          TARGET_SHA: ${{ steps.release.outputs.target_sha }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
         run: |
           {
             echo "## Release"
             echo
-            echo "- mode: ${{ inputs.mode }}"
-            echo "- tag: ${{ steps.release.outputs.tag }}"
-            echo "- previous tag: ${{ steps.release.outputs.previous_tag || '<none>' }}"
-            echo "- release exists: ${{ steps.release.outputs.release_exists }}"
-            echo "- target sha: ${{ steps.release.outputs.target_sha }}"
-            if [ -n "${{ steps.release.outputs.release_url }}" ]; then
-              echo "- release: ${{ steps.release.outputs.release_url }}"
+            echo "- mode: $MODE"
+            echo "- tag: $TAG"
+            echo "- previous tag: ${PREVIOUS_TAG:-<none>}"
+            echo "- tag exists: $TAG_EXISTS"
+            echo "- release exists: $RELEASE_EXISTS"
+            echo "- target sha: $TARGET_SHA"
+            if [ -n "$RELEASE_URL" ]; then
+              echo "- release: $RELEASE_URL"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  reject-publish-ref:
+    name: Reject publish outside main
+    if: inputs.mode == 'publish' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: |
+          echo "publish mode must run from main"
+          exit 1
+
+  publish:
+    name: Publish release
+    if: inputs.mode == 'publish' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          OUTPUT_FILE: ${{ runner.temp }}/release-notes.md
+          RELEASE_MODE: publish
+        run: bash scripts/prepare-release-notes.sh
+
+      - name: Upload generated notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ steps.release.outputs.tag }}
+          path: ${{ steps.release.outputs.notes_file }}
+          if-no-files-found: error
+
+      - name: Write job summary
+        env:
+          MODE: publish
+          TAG: ${{ steps.release.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.release.outputs.previous_tag }}
+          TAG_EXISTS: ${{ steps.release.outputs.tag_exists }}
+          RELEASE_EXISTS: ${{ steps.release.outputs.release_exists }}
+          TARGET_SHA: ${{ steps.release.outputs.target_sha }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
+        run: |
+          {
+            echo "## Release"
+            echo
+            echo "- mode: $MODE"
+            echo "- tag: $TAG"
+            echo "- previous tag: ${PREVIOUS_TAG:-<none>}"
+            echo "- tag exists: $TAG_EXISTS"
+            echo "- release exists: $RELEASE_EXISTS"
+            echo "- target sha: $TARGET_SHA"
+            if [ -n "$RELEASE_URL" ]; then
+              echo "- release: $RELEASE_URL"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

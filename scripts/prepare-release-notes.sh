@@ -67,13 +67,32 @@ PY
 tag="v$version"
 target_sha="$(git rev-parse "$target_ref")"
 previous_tag="$(
-    git tag --list 'v[0-9]*' --sort=-v:refname |
+    git tag --merged "$target_sha" --list 'v[0-9]*' --sort=-v:refname |
         awk -v current="$tag" '$0 != current { print; exit }'
 )"
 
+tag_exists=0
+if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+    tag_exists=1
+    tag_sha="$(git rev-list -n 1 "$tag")"
+    if [ "$tag_sha" != "$target_sha" ]; then
+        echo "prepare-release-notes: tag $tag already points to $tag_sha, expected $target_sha" >&2
+        exit 1
+    fi
+fi
+
+release_lookup_error="$(mktemp)"
+notes_json="$(mktemp)"
+trap 'rm -f "$release_lookup_error" "$notes_json"' EXIT
+
 release_exists=0
-if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+if gh api "repos/$repo/releases/tags/$tag" >/dev/null 2>"$release_lookup_error"; then
     release_exists=1
+elif grep -q "HTTP 404" "$release_lookup_error" || grep -qi "not found" "$release_lookup_error"; then
+    release_exists=0
+else
+    cat "$release_lookup_error" >&2
+    exit 1
 fi
 
 generate_args=(
@@ -85,8 +104,6 @@ if [ -n "$previous_tag" ]; then
     generate_args+=(-f "previous_tag_name=$previous_tag")
 fi
 
-notes_json="$(mktemp)"
-trap 'rm -f "$notes_json"' EXIT
 gh api "${generate_args[@]}" > "$notes_json"
 generated_body="$(
     python3 - "$notes_json" <<'PY'
@@ -128,6 +145,7 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
         printf 'version=%s\n' "$version"
         printf 'previous_tag=%s\n' "$previous_tag"
         printf 'target_sha=%s\n' "$target_sha"
+        printf 'tag_exists=%s\n' "$tag_exists"
         printf 'release_exists=%s\n' "$release_exists"
         printf 'notes_file=%s\n' "$output_file"
     } >> "$GITHUB_OUTPUT"
@@ -136,6 +154,7 @@ fi
 echo "release tag: $tag"
 echo "target sha: $target_sha"
 echo "previous tag: ${previous_tag:-<none>}"
+echo "tag exists: $tag_exists"
 echo "release exists: $release_exists"
 echo "notes file: $output_file"
 
@@ -149,13 +168,17 @@ if [ "$release_exists" -eq 1 ]; then
     exit 0
 fi
 
-release_url="$(
-    gh release create "$tag" \
-        --repo "$repo" \
-        --target "$target_sha" \
-        --title "$tag" \
-        --notes-file "$output_file"
-)"
+release_args=(
+    "$tag"
+    --repo "$repo"
+    --title "$tag"
+    --notes-file "$output_file"
+)
+if [ "$tag_exists" -eq 0 ]; then
+    release_args+=(--target "$target_sha")
+fi
+
+release_url="$(gh release create "${release_args[@]}")"
 
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'release_url=%s\n' "$release_url" >> "$GITHUB_OUTPUT"
