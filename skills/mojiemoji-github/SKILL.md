@@ -663,4 +663,10 @@ scripts/mojiemoji_markdown.py --text 'マジで' --inline \
 - フレーズが flavor-guide のスタンプ禁止リストに引っかかる場合、黙って落とすか指摘する。API 名・バージョン・謝罪本文・セキュリティ/法務テキストは決して装飾しない。
 - **スポットチェックは body-class surface でスタンプ数 ≥3 のとき必須、任意ではない。** 貼り付け前に `references/verification.md` § Post-dispatch spot-check(ステップ 1〜14)を本文全体に対して実行する。目視レビューでは多様性違反がすり抜ける — issue #166 は 15 スタンプで一見「装飾済み」に見えたが、スポットチェックなら捕捉できた: アニメーションが 1 種類、色が 1 種類、identifier スタンプチェックで `Promise.all` / `Green` が引っかかる。
 
+<!--
+  mojiemoji-schema-version: 2.0.0
+  Forward-compat marker for issue #60 Option B: the hook will eventually
+  parse this to detect stale skill caches and warn the agent. Currently
+  unused — placed here so future hook releases can rely on its presence.
+-->
 <!-- mojiemoji-schema-version: 2.0.0 -->
