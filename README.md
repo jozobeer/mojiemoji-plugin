@@ -29,6 +29,24 @@ mojiemoji-plugin が掛かった世界:
 
 ---
 
+## 🎴 絵文字も自動でアニメ化
+
+文字スタンプだけでなく、**Unicode 絵文字 162 種** (`🎉` / `⚠️` / `✅` / `❌` / `🎊` 等) も `prestamp.py` が自動で animated `<img>` に置換します。`emoji-catalog.yml` に登録された絵文字なら手書きの URL 組み立て不要。
+
+| 入力 | プラグイン通過後 |
+|---|---|
+| `やった 🎉 完成！` | やった <img src="https://mojiemoji.jozo.beer/emoji/%F0%9F%8E%89?font=hachimaru&color=f472b6&animation=bane&background=transparent&outline=b6f472&outline_width=2" alt="🎉" height="24" align="absmiddle"> 完成！ |
+| `注意 ⚠️ してください` | 注意 <img src="https://mojiemoji.jozo.beer/emoji/%E2%9A%A0?font=dela&color=ef4444&animation=tenmetsu&background=transparent&outline=44ef44&outline_width=2" alt="⚠" height="24" align="absmiddle"> してください |
+
+ガード:
+
+- **連続絵文字は 2 連まで** — `🎉🎊🎁🎀` の 3 つ目以降は生の Unicode のまま残す(視覚的に潰し合うため)。空白を挟めば run がリセットされ全部スタンプ化される
+- **VS16 (`U+FE0F`) は剥がして lookup** — `⚠️` (U+26A0 U+FE0F) も `⚠` (素の U+26A0) もどちらも同じカタログキーにヒット
+- **safe-zone は不可侵** — code span / fenced block / `<img>` 内 / URL 内の絵文字には触らない
+- **カタログ外の絵文字は触らない** — `🚀` のように upstream に asset が無いものは plain Unicode で残す(`emoji-catalog.yml` を読めば対応一覧が分かる)
+
+---
+
 ## 📦 同梱されるもの
 
 3 層構造で <img src="https://mojiemoji.jozo.beer/emoji/%E7%B5%B1%E5%90%88?font=maru-bold&color=3b82f6&animation=tate_ekken&background=transparent&outline=f63b82&outline_width=2" alt="統合" height="24" align="absmiddle"> されています。
@@ -37,7 +55,7 @@ mojiemoji-plugin が掛かった世界:
 |---|---|---|
 | Skill | `mojiemoji-github` | GitHub の各 surface (issue / PR / レビュー等) ごとのスタンプ配置ポリシー、6 必須パラメータ規約、helper script を提供 |
 | Subagent | `mojiemoji-selector` | フレーズ群を受け取り、フォント / 色 / アニメーション / アウトラインを多様性確保しつつ選定して `<img>` スニペットを返す |
-| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語を決定論的に先置換(variant 抽選 + safe-zone 保護)、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
+| Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語と Unicode 絵文字 (`🎉` / `⚠️` 等カタログ 162 種) を決定論的に先置換(variant 抽選 + safe-zone 保護 + 連続絵文字は 2 連までで打ち切り)、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを計測し閾値未満を warn または block |
 | Hook (PreToolUse / Bash + MCP) | `mojiemoji-japanese-gate.py` | 日本語本文を投稿しようとした時、6 必須パラメータ揃わない mojiemoji URL を含むコマンドを **送信前にブロック**。対象は `gh (issue\|pr\|release) (create\|comment\|review\|edit)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
 ---

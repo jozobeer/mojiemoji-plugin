@@ -91,6 +91,95 @@ def test_prestamp_spreads_variants_for_repeated_keyword() -> None:
     assert len(animations) >= 2
 
 
+def test_prestamp_replaces_catalog_emoji_with_img() -> None:
+    # 🎉 (U+1F389 PARTY POPPER) is in emoji-catalog.yml. The emoji pass
+    # should replace it with an <img> stamp.
+    proc = run_py(PRESTAMP, "やった 🎉 完成！", "--seed", "3")
+
+    assert proc.returncode == 0
+    assert proc.stdout.count('alt="🎉"') == 1
+    assert "mojiemoji.jozo.beer/emoji/%F0%9F%8E%89" in proc.stdout
+
+
+def test_prestamp_leaves_uncatalogued_emoji_raw() -> None:
+    # 🚀 (U+1F680 ROCKET) is the canonical "no upstream asset" emoji.
+    # prestamp must not generate an <img> for it — the SKILL.md
+    # fallback expects it to stay as plain Unicode.
+    proc = run_py(PRESTAMP, "発射 🚀 する", "--seed", "4")
+
+    assert proc.returncode == 0
+    assert "🚀" in proc.stdout
+    assert "mojiemoji.jozo.beer/emoji/%F0%9F%9A%80" not in proc.stdout
+
+
+def test_prestamp_emoji_skips_safe_zones() -> None:
+    body = (
+        "プレーン本文に 🎉 を入れる。\n\n"
+        "`code 🎉 in inline code` は触らない。\n\n"
+        "```\nfenced 🎉 block も触らない\n```\n\n"
+        "[リンク](https://example.com/🎉/path) URL 内も触らない。\n\n"
+        '<img src="https://mojiemoji.jozo.beer/emoji/🎉" alt="🎉"> 既存 img も触らない。\n'
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "5")
+
+    assert proc.returncode == 0
+    # Only the prose 🎉 gets stamped — exactly one new <img> with alt=🎉.
+    # (The pre-existing <img alt="🎉"> in the body is preserved verbatim,
+    # so the total alt=🎉 count is 2; the new emoji stamps add exactly 1.)
+    new_emoji_stamps = re.findall(
+        r'<img src="https://mojiemoji\.jozo\.beer/emoji/%F0%9F%8E%89[^"]*" alt="🎉"',
+        proc.stdout,
+    )
+    assert len(new_emoji_stamps) == 1
+    assert "`code 🎉 in inline code`" in proc.stdout
+    assert "fenced 🎉 block も触らない" in proc.stdout
+    assert "https://example.com/🎉/path" in proc.stdout
+    assert '<img src="https://mojiemoji.jozo.beer/emoji/🎉" alt="🎉">' in proc.stdout
+
+
+def test_prestamp_caps_consecutive_emoji_runs_at_two() -> None:
+    # ✅❌👀 are all in the catalog. The first two get stamped, the
+    # third stays raw to avoid visual crowding. Whitespace breaks the
+    # run, so `✅ ❌ 👀` stamps all three.
+    proc = run_py(PRESTAMP, "三連続 ✅❌👀 と 空白付き ✅ ❌ 👀", "--seed", "6")
+
+    assert proc.returncode == 0
+    stamps = re.findall(r'alt="([^"]+)"', proc.stdout)
+    # Run 1 ("✅❌👀"): ✅+❌ stamped, 👀 raw.
+    # Run 2 ("✅ ❌ 👀"): all 3 stamped.
+    # Total stamped alts: ✅×2 + ❌×2 + 👀×1 = 5.
+    assert stamps.count("✅") == 2
+    assert stamps.count("❌") == 2
+    assert stamps.count("👀") == 1
+    # The third emoji of the first run survives as plain Unicode
+    # immediately after a stamped ❌. The exact char position is
+    # brittle to track, but the stamp count above already proves it.
+
+
+def test_prestamp_strips_vs16_when_matching_emoji_catalog() -> None:
+    # `⚠️` is U+26A0 U+FE0F (variation selector). emoji-catalog stores
+    # the base codepoint `⚠` only. prestamp strips VS16 before lookup.
+    body = "注意 ⚠️ してください。"
+    proc = run_py(PRESTAMP, body, "--seed", "7")
+
+    assert proc.returncode == 0
+    assert 'alt="⚠"' in proc.stdout
+    # VS16 must not appear in the output (it was stripped before lookup
+    # and the catalog key has no VS16).
+    assert "⚠️" not in proc.stdout
+
+
+def test_prestamp_is_idempotent_for_emoji_pass() -> None:
+    # Running prestamp twice must not double-stamp emoji that the first
+    # pass already converted into <img> tags.
+    once = run_py(PRESTAMP, "やった 🎉 完成！", "--seed", "8")
+    twice = run_py(PRESTAMP, once.stdout, "--seed", "8")
+
+    assert once.returncode == 0
+    assert twice.returncode == 0
+    assert once.stdout == twice.stdout
+
+
 def test_prestamp_skips_details_summary_but_stamps_details_body() -> None:
     body = "<details>\n<summary>修正方針</summary>\n本文は修正対象です。\n</details>\n"
     proc = run_py(PRESTAMP, body, "--seed", "2")
@@ -218,10 +307,13 @@ def test_trailing_decoration_skips_list() -> None:
     assert all("paragraph 2" not in line for line in paragraph_warnings), paragraph_warnings
 
 
-def test_trailing_decoration_warns_on_unicode_emoji_with_catalog_variant(tmp_path: Path) -> None:
-    # Create a tiny emoji-catalog.yml in a temp location, then point at it
-    # via a sibling script. Since coverage.py uses a fixed DEFAULT path, we
-    # use the actual repo catalog. Pick a known catalog Unicode emoji.
+def test_no_warning_on_catalog_hit_unicode_emoji(tmp_path: Path) -> None:
+    # prestamp.py now auto-substitutes catalog emoji during the emoji
+    # pass (#89). So a Unicode emoji surviving into the coverage check
+    # is intentional — either catalog-miss or inside a safe-zone —
+    # and the old "uses Unicode X but mojiemoji variant exists in
+    # catalog" warning is obsolete. Pin that the warning no longer
+    # fires for catalog-hit emoji.
     import yaml as _yaml
     catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml"
     if not catalog_path.exists():
@@ -236,7 +328,7 @@ def test_trailing_decoration_warns_on_unicode_emoji_with_catalog_variant(tmp_pat
     body = f"# 概要 {sample}\n\n本文ここに{sample}。\n"
     proc = run_py(COVERAGE, body, "--surface", "issue-body", "--mode", "warn")
 
-    assert "mojiemoji variant exists in catalog" in proc.stderr
+    assert "mojiemoji variant exists in catalog" not in proc.stderr
 
 
 @pytest.mark.skipif(

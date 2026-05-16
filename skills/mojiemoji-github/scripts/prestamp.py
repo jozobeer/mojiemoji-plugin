@@ -23,6 +23,20 @@ from lib.constants import DEFAULT_BASE_URL
 
 
 DEFAULT_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "prestamp-catalog.yml"
+DEFAULT_EMOJI_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "emoji-catalog.yml"
+
+# Variation selector U+FE0F. Catalog keys are bare base codepoints
+# (`⚠` not `⚠️`), per emoji-catalog.yml convention pinned by
+# test_vs16_emoji_keys_use_base_codepoint. Strip from inputs before
+# emoji lookup so `⚠️` (U+26A0 U+FE0F) still hits the `⚠` key.
+VS16 = "️"
+
+# Max consecutive emoji stamps in a single uninterrupted run. The 3rd
+# (and beyond) emoji in `🎉🎊🎁🎀` stays raw Unicode — visually crowded
+# stamps lose punch. Whitespace, other glyphs, or pre-existing `<img>`
+# spans break the run (see _Masker — they become opaque tokens before
+# the emoji regex sees them, so adjacency is naturally broken).
+MAX_EMOJI_RUN = 2
 
 # Single-char catalog entries need boundary assertions or they over-match.
 # Single kanji (e.g. 月 / 火 / 後): block when preceded by another Han char,
@@ -92,6 +106,31 @@ def build_term_re(terms: dict) -> Optional[re.Pattern[str]]:
     return re.compile("|".join(parts))
 
 
+def load_emoji_catalog(path: Path = DEFAULT_EMOJI_CATALOG_PATH) -> tuple[dict, dict]:
+    """Return (defaults, emojis) from the emoji-catalog YAML file.
+
+    Mirrors load_catalog() but reads the ``emojis:`` top-level key
+    instead of ``terms:``. Values are kept as-is so the renderer sees
+    the same per-variant schema (font / color / animation / outline /
+    speed) as text catalog variants.
+    """
+    with open(path, encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    defaults = data.get("defaults") or {}
+    emojis = {}
+    for key, variants in (data.get("emojis") or {}).items():
+        emojis[str(key)] = [dict(v) for v in (variants or [])]
+    return defaults, emojis
+
+
+def build_emoji_re(emojis: dict) -> Optional[re.Pattern[str]]:
+    """Compile an alternation regex matching any catalog emoji."""
+    keys = sorted(emojis.keys(), key=lambda k: (-len(k), k))
+    if not keys:
+        return None
+    return re.compile("|".join(re.escape(k) for k in keys))
+
+
 def _build_url(base_url: str, text: str, flavor: dict, defaults: dict) -> str:
     merged = {**defaults, **flavor}
     params = [
@@ -150,18 +189,13 @@ class _Masker:
         return text
 
 
-def _protect_and_replace(
-    text: str,
-    *,
-    term_re: Optional[re.Pattern[str]],
-    terms: dict,
-    defaults: dict,
-    base_url: str,
-    seed: str,
-    state: dict,
-) -> str:
-    masker = _Masker()
+def _mask_safe_zones(text: str, masker: _Masker) -> str:
+    """Mask code spans, HTML tags, link targets, and bare URLs.
 
+    Shared between the text-catalog pass and the emoji pass — both
+    must avoid touching identifiers, code, and existing `<img>` stamps
+    inserted by the previous pass.
+    """
     # Inline code spans: try 3 → 2 → 1 backtick lengths so multi-backtick
     # spans (e.g. ``foo`` or ```foo```) are masked before the 1-backtick
     # pattern would chop them mid-fence.
@@ -194,19 +228,83 @@ def _protect_and_replace(
         lambda m: masker.mask(m.group(0)),
         text,
     )
+    return text
+
+
+def _protect_and_replace(
+    text: str,
+    *,
+    term_re: Optional[re.Pattern[str]],
+    terms: dict,
+    defaults: dict,
+    base_url: str,
+    seed: str,
+    state: dict,
+) -> str:
+    masker = _Masker()
+    text = _mask_safe_zones(text, masker)
 
     if term_re is not None:
         def _replace_term(m: re.Match) -> str:
             term = m.group(0)
             variants = terms[term]
-            key = f"{seed}:{term}:{state['occurrence']}"
+            crc_input = f"{seed}:{term}:{state['occurrence']}"
             state["occurrence"] += 1
-            variant = variants[zlib.crc32(key.encode("utf-8")) % len(variants)]
+            variant = variants[zlib.crc32(crc_input.encode("utf-8")) % len(variants)]
             return _render_variant(base_url, term, variant, defaults)
 
         text = term_re.sub(_replace_term, text)
 
     return masker.restore(text)
+
+
+def _emoji_replace_line(
+    line: str,
+    *,
+    emoji_re: re.Pattern[str],
+    emojis: dict,
+    defaults: dict,
+    base_url: str,
+    seed: str,
+    state: dict,
+) -> str:
+    """Run the emoji pass on a single non-fenced line.
+
+    Masks the same safe zones as the text pass — including `<img>`
+    tags emitted by the text pass — and then replaces Unicode emoji
+    that are catalog hits with rendered stamps. Catalog misses stay
+    raw. A run of more than ``MAX_EMOJI_RUN`` adjacent catalog hits
+    leaves the overflow as raw Unicode to avoid visual crowding.
+    """
+    masker = _Masker()
+    line = _mask_safe_zones(line, masker)
+
+    # Strip VS16 only outside masked spans — masked tokens preserve
+    # their original VS16 sequences inside <img alt=...> / URL params.
+    # Doing this after masking keeps that intent.
+    line = line.replace(VS16, "")
+
+    run_state = {"last_end": -1, "run": 0}
+
+    def _replace_emoji(m: re.Match) -> str:
+        if m.start() == run_state["last_end"]:
+            run_state["run"] += 1
+        else:
+            run_state["run"] = 1
+        run_state["last_end"] = m.end()
+
+        if run_state["run"] > MAX_EMOJI_RUN:
+            return m.group(0)
+
+        emoji = m.group(0)
+        variants = emojis[emoji]
+        crc_input = f"{seed}:{emoji}:{state['occurrence']}"
+        state["occurrence"] += 1
+        variant = variants[zlib.crc32(crc_input.encode("utf-8")) % len(variants)]
+        return _render_variant(base_url, emoji, variant, defaults)
+
+    line = emoji_re.sub(_replace_emoji, line)
+    return masker.restore(line)
 
 
 _SUMMARY_OPEN_RE = re.compile(r"<summary\b[^>]*>")
@@ -258,23 +356,16 @@ def _transform_line(
     return "".join(out)
 
 
-def transform(
-    text: str,
-    *,
-    catalog_path: Optional[Path] = None,
-    base_url: str = DEFAULT_BASE_URL,
-    seed: str = "0",
-) -> str:
-    """Transform markdown text by replacing catalog hits with mojiemoji stamps."""
-    defaults, terms = load_catalog(catalog_path or DEFAULT_CATALOG_PATH)
-    term_re = build_term_re(terms)
-    base_url = base_url.rstrip("/")
+def _walk_lines_outside_fences(text: str):
+    """Yield (line, is_outside_fence) tuples while tracking CommonMark fences.
 
+    Centralizes the fence-state machine so both passes (text + emoji)
+    follow the same definition of "in code block" — the fence marker
+    line itself is reported as inside (it's structural code-block
+    syntax, not prose).
+    """
     in_fence = False
     fence_marker: Optional[str] = None
-    state = {"occurrence": 0, "in_summary": False}
-
-    out = []
     for line in text.splitlines(keepends=True):
         m = FENCE_RE.match(line)
         if m:
@@ -286,16 +377,80 @@ def transform(
             else:
                 in_fence = True
                 fence_marker = marker
-            out.append(line)
+            yield line, False
         elif in_fence:
-            out.append(line)
+            yield line, False
         else:
-            out.append(_transform_line(
+            yield line, True
+
+
+def transform(
+    text: str,
+    *,
+    catalog_path: Optional[Path] = None,
+    emoji_catalog_path: Optional[Path] = None,
+    base_url: str = DEFAULT_BASE_URL,
+    seed: str = "0",
+) -> str:
+    """Transform markdown text by replacing catalog hits with mojiemoji stamps.
+
+    Runs two passes:
+
+    1. **Text catalog pass** — replaces ``prestamp-catalog.yml`` term
+       hits with rendered stamps. Existing safe-zones (code, links,
+       URLs, `<img>` tags) are protected.
+    2. **Emoji catalog pass** — replaces Unicode emoji that appear in
+       ``emoji-catalog.yml`` with rendered stamps. The pass re-masks
+       all safe zones including the `<img>` tags emitted by pass 1,
+       and caps consecutive emoji at ``MAX_EMOJI_RUN`` to avoid the
+       visually crowded ``🎉🎊🎁🎀`` case.
+
+    Pass 2 is skipped silently when the emoji catalog is empty or
+    missing — callers may pass ``emoji_catalog_path=None`` (default
+    location) or set it to an explicit override path.
+    """
+    defaults, terms = load_catalog(catalog_path or DEFAULT_CATALOG_PATH)
+    term_re = build_term_re(terms)
+    base_url = base_url.rstrip("/")
+
+    emoji_defaults: dict = {}
+    emojis: dict = {}
+    emoji_re: Optional[re.Pattern[str]] = None
+    emoji_path = emoji_catalog_path or DEFAULT_EMOJI_CATALOG_PATH
+    if emoji_path.exists():
+        emoji_defaults, emojis = load_emoji_catalog(emoji_path)
+        emoji_re = build_emoji_re(emojis)
+
+    state = {"occurrence": 0, "in_summary": False}
+
+    # Pass 1 — text catalog.
+    pass1 = []
+    for line, is_prose in _walk_lines_outside_fences(text):
+        if is_prose:
+            pass1.append(_transform_line(
                 line,
                 term_re=term_re, terms=terms, defaults=defaults,
                 base_url=base_url, seed=seed, state=state,
             ))
-    return "".join(out)
+        else:
+            pass1.append(line)
+
+    if emoji_re is None:
+        return "".join(pass1)
+
+    # Pass 2 — emoji catalog. Walks the pass-1 output with the same
+    # fence semantics so emoji inside ```fenced code``` is left alone.
+    pass2 = []
+    for line, is_prose in _walk_lines_outside_fences("".join(pass1)):
+        if is_prose:
+            pass2.append(_emoji_replace_line(
+                line,
+                emoji_re=emoji_re, emojis=emojis, defaults=emoji_defaults,
+                base_url=base_url, seed=seed, state=state,
+            ))
+        else:
+            pass2.append(line)
+    return "".join(pass2)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -311,12 +466,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         type=Path,
         help="Override the catalog path (default: <skill>/data/prestamp-catalog.yml)",
     )
+    parser.add_argument(
+        "--emoji-catalog",
+        default=None,
+        type=Path,
+        help="Override the emoji catalog path (default: <skill>/data/emoji-catalog.yml)",
+    )
     args = parser.parse_args(argv)
 
     text = sys.stdin.read()
     output = transform(
         text,
         catalog_path=args.catalog,
+        emoji_catalog_path=args.emoji_catalog,
         base_url=args.base_url,
         seed=args.seed,
     )
