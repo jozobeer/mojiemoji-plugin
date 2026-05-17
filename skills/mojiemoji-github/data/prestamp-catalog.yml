@@ -23,7 +23,7 @@
 #
 # Canonical font / animation / color values: see
 #   skills/mojiemoji-github/references/parameters.md
-# Hard validation happens at submission time via hooks/mojiemoji-japanese-gate.py.
+# Hard validation happens at submission time via hooks/mojiemoji_japanese_gate.py.
 
 defaults:
   background: transparent

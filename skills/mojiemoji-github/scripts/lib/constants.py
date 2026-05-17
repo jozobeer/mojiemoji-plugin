@@ -2,13 +2,13 @@
 
 Previously duplicated across `bump_catalog`, `cache_record`,
 `cache_stats`, `generate_catalog`, `mojiemoji_markdown`, and
-`prestamp`. The hook (`hooks/mojiemoji-japanese-gate.py`) still keeps
+`prestamp`. The hook (`hooks/mojiemoji_japanese_gate.py`) still keeps
 its own copy because it is loaded outside the skills directory and
 cannot import from this package — keep that copy in sync until the
 hook decomposition (issue #54 Step 4) lands.
 
 Canonical font / animation values mirror what
-`hooks/mojiemoji-japanese-gate.py` validates against and what
+`hooks/mojiemoji_japanese_gate.py` validates against and what
 `skills/mojiemoji-github/references/parameters.md` documents. Drift is
 caught by `scripts/verify-lists-vs-docs.sh`.
 """
@@ -54,7 +54,7 @@ INLINE_PROBLEMATIC_ANIMATIONS = frozenset({"bakusan", "chuuou_zoom"})
 
 # Tailwind 600+ palette values that render black-on-dark in GitHub's
 # dark theme. Generators must not pick from this set; the hook
-# (`hooks/mojiemoji-japanese-gate.py:222`) rejects URLs containing
+# (`hooks/mojiemoji_japanese_gate.py:222`) rejects URLs containing
 # them. Keep this list in lockstep with the hook's `FORBIDDEN_COLORS`
 # until the hook can import from this package. `scripts/verify-
 # canonical-lists.sh` cross-checks for drift.

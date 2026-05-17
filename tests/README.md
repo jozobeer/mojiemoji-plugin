@@ -1,6 +1,6 @@
 # tests/
 
-`hooks/mojiemoji-japanese-gate.py` の pytest スイート。
+`hooks/mojiemoji_japanese_gate.py` の pytest スイート。
 
 ## 走らせ方
 

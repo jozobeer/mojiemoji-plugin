@@ -17,7 +17,7 @@ set -euo pipefail
 SERVICE_URL="${MOJIEMOJI_BASE_URL:-https://mojiemoji.jozo.beer/}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="${CLAUDE_PLUGIN_ROOT:-$SCRIPT_DIR/../../..}"
-HOOK_PATH="${HOOK_PATH:-$REPO_ROOT/hooks/mojiemoji-japanese-gate.py}"
+HOOK_PATH="${HOOK_PATH:-$REPO_ROOT/hooks/mojiemoji_japanese_gate.py}"
 EXTRACT="${EXTRACT_HOOK_SET:-$REPO_ROOT/scripts/extract_hook_set.py}"
 
 if [[ ! -f "$HOOK_PATH" ]]; then

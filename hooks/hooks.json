@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/mojiemoji-japanese-gate.py\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/mojiemoji_japanese_gate.py\""
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/mojiemoji-md-edit-warn.py\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/mojiemoji_md_edit_warn.py\""
           }
         ]
       }

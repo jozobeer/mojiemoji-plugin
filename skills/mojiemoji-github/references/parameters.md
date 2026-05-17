@@ -136,7 +136,7 @@ disco, psycho, kage_kaiten, kage_bokashi, kage_neon
 または `slow` の時のみ可読** で、
 `normal` / `fast` では回転が速すぎて読めなくなる — 現行サービスでは
 `kaiten`(回転) と `kage_kaiten`(影付き回転) の 2 つが該当する正準名。
-両方とも hook (`mojiemoji-japanese-gate.py`) が `speed=step|slow` 以外
+両方とも hook (`mojiemoji_japanese_gate.py`) が `speed=step|slow` 以外
 (省略含む、デフォルトはサービス側で fast 相当) を拒否する。helper
 script (`scripts/mojiemoji_markdown.py`) は `--animation kaiten` /
 `--animation kage_kaiten` を受け取って `--speed` 未指定なら自動で

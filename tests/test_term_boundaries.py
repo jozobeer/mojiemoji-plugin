@@ -1,7 +1,7 @@
 """Tests for skills/mojiemoji-github/scripts/lib/term_boundaries.py.
 
 The boundary helpers are consumed by both `prestamp.py` (mechanical
-replacement) and `hooks/mojiemoji-japanese-gate.py` (catalog-leftover
+replacement) and `hooks/mojiemoji_japanese_gate.py` (catalog-leftover
 detection). Drift between the two would mean: a body the hook blocks
 as "uncovered" cannot be auto-fixed by prestamp, leaving the author
 no path forward. These tests pin that the two paths agree on what

@@ -16,7 +16,7 @@ This map is the SSOT for "catalog must not ship these colors":
     fails CI when a catalog `color:` / `outline:` is re-introduced
     from this set.
 
-The hook (`hooks/mojiemoji-japanese-gate.py`) maintains a separate,
+The hook (`hooks/mojiemoji_japanese_gate.py`) maintains a separate,
 smaller `FORBIDDEN_COLORS` set in `lib/constants.py` covering only
 the truly-black + already-rejected-on-URL subset. The cleanup map
 here is a superset — it includes Tailwind 500-band colors that

@@ -7,7 +7,7 @@ of text without false-matching inside larger identifiers (``POST``
 contains ``OS``, ``ASCII`` contains ``CI``).
 
 Both `skills/mojiemoji-github/scripts/prestamp.py` and
-`hooks/mojiemoji-japanese-gate.py` consume these primitives so the two
+`hooks/mojiemoji_japanese_gate.py` consume these primitives so the two
 agree on what counts as a standalone catalog hit. Drift between them
 manifests as "the hook blocked a body, but prestamp could not auto-
 replace it" or vice-versa — the body author then has no path forward.

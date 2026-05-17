@@ -24,7 +24,7 @@ body:
     attributes:
       label: 既存機能で代用できるか確認しましたか
       description: |
-        `mojiemoji-github` skill / `mojiemoji-selector` subagent / `mojiemoji-japanese-gate.py` hook / helper script (`mojiemoji_markdown.py`) のどれかで実現できないか確認した結果を書いてください。
+        `mojiemoji-github` skill / `mojiemoji-selector` subagent / `mojiemoji_japanese_gate.py` hook / helper script (`mojiemoji_markdown.py`) のどれかで実現できないか確認した結果を書いてください。
       placeholder: |
         例: SKILL.md § "LGTM 画像" を読んだが、approve 判定の trigger は書かれていない、など
     validations:
