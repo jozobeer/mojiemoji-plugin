@@ -756,13 +756,20 @@ class TestSchemaVersionDrift:
 
     @staticmethod
     def _import_hook():
-        import importlib.util
-        from conftest import HOOK
-        spec = importlib.util.spec_from_file_location("gate_hook", HOOK)
-        assert spec is not None and spec.loader is not None
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
+        """Load `hooks.gate.validators.schema_version` so the tests can
+        monkeypatch HOST_SKILL_PATH / _canonical_version_cache /
+        _harness_skill_paths and exercise `validate_schema_version`
+        directly. The validator was decomposed out of the hook entry
+        point in #101 — splice `hooks/` onto sys.path and import the
+        submodule rather than executing the entry-point file.
+        """
+        import importlib
+        import sys
+        from conftest import REPO_ROOT
+        hooks_dir = str(REPO_ROOT / "hooks")
+        if hooks_dir not in sys.path:
+            sys.path.insert(0, hooks_dir)
+        return importlib.import_module("gate.validators.schema_version")
 
     @staticmethod
     def _write_skill(path, version):
