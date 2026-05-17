@@ -28,7 +28,7 @@
 #
 # Canonical font / animation / color values: see
 #   skills/mojiemoji-github/references/parameters.md
-# Submission-time validation: hooks/mojiemoji-japanese-gate.py
+# Submission-time validation: hooks/mojiemoji_japanese_gate.py
 
 defaults:
   background: transparent

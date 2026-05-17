@@ -1,5 +1,5 @@
 """Validate skills/mojiemoji-github/data/emoji-catalog.yml against the canonical
-parameter sets enforced by hooks/mojiemoji-japanese-gate.py.
+parameter sets enforced by hooks/mojiemoji_japanese_gate.py.
 
 The catalog is consumed by SKILL.md (trailing-decoration 2-step rule) and may
 later be consumed by a render helper / prestamp integration. Either way every
@@ -44,7 +44,7 @@ CANONICAL_FONTS = frozenset({
     "hachimaru", "chikara", "tamanegi", "toge", "rampart", "maru", "gothic",
     "mincho", "pixel",
 })
-# Mirrors FORBIDDEN_COLORS in hooks/mojiemoji-japanese-gate.py. Tailwind 600+
+# Mirrors FORBIDDEN_COLORS in hooks/mojiemoji_japanese_gate.py. Tailwind 600+
 # fills (and near-black greys) go invisible on dark mode.
 FORBIDDEN_COLORS = frozenset({
     "dc2626", "b91c1c", "991b1b",

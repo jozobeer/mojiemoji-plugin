@@ -21,7 +21,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$REPO_ROOT/hooks/mojiemoji-japanese-gate.py"
+HOOK="$REPO_ROOT/hooks/mojiemoji_japanese_gate.py"
 PARAMS="$REPO_ROOT/skills/mojiemoji-github/references/parameters.md"
 EXTRACT="$REPO_ROOT/scripts/extract_hook_set.py"
 GENERATOR="$REPO_ROOT/skills/mojiemoji-github/scripts/generate_catalog.py"

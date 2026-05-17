@@ -1,4 +1,4 @@
-"""Tests for hooks/mojiemoji-md-edit-warn.py.
+"""Tests for hooks/mojiemoji_md_edit_warn.py.
 
 The PostToolUse hook never blocks — it only writes a unified diff to
 stderr when a documentation `*.md` would change under prestamp. Exit
@@ -22,7 +22,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-HOOK = REPO_ROOT / "hooks" / "mojiemoji-md-edit-warn.py"
+HOOK = REPO_ROOT / "hooks" / "mojiemoji_md_edit_warn.py"
 
 
 def _run(payload: dict, cwd: Path) -> subprocess.CompletedProcess[str]:

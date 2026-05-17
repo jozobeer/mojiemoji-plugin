@@ -1,4 +1,4 @@
-"""pytest helpers for the mojiemoji-japanese-gate hook."""
+"""pytest helpers for the mojiemoji_japanese_gate hook."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-HOOK = REPO_ROOT / "hooks" / "mojiemoji-japanese-gate.py"
+HOOK = REPO_ROOT / "hooks" / "mojiemoji_japanese_gate.py"
 
 
 @pytest.fixture(autouse=True)

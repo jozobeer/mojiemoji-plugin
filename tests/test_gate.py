@@ -1,4 +1,4 @@
-"""Tests for hooks/mojiemoji-japanese-gate.py.
+"""Tests for hooks/mojiemoji_japanese_gate.py.
 
 Exit code contract:
 - 0 → allow (not our target, no Japanese, properly decorated, or bypassed)
