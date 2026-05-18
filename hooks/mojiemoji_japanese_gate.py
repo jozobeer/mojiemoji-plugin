@@ -7,14 +7,15 @@ Fires on two posting paths:
      - `gh api .../reviews|comments|issues|releases ...` (raw REST POST,
        used by skills like cross-repo-review that batch-publish reviews).
   2. MCP GitHub tools whose `tool_input` carries a Japanese `body`
-     field. The MCP matcher uses both server-alias signals (anything
+     field, including nested review `comments[].body` fields. The MCP
+     matcher uses both server-alias signals (anything
      with `github` in the namespace) AND known GitHub-specific tool
      name patterns (`*pull_request*`, `*issue_write`, `add_issue_comment`,
      `*release*`, etc.) so installations that aliased the GitHub MCP
      server to a non-`github` name are still covered. Title /
      commit_message / file content / description are intentionally NOT
-     inspected — only the `body` posting-prose field, matching the
-     SKILL.md decoration policy.
+     inspected — only the `body` posting-prose field is inspected, and
+     each body value must be decorated on its own.
 
 And EITHER:
   1. inspected text has zero `mojiemoji.jozo.beer` URLs, OR
@@ -82,6 +83,27 @@ BODY_FILE_RE = re.compile(
     r"(?:--body-file|--input)(?:\s+|=)(['\"]?)([^'\"\s|;&)]+)\1"
 )
 F_BODY_RE = re.compile(r"-F\s+body=@(['\"]?)([^'\"\s|;&)]+)\1")
+# Non-body flag/value pairs to strip from the command before treating
+# it as an inspect surface. Title / label / reviewer / assignee /
+# milestone / head / base values are metadata, not posting prose — they
+# may legitimately carry Japanese (`--title "日本語…"`, `--label "バグ"`)
+# without needing mojiemoji decoration, mirroring the MCP path's
+# `BODY_FIELDS = {"body"}` policy. Without this strip, the per-surface
+# validation rolled out in this skill change would block valid posts
+# like `gh pr create --title "<JP>" --body-file decorated.md`.
+#
+# Short forms (`-t`, `-l`, `-r`, `-a`, `-m`, `-H`, `-B`) follow gh CLI
+# defaults. `-H` overlaps with `gh api -H "HTTP-Header: ..."`, but HTTP
+# headers are not body prose either, so collapsing both into the same
+# strip rule is safe. Value forms covered: `--flag "v"`, `--flag 'v'`,
+# `--flag=v`, `--flag v`. Lookbehind on the short-form alternative
+# prevents `--flag-with-t` from being mis-stripped as `-t`.
+NON_BODY_FLAGS_RE = re.compile(
+    r"(?:--(?:title|label|reviewer|assignee|milestone|head|base)|"
+    r"(?<!\S)-[tlramHB])"
+    r"(?:\s+|=)"
+    r"(?:\"[^\"]*\"|'[^']*'|[^\s\"']+)"
+)
 # Script files referenced via interpreter invocation. The 2026-05-12
 # triage-review incident bypassed file-body inspection by building the JSON
 # body via `python3 approve-1756.py` and posting via `gh api --input` in the
@@ -259,9 +281,31 @@ def expand_body_path(raw, cwd):
     return path
 
 
+def _body_texts_from_source(text):
+    """Return inspectable body pieces from raw markdown or JSON payload text.
+
+    `gh api --input file.json` review payloads can carry a top-level
+    `body` plus nested `comments[].body` fields. Treat those as
+    separate surfaces so a decorated summary cannot mask undecorated
+    inline findings.
+    """
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        return [text]
+    pieces = collect_body_text(parsed, BODY_FIELDS)
+    return pieces or [text]
+
+
 def read_body_files(command, cwd):
-    """Return (concatenated_text, missing_paths) for every body file
+    """Return (body_pieces, missing_paths) for every body file
     referenced by the command.
+
+    `body_pieces` is `list[str]` — one entry per inspectable surface —
+    so callers can extend a pieces list directly. Previously this
+    helper joined pieces into a single string, which made
+    `pieces.extend(file_bodies)` split Japanese into per-character
+    surfaces and falsely block decorated review payloads.
 
     `-` (stdin) and missing files are tracked separately so callers
     can decide whether to react. Most callers should ignore
@@ -281,11 +325,11 @@ def read_body_files(command, cwd):
             path = expand_body_path(raw, cwd)
             try:
                 with open(path, "r", encoding="utf-8", errors="replace") as fh:
-                    pieces.append(fh.read())
+                    pieces.extend(_body_texts_from_source(fh.read()))
             except (OSError, ValueError):
                 missing.append(raw)
                 continue
-    return "\n".join(pieces), missing
+    return pieces, missing
 
 
 def read_script_files(command, cwd):
@@ -327,7 +371,7 @@ def collect_body_text(obj, target_keys):
 
 
 def _route_bash(data: dict):
-    """Return `inspect_text` for a Bash tool call, or `None` to skip the gate.
+    """Return inspectable body pieces for a Bash tool call, or `None` to skip the gate.
 
     Bypass marker is scoped to the command line, not the merged body/
     script text — the original idiom (matching the git pre-commit
@@ -339,10 +383,12 @@ def _route_bash(data: dict):
     bypass via benign mention. Keep the bypass check on `command` only.
 
     File-routed posts (`--body-file PATH` / `--input PATH` /
-    `-F body=@PATH`) and interpreter-invoked scripts (`python3 X.py`
-    etc.) are merged into `inspect_text` so dynamically-built bodies
-    cannot bypass the regex inspection. See `read_body_files` /
-    `read_script_files` for the file-side cwd resolution.
+    `-F body=@PATH`) are inspected as individual body surfaces when
+    they contain JSON review payloads. Interpreter-invoked scripts
+    (`python3 X.py` etc.) are kept as one source-text surface so
+    dynamically-built bodies cannot bypass the regex inspection. See
+    `read_body_files` / `read_script_files` for the file-side cwd
+    resolution.
     """
     command = (data.get("tool_input", {}) or {}).get("command", "")
     if not command:
@@ -352,26 +398,29 @@ def _route_bash(data: dict):
     if not (GH_HIGH_RE.search(command) or GH_API_RE.search(command)):
         return None
     cwd = data.get("cwd", "")
-    file_body, _ = read_body_files(command, cwd)
+    file_bodies, _ = read_body_files(command, cwd)
     script_body = read_script_files(command, cwd)
-    extras = "\n".join(p for p in (file_body, script_body) if p)
-    return command + ("\n" + extras if extras else "")
+    # Strip non-body flag values (title / label / reviewer / assignee /
+    # milestone / head / base) from the command before treating it as
+    # an inspect surface. Without this, Japanese in `--title` etc.
+    # would be required to carry mojiemoji decoration — contradicting
+    # the documented policy that titles / labels are out of scope.
+    inspected_command = NON_BODY_FLAGS_RE.sub("", command)
+    pieces = [inspected_command]
+    pieces.extend(file_bodies)
+    if script_body:
+        pieces.append(script_body)
+    return pieces
 
 
 def _route_mcp(tool_input: dict):
-    """Return `inspect_text` for an MCP GitHub tool call, or `None` to skip.
+    """Return inspectable body pieces for an MCP GitHub tool call, or `None` to skip.
 
     Multiple body pieces (e.g., `pull_request_review_write` with a
     top-level `body` summary plus `comments[].body` inline findings)
-    are joined into a single `inspect_text` *on purpose*: the SKILL.md
-    surface policy is "summary body decorated, inline findings
-    un-stamped". A per-piece zero-stamp check would force stamps on
-    each finding, contradicting that policy. Aggregating means a
-    stamped summary covers un-stamped findings (correct), and a fully
-    un-stamped submission still trips the aggregate zero-stamp check
-    (correct). Each URL is still validated individually for required
-    params / canonical values, so the aggregation only relaxes the
-    zero-stamp coarse gate, not the per-URL fine gates.
+    remain separate on purpose: review summaries and inline comments
+    are both GitHub prose surfaces, and each Japanese body value must
+    carry its own mojiemoji decoration.
 
     Bypass marker check happens AFTER body assembly because MCP path
     has no shell prefix; the only place a caller can legitimately opt
@@ -382,14 +431,13 @@ def _route_mcp(tool_input: dict):
     pieces = collect_body_text(tool_input, BODY_FIELDS)
     if not pieces:
         return None
-    inspect_text = "\n".join(pieces)
-    if _has_bypass(inspect_text):
+    if _has_bypass("\n".join(pieces)):
         return None
-    return inspect_text
+    return pieces
 
 
 def extract_inspect_text(data: dict):
-    """Dispatch to Bash / MCP routing. Returns inspect_text or `None`.
+    """Dispatch to Bash / MCP routing. Returns body pieces or `None`.
 
     Read-only MCP tools (get_*, list_*, search_*) match `MCP_GH_RE`
     too but carry no body field — `_route_mcp` returns `None` for
@@ -920,23 +968,25 @@ def main() -> int:
     except Exception:
         return 0
 
-    inspect_text = extract_inspect_text(data)
-    if inspect_text is None:
+    inspect_texts = extract_inspect_text(data)
+    if inspect_texts is None:
         return 0
-    if not JP_RE.search(inspect_text):
+    jp_texts = [text for text in inspect_texts if JP_RE.search(text)]
+    if not jp_texts:
         return 0
 
-    urls = MOJI_URL_RE.findall(inspect_text)
-    for stage in VALIDATION_PIPELINE:
-        rc = stage(urls)
+    for inspect_text in jp_texts:
+        urls = MOJI_URL_RE.findall(inspect_text)
+        for stage in VALIDATION_PIPELINE:
+            rc = stage(urls)
+            if rc != 0:
+                return rc
+
+        rc = validate_catalog_leftovers(inspect_text)
         if rc != 0:
             return rc
 
-    rc = validate_catalog_leftovers(inspect_text)
-    if rc != 0:
-        return rc
-
-    rc = validate_schema_version(inspect_text)
+    rc = validate_schema_version("\n".join(jp_texts))
     if rc != 0:
         return rc
     return 0

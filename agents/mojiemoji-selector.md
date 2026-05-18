@@ -42,7 +42,7 @@ skill ディレクトリは `$SKILL_DIR` から解決する(dispatcher が渡す
 dispatcher は以下のようなブロックを送ってくる:
 
 ```
-SURFACE: issue-body | pr-body | review-comment | reply | release-note
+SURFACE: issue-body | pr-body | review-summary | review-inline-comment | reply | release-note
 MODE:    block | inline | mixed
 TONE:    calm | neutral | loud
 PHRASES:
@@ -53,8 +53,12 @@ CONSTRAINTS (optional):
 SKILL_DIR: <絶対パス>
 ```
 
+Review <img src="https://mojiemoji.jozo.beer/emoji/API?font=mincho&amp;color=10b981&amp;animation=patapata&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="API" height="24" align="absmiddle"> payload の `body` は `SURFACE=review-summary`、各 `comments[].body` は
+`SURFACE=review-inline-comment` として個別に渡す。file path / line / symbol /
+suggestion block は候補 phrase に含めず、散文<img src="https://mojiemoji.jozo.beer/emoji/%E9%83%A8%E5%88%86?font=hachimaru&amp;color=ef4444&amp;animation=bane&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="部分" height="24" align="absmiddle">だけを stamp <img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=akzk&amp;color=facc15&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="対象" height="24" align="absmiddle">にする。
+
 いずれかのフィールドが欠けている場合は<img src="https://mojiemoji.jozo.beer/emoji/%E5%A6%A5%E5%BD%93?font=hachimaru&amp;color=f472b6&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="妥当" height="24" align="absmiddle">なデフォルト
-(SURFACE=review-comment、MODE=mixed、TONE=neutral)を仮定し、
+(SURFACE=review-inline-comment、MODE=mixed、TONE=neutral)を仮定し、
 <img src="https://mojiemoji.jozo.beer/emoji/%E5%87%BA%E5%8A%9B?font=tamanegi&amp;color=22c55e&amp;animation=kage_bokashi&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="出力" height="24" align="absmiddle">フッターにその仮定を記載する。
 
 ## <img src="https://mojiemoji.jozo.beer/emoji/%E6%89%8B%E9%A0%86?font=dela&amp;color=a855f7&amp;animation=mochimochi&amp;background=transparent&amp;outline=f7a855&amp;outline_width=2" alt="手順" height="24" align="absmiddle">
@@ -145,7 +149,7 @@ SKILL_DIR: <絶対パス>
 <img src="https://mojiemoji.jozo.beer/emoji/%E4%BB%BB%E6%84%8F?font=gothic-bold&amp;color=c084fc&amp;animation=tatemoya&amp;background=transparent&amp;outline=fcc084&amp;outline_width=2" alt="任意" height="24" align="absmiddle">のフッター形式、1 行 1 メモ:
 
 ```
-- assumption: SURFACE defaulted to review-comment
+- assumption: SURFACE defaulted to review-inline-comment
 - constraint-applied: avoided red per dispatcher
 ```
 

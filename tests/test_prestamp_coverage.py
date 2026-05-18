@@ -63,6 +63,24 @@ puts '修正'
     assert "puts '修正'" in proc.stdout
 
 
+def test_prestamp_decorates_inline_comment_prose_but_preserves_suggestions() -> None:
+    body = """このコメントは修正方針を確認します。
+
+```suggestion
+修正済みです
+```
+
+`確認` はコード引用なので触らない。
+"""
+    proc = run_py(PRESTAMP, body, "--seed", "13")
+
+    assert proc.returncode == 0
+    assert proc.stdout.count('alt="修正"') == 1
+    assert proc.stdout.count('alt="確認"') == 1
+    assert "修正済みです" in proc.stdout
+    assert "`確認`" in proc.stdout
+
+
 def test_prestamp_uses_longest_match() -> None:
     # 修正版 is not its own catalog entry; the longest match is 修正, leaving
     # 版 as plain text. Both 修正 occurrences in the input get stamped.

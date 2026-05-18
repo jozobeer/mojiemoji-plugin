@@ -23,7 +23,7 @@ python3 -m pytest
   - `TestAnimationConflicts` — disco × outline / kaiten + 速度
   - `TestOutlineValidity` — outline の値検証
   - `TestFileInspection` — `--body-file` / `--input` / インタプリタ起動スクリプト
-  - `TestMcpPath` — MCP 経路 (aliased server も含む)、read-only ツール、review + 内側 comments の集約
+  - `TestMcpPath` — MCP 経路 (aliased server も含む)、read-only ツール、review body / `comments[].body` の個別検査
 
 ## 設計メモ
 

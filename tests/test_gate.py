@@ -554,7 +554,7 @@ class TestLgtmStamp:
 
 
 class TestMcpPath:
-    """MCP GitHub tools are gated identically (body-field only)."""
+    """MCP GitHub tools are gated identically for each body field."""
 
     # Names that Claude Code's matcher (`hooks/hooks.json`) actually routes
     # to the hook today: the pattern is `Bash|mcp__.*github.*`, so the tool
@@ -608,11 +608,11 @@ class TestMcpPath:
         )
         assert result.returncode == 0
 
-    def test_review_with_comments_aggregates(self, run_hook):
+    def test_review_comment_without_own_stamp_blocks(self, run_hook):
         # `pull_request_review_write` carries a top-level body plus
-        # inline `comments[].body`. The gate aggregates them so a
-        # stamped summary covers un-stamped findings (matching the
-        # SKILL.md "summary decorated, findings un-stamped" policy).
+        # inline `comments[].body`. Each body field is its own GitHub
+        # prose surface, so a stamped summary must not cover un-stamped
+        # inline findings.
         result = run_hook(
             {
                 "tool_name": "mcp__github__github_pull_request_review_write",
@@ -624,6 +624,103 @@ class TestMcpPath:
                     ],
                 },
             }
+        )
+        assert result.returncode == 2, "comments[].body must be decorated independently"
+
+    def test_review_with_decorated_comments_passes(self, run_hook):
+        result = run_hook(
+            {
+                "tool_name": "mcp__github__github_pull_request_review_write",
+                "tool_input": {
+                    "body": f"{JP_PARAGRAPH} {stamp_img()}",
+                    "comments": [
+                        {"path": "x.py", "line": 1, "body": f"ここは型エラーです {stamp_img(text='型')}"},
+                        {"path": "y.py", "line": 2, "body": f"余分な引数があります {stamp_img(text='余分')}"},
+                    ],
+                },
+            }
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_gh_api_input_review_comments_require_own_stamp(self, run_hook, tmp_path):
+        payload = tmp_path / "review.json"
+        payload.write_text(
+            json.dumps(
+                {
+                    "body": f"{JP_PARAGRAPH} {stamp_img()}",
+                    "comments": [
+                        {"path": "x.py", "line": 1, "body": "ここは型エラーです"},
+                    ],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f"gh api repos/o/r/pulls/1/reviews --input {payload}"
+                },
+            },
+            cwd=tmp_path,
+        )
+        assert result.returncode == 2
+
+    def test_gh_api_input_review_with_decorated_comments_passes(self, run_hook, tmp_path):
+        # Regression for #112 review feedback: `read_body_files` previously
+        # joined extracted JSON body pieces into a single string and
+        # `_route_bash` extended a list with it, splitting Japanese into
+        # per-character surfaces. Each char then had 0 mojiemoji URLs and
+        # the gate falsely blocked properly-decorated review payloads.
+        payload = tmp_path / "review.json"
+        payload.write_text(
+            json.dumps(
+                {
+                    "body": f"{JP_PARAGRAPH} {stamp_img()}",
+                    "comments": [
+                        {"path": "x.py", "line": 1, "body": f"型エラーです {stamp_img(text='型')}"},
+                        {"path": "y.py", "line": 2, "body": f"余分な引数です {stamp_img(text='余分')}"},
+                    ],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f"gh api repos/o/r/pulls/1/reviews --input {payload}"
+                },
+            },
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_japanese_title_with_decorated_body_file_passes(self, run_hook, tmp_path):
+        # Regression for #112 review feedback: Japanese in non-body flag
+        # values (e.g., `--title "日本語…"`) should not trip the gate.
+        # Only body-class surfaces are inspected per BODY_FIELDS policy;
+        # title / label / reviewer / etc. are explicitly out of scope.
+        body_md = tmp_path / "body.md"
+        body_md.write_text(f"{JP_PARAGRAPH} {stamp_img()}")
+        cmd = f'gh pr create --title "日本語タイトル" --body-file {body_md}'
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": cmd}},
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_japanese_label_with_decorated_body_passes(self, run_hook, tmp_path):
+        # `--label "バグ"` is metadata, not posting prose. Should not
+        # require mojiemoji decoration even when no body file is used.
+        body_md = tmp_path / "body.md"
+        body_md.write_text(f"{JP_PARAGRAPH} {stamp_img()}")
+        cmd = f'gh pr create --label "バグ" --label "機能追加" --body-file {body_md}'
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": cmd}},
+            cwd=tmp_path,
         )
         assert result.returncode == 0, result.stderr
 
