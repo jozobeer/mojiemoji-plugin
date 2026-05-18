@@ -147,3 +147,54 @@ def test_helper_constants_match_prestamp_constants() -> None:
     assert prestamp.ASCII_KEY_RE.pattern == term_boundaries.ASCII_KEY_RE.pattern
     assert prestamp.ASCII_LEFT_GUARD == term_boundaries.ASCII_LEFT_GUARD
     assert prestamp.ASCII_RIGHT_GUARD == term_boundaries.ASCII_RIGHT_GUARD
+
+
+@pytest.mark.parametrize(
+    "char,expected",
+    [
+        # CJK Extension A boundary
+        ("㐀", True),
+        ("䶿", True),
+        # CJK Unified Ideographs
+        ("一", True),
+        ("鿿", True),
+        # CJK Compatibility Ideographs (the U+F900 `豈`, NOT the U+8C48 one)
+        ("豈", True),
+        ("﫿", True),
+        # Hangul — must NOT match. `한` is U+D55C, well inside the over-
+        # extended U+8C48-U+FAFF range the pre-#118 code accidentally
+        # covered. If this assertion ever fires, the `豈` in
+        # boundaries.py has reverted to U+8C48.
+        ("한", False),
+        ("가", False),  # `가` — first Hangul syllable
+        ("힣", False),  # `힣` — last Hangul syllable
+        # Yi Syllables
+        ("ꀀ", False),
+        # Private Use Area boundary just below U+F900
+        ("", False),
+        # Hiragana / Katakana are NOT in HAN_RANGE — they have their own.
+        ("あ", False),  # `あ`
+        ("ア", False),  # `ア`
+    ],
+)
+def test_han_range_excludes_hangul_yi_pua(char: str, expected: bool) -> None:
+    """Pin HAN_RANGE to CJK only — Hangul / Yi / PUA must never match (#118).
+
+    Without this guard, ``SINGLE_HAN_LEFT_GUARD`` would fire before
+    Korean text and ``JAPANESE_RUN_RE`` would flag Hangul runs as
+    catalog-promotion candidates — both incorrect for a Japanese
+    Markdown skill.
+    """
+    from prestamp.boundaries import HAN_CHAR_RE
+
+    assert bool(HAN_CHAR_RE.match(char)) is expected
+
+
+def test_japanese_run_re_does_not_match_hangul() -> None:
+    """End-to-end: a Hangul-only run must not register as a Japanese
+    catalog-promotion candidate."""
+    from prestamp.boundaries import JAPANESE_RUN_RE
+
+    assert JAPANESE_RUN_RE.findall("한국어です") == []
+    # Mixed Korean + Japanese: only the Japanese part is a candidate.
+    assert JAPANESE_RUN_RE.findall("한국語日本") == ["語日本"]
