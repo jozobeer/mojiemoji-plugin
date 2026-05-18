@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "mojiemoji-github",
-  "version": "0.24.7",
+  "version": "0.24.8",
   "description": "GitHub Markdown 向け mojiemoji 画像スタンプを埋め込むスキル + サブエージェント + 6 必須パラメータゲートフック",
   "author": {
     "name": "jozobeer"
