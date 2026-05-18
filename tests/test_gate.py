@@ -852,14 +852,21 @@ class TestSchemaVersionDrift:
     """
 
     @staticmethod
-    def _import_hook():
-        import importlib.util
+    def _import_schema_version_mod():
+        # The schema-version drift validator lives in
+        # `hooks/gate/validators/schema_version.py`. We splice the
+        # `hooks/` directory onto sys.path so the import works
+        # regardless of pytest invocation cwd, then return the module
+        # for monkeypatch.setattr to mutate. `monkeypatch` already
+        # restores patched attributes between tests, so we rely on
+        # the import cache rather than reloading the module each time.
+        import importlib
+        import sys
         from conftest import HOOK
-        spec = importlib.util.spec_from_file_location("gate_hook", HOOK)
-        assert spec is not None and spec.loader is not None
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
+        hooks_dir = HOOK.parent
+        if str(hooks_dir) not in sys.path:
+            sys.path.insert(0, str(hooks_dir))
+        return importlib.import_module("gate.validators.schema_version")
 
     @staticmethod
     def _write_skill(path, version):
@@ -870,7 +877,7 @@ class TestSchemaVersionDrift:
             path.write_text(f"# SKILL.md\n\n<!-- mojiemoji-schema-version: {version} -->\n")
 
     def test_match_emits_nothing(self, tmp_path, monkeypatch, capsys):
-        mod = self._import_hook()
+        mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
         # Re-cache by clearing the sentinel.
         monkeypatch.setattr(mod, "_canonical_version_cache", object())
@@ -889,7 +896,7 @@ class TestSchemaVersionDrift:
         assert captured.err == ""
 
     def test_mismatch_warns_but_does_not_block(self, tmp_path, monkeypatch, capsys):
-        mod = self._import_hook()
+        mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
         monkeypatch.setattr(mod, "_canonical_version_cache", object())
         self._write_skill(tmp_path / "host.md", "2.0.0")
@@ -908,7 +915,7 @@ class TestSchemaVersionDrift:
         assert "codex" in captured.err
 
     def test_missing_marker_on_harness_warns(self, tmp_path, monkeypatch, capsys):
-        mod = self._import_hook()
+        mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
         monkeypatch.setattr(mod, "_canonical_version_cache", object())
         self._write_skill(tmp_path / "host.md", "2.0.0")
@@ -926,7 +933,7 @@ class TestSchemaVersionDrift:
         assert "gemini" in captured.err
 
     def test_strict_mode_mismatch_blocks(self, tmp_path, monkeypatch, capsys):
-        mod = self._import_hook()
+        mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
         monkeypatch.setattr(mod, "_canonical_version_cache", object())
         self._write_skill(tmp_path / "host.md", "2.0.0")
@@ -944,7 +951,7 @@ class TestSchemaVersionDrift:
     def test_host_marker_missing_is_noop(self, tmp_path, monkeypatch, capsys):
         # When the host SKILL.md has no marker (drift-check disabled),
         # the stage must not emit anything regardless of harness state.
-        mod = self._import_hook()
+        mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "no-marker-host.md")
         monkeypatch.setattr(mod, "_canonical_version_cache", object())
         self._write_skill(tmp_path / "no-marker-host.md", None)
@@ -962,7 +969,7 @@ class TestSchemaVersionDrift:
 
     def test_absent_harness_files_are_skipped(self, tmp_path, monkeypatch, capsys):
         # Harness path doesn't exist — should silently skip, not warn.
-        mod = self._import_hook()
+        mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
         monkeypatch.setattr(mod, "_canonical_version_cache", object())
         self._write_skill(tmp_path / "host.md", "2.0.0")
