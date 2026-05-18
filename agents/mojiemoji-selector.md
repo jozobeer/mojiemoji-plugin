@@ -53,9 +53,9 @@ CONSTRAINTS (optional):
 SKILL_DIR: <絶対パス>
 ```
 
-Review API payload の `body` は `SURFACE=review-summary`、各 `comments[].body` は
+Review <img src="https://mojiemoji.jozo.beer/emoji/API?font=mincho&amp;color=10b981&amp;animation=patapata&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="API" height="24" align="absmiddle"> payload の `body` は `SURFACE=review-summary`、各 `comments[].body` は
 `SURFACE=review-inline-comment` として個別に渡す。file path / line / symbol /
-suggestion block は候補 phrase に含めず、散文部分だけを stamp 対象にする。
+suggestion block は候補 phrase に含めず、散文<img src="https://mojiemoji.jozo.beer/emoji/%E9%83%A8%E5%88%86?font=hachimaru&amp;color=ef4444&amp;animation=bane&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="部分" height="24" align="absmiddle">だけを stamp <img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=akzk&amp;color=facc15&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="対象" height="24" align="absmiddle">にする。
 
 いずれかのフィールドが欠けている場合は<img src="https://mojiemoji.jozo.beer/emoji/%E5%A6%A5%E5%BD%93?font=hachimaru&amp;color=f472b6&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="妥当" height="24" align="absmiddle">なデフォルト
 (SURFACE=review-inline-comment、MODE=mixed、TONE=neutral)を仮定し、
