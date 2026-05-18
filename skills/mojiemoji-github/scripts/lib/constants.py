@@ -1,16 +1,18 @@
 """Single provenance for cross-script constants.
 
-Previously duplicated across `bump_catalog`, `cache_record`,
-`cache_stats`, `generate_catalog`, `mojiemoji_markdown`, and
-`prestamp`. The hook (`hooks/mojiemoji_japanese_gate.py`) still keeps
-its own copy because it is loaded outside the skills directory and
-cannot import from this package — keep that copy in sync until the
-hook decomposition (issue #54 Step 4) lands.
+Source of truth for every consumer that needs canonical font /
+animation / forbidden-color sets:
 
-Canonical font / animation values mirror what
-`hooks/mojiemoji_japanese_gate.py` validates against and what
-`skills/mojiemoji-github/references/parameters.md` documents. Drift is
-caught by `scripts/verify-lists-vs-docs.sh`.
+- skill scripts: `bump_catalog`, `cache_record`, `cache_stats`,
+  `generate_catalog`, `mojiemoji_markdown`, `prestamp`
+- hook validators: `hooks/gate/validators/canonical.py`,
+  `required_params.py` (the hook decomposition in #101 spliced
+  `skills/mojiemoji-github/scripts/` onto `sys.path` so the
+  validators can `from lib.constants import …` directly)
+
+Drift between these constants and the docs in
+`skills/mojiemoji-github/references/parameters.md` is caught by
+`scripts/verify-lists-vs-docs.sh`.
 """
 
 from __future__ import annotations
@@ -53,11 +55,10 @@ INLINE_PROBLEMATIC_ANIMATIONS = frozenset({"bakusan", "chuuou_zoom"})
 
 
 # Tailwind 600+ palette values that render black-on-dark in GitHub's
-# dark theme. Generators must not pick from this set; the hook
-# (`hooks/mojiemoji_japanese_gate.py:222`) rejects URLs containing
-# them. Keep this list in lockstep with the hook's `FORBIDDEN_COLORS`
-# until the hook can import from this package. `scripts/verify-
-# canonical-lists.sh` cross-checks for drift.
+# dark theme. Generators must not pick from this set; the hook's
+# `canonical` validator (`hooks/gate/validators/canonical.py`) rejects
+# URLs containing them via `FORBIDDEN_COLORS` imported from here.
+# `scripts/verify-canonical-lists.sh` cross-checks for drift.
 FORBIDDEN_COLORS = frozenset({
     "dc2626", "b91c1c", "991b1b",        # red-600/700/800
     "c2410c",                            # orange-700

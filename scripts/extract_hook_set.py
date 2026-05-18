@@ -22,27 +22,41 @@ import sys
 def extract(name: str, path: str) -> set[str]:
     tree = ast.parse(open(path, encoding="utf-8").read())
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        # `Assign` is `X = ...`; `AnnAssign` is `X: T = ...`. The post-#101
+        # `lib/constants.py` declares CANONICAL_FONTS / CANONICAL_ANIMATIONS
+        # as annotated tuples (`X: tuple[str, ...] = (...)`), which appear
+        # as `AnnAssign` in the AST. Without this branch the extractor
+        # walks past them and raises "missing <name> in <path>".
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+            value = node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets = [node.target]
+            value = node.value
+        else:
             continue
-        for target in node.targets:
+        for target in targets:
             if not (isinstance(target, ast.Name) and target.id == name):
                 continue
-            value = node.value
-            if isinstance(value, ast.Set):
+            # Accept `{...}` (set), `frozenset({...})`, or `(...)` / `[...]`
+            # (ordered tuple / list literals — used for canonical font /
+                # animation lists in lib/constants.py).
+            if isinstance(value, (ast.Set, ast.Tuple, ast.List)):
                 elts = value.elts
             elif (
                 isinstance(value, ast.Call)
                 and isinstance(value.func, ast.Name)
                 and value.func.id == "frozenset"
                 and value.args
-                and isinstance(value.args[0], ast.Set)
+                and isinstance(value.args[0], (ast.Set, ast.Tuple, ast.List))
             ):
                 elts = value.args[0].elts
             else:
                 raise SystemExit(
-                    f"{name} in {path} is not a set/frozenset literal "
-                    f"(got {type(value).__name__}); only `{{...}}` and "
-                    f"`frozenset({{...}})` are supported"
+                    f"{name} in {path} is not a set/frozenset/tuple/list "
+                    f"literal (got {type(value).__name__}); supported "
+                    f"shapes are `{{...}}`, `frozenset({{...}})`, "
+                    f"`(...)`, and `[...]`"
                 )
             result: set[str] = set()
             for elt in elts:
