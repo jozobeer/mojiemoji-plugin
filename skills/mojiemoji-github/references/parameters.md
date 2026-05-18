@@ -280,9 +280,10 @@ silently 200 を返す一方、`teal` / `purple` / `indigo` / `violet` /
 
 PreToolUse hook (`hooks/gate/validators/canonical.py`) は 6-hex 必須で
 gate しているため、プラグイン経由の投稿は守られている。プラグイン外
-経路で named color が混入した body を投稿してしまった場合は、
-`scripts/lint-rendered-bodies.py` (今後追加予定 / #110 中期案) で
-post-hoc 検証する。
+経路で named color が混入した body を投稿してしまった場合は、`gh pr
+view <N> --json body --jq .body | grep -oE 'color=[a-z]+' | sort -u` で
+混入語を抽出してから body を編集し直して `gh pr edit --body-file` で
+再投稿する。自動 lint CLI は #110 中期案として別 issue で追跡。
 
 ## outline(body-class surface で推奨)
 
