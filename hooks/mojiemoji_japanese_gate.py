@@ -83,6 +83,27 @@ BODY_FILE_RE = re.compile(
     r"(?:--body-file|--input)(?:\s+|=)(['\"]?)([^'\"\s|;&)]+)\1"
 )
 F_BODY_RE = re.compile(r"-F\s+body=@(['\"]?)([^'\"\s|;&)]+)\1")
+# Non-body flag/value pairs to strip from the command before treating
+# it as an inspect surface. Title / label / reviewer / assignee /
+# milestone / head / base values are metadata, not posting prose — they
+# may legitimately carry Japanese (`--title "日本語…"`, `--label "バグ"`)
+# without needing mojiemoji decoration, mirroring the MCP path's
+# `BODY_FIELDS = {"body"}` policy. Without this strip, the per-surface
+# validation rolled out in this skill change would block valid posts
+# like `gh pr create --title "<JP>" --body-file decorated.md`.
+#
+# Short forms (`-t`, `-l`, `-r`, `-a`, `-m`, `-H`, `-B`) follow gh CLI
+# defaults. `-H` overlaps with `gh api -H "HTTP-Header: ..."`, but HTTP
+# headers are not body prose either, so collapsing both into the same
+# strip rule is safe. Value forms covered: `--flag "v"`, `--flag 'v'`,
+# `--flag=v`, `--flag v`. Lookbehind on the short-form alternative
+# prevents `--flag-with-t` from being mis-stripped as `-t`.
+NON_BODY_FLAGS_RE = re.compile(
+    r"(?:--(?:title|label|reviewer|assignee|milestone|head|base)|"
+    r"(?<!\S)-[tlramHB])"
+    r"(?:\s+|=)"
+    r"(?:\"[^\"]*\"|'[^']*'|[^\s\"']+)"
+)
 # Script files referenced via interpreter invocation. The 2026-05-12
 # triage-review incident bypassed file-body inspection by building the JSON
 # body via `python3 approve-1756.py` and posting via `gh api --input` in the
@@ -280,6 +301,12 @@ def read_body_files(command, cwd):
     """Return (body_pieces, missing_paths) for every body file
     referenced by the command.
 
+    `body_pieces` is `list[str]` — one entry per inspectable surface —
+    so callers can extend a pieces list directly. Previously this
+    helper joined pieces into a single string, which made
+    `pieces.extend(file_bodies)` split Japanese into per-character
+    surfaces and falsely block decorated review payloads.
+
     `-` (stdin) and missing files are tracked separately so callers
     can decide whether to react. Most callers should ignore
     `missing_paths` — referencing the same paths in heredoc-quoted
@@ -302,7 +329,7 @@ def read_body_files(command, cwd):
             except (OSError, ValueError):
                 missing.append(raw)
                 continue
-    return "\n".join(pieces), missing
+    return pieces, missing
 
 
 def read_script_files(command, cwd):
@@ -373,7 +400,13 @@ def _route_bash(data: dict):
     cwd = data.get("cwd", "")
     file_bodies, _ = read_body_files(command, cwd)
     script_body = read_script_files(command, cwd)
-    pieces = [command]
+    # Strip non-body flag values (title / label / reviewer / assignee /
+    # milestone / head / base) from the command before treating it as
+    # an inspect surface. Without this, Japanese in `--title` etc.
+    # would be required to carry mojiemoji decoration — contradicting
+    # the documented policy that titles / labels are out of scope.
+    inspected_command = NON_BODY_FLAGS_RE.sub("", command)
+    pieces = [inspected_command]
     pieces.extend(file_bodies)
     if script_body:
         pieces.append(script_body)

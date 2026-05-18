@@ -667,6 +667,63 @@ class TestMcpPath:
         )
         assert result.returncode == 2
 
+    def test_gh_api_input_review_with_decorated_comments_passes(self, run_hook, tmp_path):
+        # Regression for #112 review feedback: `read_body_files` previously
+        # joined extracted JSON body pieces into a single string and
+        # `_route_bash` extended a list with it, splitting Japanese into
+        # per-character surfaces. Each char then had 0 mojiemoji URLs and
+        # the gate falsely blocked properly-decorated review payloads.
+        payload = tmp_path / "review.json"
+        payload.write_text(
+            json.dumps(
+                {
+                    "body": f"{JP_PARAGRAPH} {stamp_img()}",
+                    "comments": [
+                        {"path": "x.py", "line": 1, "body": f"型エラーです {stamp_img(text='型')}"},
+                        {"path": "y.py", "line": 2, "body": f"余分な引数です {stamp_img(text='余分')}"},
+                    ],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f"gh api repos/o/r/pulls/1/reviews --input {payload}"
+                },
+            },
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_japanese_title_with_decorated_body_file_passes(self, run_hook, tmp_path):
+        # Regression for #112 review feedback: Japanese in non-body flag
+        # values (e.g., `--title "日本語…"`) should not trip the gate.
+        # Only body-class surfaces are inspected per BODY_FIELDS policy;
+        # title / label / reviewer / etc. are explicitly out of scope.
+        body_md = tmp_path / "body.md"
+        body_md.write_text(f"{JP_PARAGRAPH} {stamp_img()}")
+        cmd = f'gh pr create --title "日本語タイトル" --body-file {body_md}'
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": cmd}},
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_japanese_label_with_decorated_body_passes(self, run_hook, tmp_path):
+        # `--label "バグ"` is metadata, not posting prose. Should not
+        # require mojiemoji decoration even when no body file is used.
+        body_md = tmp_path / "body.md"
+        body_md.write_text(f"{JP_PARAGRAPH} {stamp_img()}")
+        cmd = f'gh pr create --label "バグ" --label "機能追加" --body-file {body_md}'
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": cmd}},
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0, result.stderr
+
     def test_mcp_title_only_jp_passes(self, run_hook):
         # Title is intentionally NOT inspected (BODY_FIELDS = {"body"}).
         # A Japanese title without a body should not trip the gate.
