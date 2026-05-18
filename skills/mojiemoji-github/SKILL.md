@@ -162,20 +162,20 @@ skip <img src="https://mojiemoji.jozo.beer/emoji/%E5%88%A4%E6%96%AD?font=kurobar
 
 gate 自体を<img src="https://mojiemoji.jozo.beer/emoji/%E4%B8%80%E6%99%82?font=gothic&amp;color=fbbf24&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="一時" height="24" align="absmiddle">的に黙らせたい場合は Bash command 先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める(PreToolUse hook がこの marker を見ると素通しする)。乱用しない — 1 投稿 1 bypass の最小スコープに留める。
 
-### Reviews <img src="https://mojiemoji.jozo.beer/emoji/API?font=maru-bold&amp;color=3b82f6&amp;animation=tenmetsu&amp;background=transparent&amp;outline=f63b82&amp;outline_width=2" alt="API" height="24" align="absmiddle"> の structural distinction(`body` vs `comments[]`)
+### Reviews API の surface policy(`body` + `comments[]`)
 
-`gh api repos/{owner}/{repo}/pulls/{n}/reviews` (および MCP `github_pull_request_review_write`) で POST する review payload は<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E9%80%A0?font=kurobara&amp;color=22c55e&amp;animation=mabataki&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構造" height="24" align="absmiddle">上 **2 つの surface** を持つ。装飾の<img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=akzk&amp;color=facc15&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="対象" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E7%AF%84%E5%9B%B2?font=gothic-bold&amp;color=8b5cf6&amp;animation=zairu&amp;background=transparent&amp;outline=f68b5c&amp;outline_width=2" alt="範囲" height="24" align="absmiddle">が両者で<img src="https://mojiemoji.jozo.beer/emoji/%E7%95%B0%E3%81%AA%E3%82%8B?font=dela&amp;color=ef4444&amp;animation=yatta&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="異なる" height="24" align="absmiddle">:
+`gh api repos/{owner}/{repo}/pulls/{n}/reviews` (および MCP `github_pull_request_review_write`) の review payload は `body` と `comments[].body` の両方を GitHub prose surface として扱う。summary だけを装飾して inline comment を素のまま残す運用は廃止する。
 
 | フィールド | 用途 | 装飾 |
 |---|---|---|
-| `body` | summary text(verdict + <img src="https://mojiemoji.jozo.beer/emoji/%E8%A9%95%E4%BE%A1?font=chikara&amp;color=fdba74&amp;animation=patapata&amp;background=transparent&amp;outline=74fdba&amp;outline_width=2" alt="評価" height="24" align="absmiddle"> + 締め、通常は<img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=tamanegi&amp;color=f87171&amp;animation=kage_neon&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語 prose) | **<img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=gothic-bold&amp;color=f97316&amp;animation=gatagata&amp;background=transparent&amp;outline=16f973&amp;outline_width=2" alt="対象" height="24" align="absmiddle">** — surface ヒューリスティック表(§ Review summary body)に沿って inline 飽和で装飾 |
-| `comments[]` | inline findings(file path + line + 技術的指摘) | **<img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=gothic-bold&amp;color=f97316&amp;animation=gatagata&amp;background=transparent&amp;outline=16f973&amp;outline_width=2" alt="対象" height="24" align="absmiddle">外** — 素のまま投稿 |
+| `body` | verdict / 総評 / 締めの review summary | 対象。Review summary body のヒューリスティックに沿って inline 飽和で装飾 |
+| `comments[].body` | file path + line に紐づく inline finding | 対象。`body` と同じ prestamp / selector パイプラインを通す |
 
-`comments[]` の findings は **コード<img src="https://mojiemoji.jozo.beer/emoji/%E5%BC%95%E7%94%A8?font=pixel&amp;color=f87171&amp;animation=poyoon&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="引用" height="24" align="absmiddle"> / ファイル<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%91%E3%82%B9?font=gothic&amp;color=a855f7&amp;animation=kirari&amp;background=transparent&amp;outline=f7a855&amp;outline_width=2" alt="パス" height="24" align="absmiddle"> / シンボル名 / 行番号** が主体で、スタンプとの相性が悪い(grep 性が落ち、<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=noto&amp;color=c084fc&amp;animation=tatemoya&amp;background=transparent&amp;outline=fcc084&amp;outline_width=2" alt="修正" height="24" align="absmiddle">提案の<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%AF%E8%AA%AD?font=mincho&amp;color=60a5fa&amp;animation=nami&amp;background=transparent&amp;outline=fa60a5&amp;outline_width=2" alt="可読" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E6%80%A7?font=mincho&amp;color=60a5fa&amp;animation=nami&amp;background=transparent&amp;outline=fa60a5&amp;outline_width=2" alt="性" height="24" align="absmiddle">が下がる)。`cross-repo-review` / `triage-review` / `vibes-review` / `copilot-review` 等の subagent 駆動 batch posting で `gh api .../reviews` を経由するとき、**装飾は `body` フィールドだけに適用し、`comments[]` 配列の各 element には適用しない**。
+`comments[].body` でも fenced code block / suggestion block / inline code / URL / file path / symbol は safe-zone として保護し、散文部分だけに stamp を入れる。`cross-repo-review` / `triage-review` / `vibes-review` / `copilot-review` 等の subagent 駆動 batch posting では、review payload を作る直前に `body` と各 `comments[].body` を個別に prestamp / selector へ通す。
 
-action バッジ(`action: fixed/by design/test added/deferred/wontfix`)を返信本文の先頭に置くケース(`gh api .../pulls/.../comments` 経由の reply)は別ルートで、§ Reply / コメント返信 のヒューリスティックに従う — そちらは reply 自体が<img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=tamanegi&amp;color=f87171&amp;animation=kage_neon&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語 prose なので装飾<img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=maru-bold&amp;color=8b5cf6&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="対象" height="24" align="absmiddle">。
+action バッジ(`action: fixed/by design/test added/deferred/wontfix`)を返信本文の先頭に置くケース(`gh api .../pulls/.../comments` 経由の reply)も同じ方針で、reply body 自体を装飾対象にする。
 
-迷ったときの判定: 「この文字列を逐語 grep したいか?」がコードレビューでの<img src="https://mojiemoji.jozo.beer/emoji/%E5%88%A4%E6%96%AD?font=kurobara&amp;color=06b6d4&amp;animation=yurayura&amp;background=transparent&amp;outline=d406b6&amp;outline_width=2" alt="判断" height="24" align="absmiddle">軸と一致する。findings は yes(コードを<img src="https://mojiemoji.jozo.beer/emoji/%E5%BC%95%E7%94%A8?font=akzk&amp;color=fbbf24&amp;animation=patapata&amp;background=transparent&amp;outline=06d977&amp;outline_width=2" alt="引用" height="24" align="absmiddle">するから)、summary body は no(感情・<img src="https://mojiemoji.jozo.beer/emoji/%E8%A9%95%E4%BE%A1?font=gothic&amp;color=eab308&amp;animation=mabataki&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="評価" height="24" align="absmiddle">・指示の prose だから)。
+迷ったときは「コード識別子や引用そのものを stamp しない」で判断する。装飾対象外なのは token 単位の code / path / symbol であり、inline comment surface 全体ではない。
 
 ## バッジと併用する(バッジが見出しの役割)
 
@@ -524,7 +524,7 @@ CONSTRAINTS:
 
 ### Review summary body(`gh pr review` / `gh api .../reviews`)
 
-`verdict × finding-count` でトーンが決まる。**summary body(`body` フィールド)のみ装飾**し、inline `comments[]` の findings は素のままにする — findings は技術的<img src="https://mojiemoji.jozo.beer/emoji/%E5%BC%95%E7%94%A8?font=pixel&amp;color=f87171&amp;animation=poyoon&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="引用" height="24" align="absmiddle">なので装飾と<img src="https://mojiemoji.jozo.beer/emoji/%E5%B9%B2%E6%B8%89?font=maru&amp;color=fb923c&amp;animation=kira&amp;background=transparent&amp;outline_width=0" alt="干渉" height="24" align="absmiddle">する。
+`verdict × finding-count` で summary body のトーンが決まる。inline `comments[].body` も同じ review-class surface なので、summary とは別に prestamp / selector を通す。装飾が干渉するのはコード引用・file path・symbol・suggestion block などの token 部分であり、comment body 全体ではない。
 
 | verdict | findings | 先頭文に埋め込む語(例) | 締め文に埋め込む語(例) | <img src="https://mojiemoji.jozo.beer/emoji/%E6%B3%A8%E6%84%8F?font=hachimaru&amp;color=06b6d4&amp;animation=neruneru&amp;background=transparent&amp;outline=d406b6&amp;outline_width=2" alt="注意" height="24" align="absmiddle"> |
 |---|---|---|---|---|
@@ -535,7 +535,7 @@ CONSTRAINTS:
 | `comment` | 6+ | `要点` / `観点` / `整理` | `確認` / `お願い` | matter-of-fact、スタンプ少なめでメリハリ |
 | `request-changes` | — | `相談` / `観点` / `要修正` | `引き続き` / `よろしく` | cautious、pile-on しない |
 
-`comments[]` フィールドの inline findings は**装飾しない**。findings は技術<img src="https://mojiemoji.jozo.beer/emoji/%E5%BC%95%E7%94%A8?font=akzk&amp;color=fbbf24&amp;animation=patapata&amp;background=transparent&amp;outline=06d977&amp;outline_width=2" alt="引用" height="24" align="absmiddle">(コード行・<img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=akzk&amp;color=facc15&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="対象" height="24" align="absmiddle">シンボル・<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%AE%E6%AD%A3?font=gothic-bold&amp;color=ef4444&amp;animation=kirari&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="修正" height="24" align="absmiddle">提案)であり、装飾が入ると読み手の grep 性を阻害する。
+`comments[].body` の散文にも inline 飽和を適用する。ただし code block / suggestion block / inline code / URL / file path / symbol は safe-zone として必ず保護する。review payload の `body` だけを装飾し、`comments[]` を素のまま残すのは不可。
 
 ### Reply / コメント返信(`gh api .../comments`)
 
@@ -575,7 +575,7 @@ CONSTRAINTS:
 `mojiemoji-selector` subagent を `Agent` ツールで `subagent_type: "mojiemoji-selector"` を指定してディスパッチする。<img src="https://mojiemoji.jozo.beer/emoji/%E5%85%A5%E5%8A%9B?font=gothic-bold&amp;color=a78bfa&amp;animation=kirari&amp;background=transparent&amp;outline=ed7c3a&amp;outline_width=2" alt="入力" height="24" align="absmiddle">は以下のコントラクト形式で渡す:
 
 ```
-SURFACE: <issue-body|pr-body|review-comment|reply|release-note>
+SURFACE: <issue-body|pr-body|review-summary|review-inline-comment|reply|release-note>
 MODE:    <block|inline|mixed>
 TONE:    <calm|neutral|loud>
 PHRASES:
