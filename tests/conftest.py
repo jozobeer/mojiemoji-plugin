@@ -13,6 +13,25 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK = REPO_ROOT / "hooks" / "mojiemoji_japanese_gate.py"
+PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.py"
+COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.py"
+GENERATE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "generate_catalog.py"
+
+
+def run_py(script: Path, text: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run a script under tests/ skill scripts with `text` on stdin.
+
+    Shared helper for the prestamp / coverage / generate_catalog test
+    files split out of test_prestamp_coverage.py (#103). Pinning a
+    10-second timeout matches the prior monolithic file's behaviour.
+    """
+    return subprocess.run(
+        [sys.executable, str(script), *args],
+        input=text,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
 
 
 @pytest.fixture(autouse=True)
