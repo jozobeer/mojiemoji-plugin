@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Verify that the canonical font / animation allowlists in the hook
-# match the lists documented in parameters.md, plus FORBIDDEN_COLORS
-# is consistent across hook and lib/constants.py, plus the generator's
-# raw Tailwind palette has no overlap with FORBIDDEN_COLORS.
+# Verify that the canonical font / animation allowlists in
+# `lib/constants.py` (the SSOT consumed by both the hook and skill
+# scripts) match the lists documented in parameters.md, plus the
+# generator's raw Tailwind palette has no overlap with FORBIDDEN_COLORS.
 #
 # Drift between these locations is the root cause of multiple silent
 # failures (the hook rejects a value the docs say is valid, accepts a
@@ -11,63 +11,56 @@
 # this on every PR and weekly; humans can run it locally before
 # bumping any list.
 #
+# Pre-#101 this script also diffed hook-local copies of FORBIDDEN_COLORS
+# / COLOR_SHIFTING_ANIMATIONS / ROTATIONAL_ANIMATIONS against the lib
+# copies. #101 made `lib/constants.py` the sole provenance and the hook
+# validators import from it directly, so the hook↔lib drift check was
+# removed — there is now only one source to drift from.
+#
 # Renamed from verify-canonical-lists.sh in #54 item 7 — sibling
 # `skills/mojiemoji-github/scripts/verify-lists-vs-service.sh` checks
-# the hook against the live mojiemoji service HTML; this one checks
-# against in-repo sources only.
+# the canonical allowlist against the live mojiemoji service HTML;
+# this one checks against in-repo sources only.
 #
 # Exits non-zero if any list differs. Diff is printed to stderr.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$REPO_ROOT/hooks/mojiemoji_japanese_gate.py"
 PARAMS="$REPO_ROOT/skills/mojiemoji-github/references/parameters.md"
 EXTRACT="$REPO_ROOT/scripts/extract_hook_set.py"
 GENERATOR="$REPO_ROOT/skills/mojiemoji-github/scripts/generate_catalog.py"
 LIB_CONSTANTS="$REPO_ROOT/skills/mojiemoji-github/scripts/lib/constants.py"
 
-python3 - "$HOOK" "$PARAMS" "$EXTRACT" "$GENERATOR" "$LIB_CONSTANTS" <<'PY'
+python3 - "$PARAMS" "$EXTRACT" "$GENERATOR" "$LIB_CONSTANTS" <<'PY'
 import ast
 import re
 import subprocess
 import sys
 
-hook_path, params_path, extract_path, generator_path, lib_path = sys.argv[1:6]
+params_path, extract_path, generator_path, lib_path = sys.argv[1:5]
 
 
-def hook_set(name: str, source_path: str) -> set[str]:
-    """Run scripts/extract_hook_set.py against `source_path` and return the
-    named set/frozenset as a Python set of strings."""
+def lib_set(name: str) -> set[str]:
+    """Run scripts/extract_hook_set.py against `lib/constants.py` and
+    return the named set/frozenset as a Python set of strings."""
     out = subprocess.check_output(
-        [sys.executable, extract_path, name, source_path],
+        [sys.executable, extract_path, name, lib_path],
         text=True,
     )
     return {line for line in out.splitlines() if line}
 
 
-hook_fonts = hook_set("CANONICAL_FONTS", hook_path)
-hook_anims = hook_set("CANONICAL_ANIMATIONS", hook_path)
-hook_forbidden = hook_set("FORBIDDEN_COLORS", hook_path)
-hook_color_shifting = hook_set("COLOR_SHIFTING_ANIMATIONS", hook_path)
-hook_rotational = hook_set("ROTATIONAL_ANIMATIONS", hook_path)
-
-# --- Extract from lib/constants.py (the copy generators actually use) -----
-# The generator filters with `lib.constants.FORBIDDEN_COLORS`, not the
-# hook's copy. If the two drift, the catalog can quietly include colors
-# the hook rejects (or exclude safe ones). Same shape of risk applies to
-# COLOR_SHIFTING_ANIMATIONS and ROTATIONAL_ANIMATIONS — the helper
-# scripts strip outlines / require `speed=slow` based on the lib copy,
-# but the hook enforces against its own copy.
-lib_forbidden = hook_set("FORBIDDEN_COLORS", lib_path)
-lib_color_shifting = hook_set("COLOR_SHIFTING_ANIMATIONS", lib_path)
-lib_rotational = hook_set("ROTATIONAL_ANIMATIONS", lib_path)
+lib_fonts = lib_set("CANONICAL_FONTS")
+lib_anims = lib_set("CANONICAL_ANIMATIONS")
+lib_forbidden = lib_set("FORBIDDEN_COLORS")
+lib_color_shifting = lib_set("COLOR_SHIFTING_ANIMATIONS")
+lib_rotational = lib_set("ROTATIONAL_ANIMATIONS")
 
 # --- Extract from generate_catalog (Python tuple literal) -----------------
 # `_RAW_TAILWIND_PALETTE` is the unfiltered Tailwind palette the
-# generator picks from. We verify its intersection with the hook's
-# `FORBIDDEN_COLORS` so the generator never emits values the hook
-# would block.
+# generator picks from. We verify its intersection with `FORBIDDEN_COLORS`
+# so the generator never emits values the hook would block.
 gen_tree = ast.parse(open(generator_path, encoding="utf-8").read())
 
 
@@ -104,71 +97,34 @@ def extract_block(header: str) -> set[str]:
 doc_anims = extract_block("animation")
 doc_fonts = extract_block("font")
 
-# --- Diff hook vs docs ----------------------------------------------------
+# --- Diff lib (SSOT) vs docs ----------------------------------------------
 errors: list[str] = []
-for name, hook_s, doc_s in [
-    ("CANONICAL_FONTS", hook_fonts, doc_fonts),
-    ("CANONICAL_ANIMATIONS", hook_anims, doc_anims),
+for name, lib_s, doc_s in [
+    ("CANONICAL_FONTS", lib_fonts, doc_fonts),
+    ("CANONICAL_ANIMATIONS", lib_anims, doc_anims),
 ]:
-    only_hook = hook_s - doc_s
-    only_doc = doc_s - hook_s
-    if only_hook or only_doc:
+    only_lib = lib_s - doc_s
+    only_doc = doc_s - lib_s
+    if only_lib or only_doc:
         msg = [f"[drift] {name}"]
-        if only_hook:
-            msg.append(f"  only in hook: {sorted(only_hook)}")
+        if only_lib:
+            msg.append(f"  only in lib/constants.py: {sorted(only_lib)}")
         if only_doc:
-            msg.append(f"  only in docs: {sorted(only_doc)}")
+            msg.append(f"  only in parameters.md:    {sorted(only_doc)}")
         errors.append("\n".join(msg))
 
 if errors:
     print("\n\n".join(errors), file=sys.stderr)
     print(
-        "\nFix: update either the hook's set literal or the parameters.md "
-        "code block so the two agree, then re-run this script.",
+        "\nFix: update either the lib/constants.py set literal or the "
+        "parameters.md code block so the two agree, then re-run this "
+        "script.",
         file=sys.stderr,
     )
     sys.exit(1)
 
-# --- hook ↔ lib set drift (FORBIDDEN_COLORS / COLOR_SHIFTING / ROTATIONAL) --
-for name, hook_s, lib_s, fix_hint in [
-    (
-        "FORBIDDEN_COLORS",
-        hook_forbidden,
-        lib_forbidden,
-        "The generator filters with the lib copy; drift means the "
-        "catalog can quietly include colors the hook rejects.",
-    ),
-    (
-        "COLOR_SHIFTING_ANIMATIONS",
-        hook_color_shifting,
-        lib_color_shifting,
-        "Helper scripts strip outline params for these animations "
-        "based on the lib copy; if hook doesn't agree, the hook's "
-        "outline-presence check can desync.",
-    ),
-    (
-        "ROTATIONAL_ANIMATIONS",
-        hook_rotational,
-        lib_rotational,
-        "Helper scripts auto-inject `speed=slow` for these based on "
-        "the lib copy; if hook doesn't agree, the slow-speed "
-        "requirement check can desync.",
-    ),
-]:
-    if hook_s != lib_s:
-        only_hook = hook_s - lib_s
-        only_lib = lib_s - hook_s
-        msg = [f"[drift] {name} (hook vs lib/constants.py)"]
-        if only_hook:
-            msg.append(f"  only in hook: {sorted(only_hook)}")
-        if only_lib:
-            msg.append(f"  only in lib:  {sorted(only_lib)}")
-        msg.append(f"  Fix: update either hook or lib so the two sets agree. {fix_hint}")
-        print("\n".join(msg), file=sys.stderr)
-        sys.exit(1)
-
 # --- FORBIDDEN ∩ TAILWIND drift -------------------------------------------
-overlap = raw_palette & hook_forbidden
+overlap = raw_palette & lib_forbidden
 if overlap:
     print(
         f"[drift] _RAW_TAILWIND_PALETTE ∩ FORBIDDEN_COLORS = "
@@ -181,12 +137,12 @@ if overlap:
     sys.exit(1)
 
 print(
-    f"OK: CANONICAL_FONTS ({len(hook_fonts)}) and CANONICAL_ANIMATIONS "
-    f"({len(hook_anims)}) match between hook and parameters.md; "
-    f"FORBIDDEN_COLORS ({len(hook_forbidden)}), "
-    f"COLOR_SHIFTING_ANIMATIONS ({len(hook_color_shifting)}), "
-    f"ROTATIONAL_ANIMATIONS ({len(hook_rotational)}) "
-    f"match between hook and lib; "
+    f"OK: CANONICAL_FONTS ({len(lib_fonts)}) and CANONICAL_ANIMATIONS "
+    f"({len(lib_anims)}) match between lib/constants.py and parameters.md; "
+    f"FORBIDDEN_COLORS ({len(lib_forbidden)}), "
+    f"COLOR_SHIFTING_ANIMATIONS ({len(lib_color_shifting)}), "
+    f"ROTATIONAL_ANIMATIONS ({len(lib_rotational)}) "
+    f"present in lib (single source); "
     f"FORBIDDEN_COLORS ∩ TAILWIND palette = ∅"
 )
 PY
