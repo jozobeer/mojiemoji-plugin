@@ -268,6 +268,22 @@ GitHub のダークテーマ背景はほぼ黒(`#0d1117`)。Tailwind の 600 以
 として使わない。脳内テスト: 「この色、黒い T シャツに乗せて読めるか?」
 読めないなら明るくする。
 
+### CSS named-color は使わない
+
+`color=red` / `color=teal` / `color=vivid-purple` のような CSS / Tailwind
+名前は **使用禁止**。mojiemoji サービスの color パーサが不整合で、
+`red` / `green` / `blue` / `yellow` / `cyan` / `pink` / `orange` は
+silently 200 を返す一方、`teal` / `purple` / `indigo` / `violet` /
+`lime` / `brown` は 400 (`invalid color: expected 6 or 8 hex digits`)
+を返す (#110)。200 を引いた場合も Tailwind 300–500 帯から外れるため
+ダークモードで黒不可視になる。常に 6-digit hex を指定する。
+
+PreToolUse hook (`hooks/gate/validators/canonical.py`) は 6-hex 必須で
+gate しているため、プラグイン経由の投稿は守られている。プラグイン外
+経路で named color が混入した body を投稿してしまった場合は、
+`scripts/lint-rendered-bodies.py` (今後追加予定 / #110 中期案) で
+post-hoc 検証する。
+
 ## outline(body-class surface で推奨)
 
 mojiemoji サービスは `outline`(色、hex または `darker` / `lighter`)と
