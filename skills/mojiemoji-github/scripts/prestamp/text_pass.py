@@ -12,9 +12,57 @@ import re
 import zlib
 from typing import Optional
 
+from lib.sentence import split_sentences
+
 from prestamp.lines import _scan_summary_aware
 from prestamp.masker import _Masker, _mask_safe_zones
 from prestamp.render import _render_variant
+
+
+def _filtered_replace(
+    text: str,
+    *,
+    term_re: re.Pattern[str],
+    terms: dict,
+    defaults: dict,
+    base_url: str,
+    seed: str,
+    state: dict,
+    intensity: str,
+) -> str:
+    """Replace only catalog matches selected by intensity rules (masked text)."""
+    matches = list(term_re.finditer(text))
+    if not matches:
+        return text
+
+    selected: set[int] = set()
+    for sent_start, sent_end, _ in split_sentences(text):
+        indices = [i for i, m in enumerate(matches) if sent_start <= m.start() < sent_end]
+        if not indices:
+            continue
+        selected.add(indices[0])
+        selected.add(indices[-1])
+        if intensity == "normal":
+            for m_idx, m in enumerate(matches):
+                key = f"{seed}:intensity:{m.group(0)}:{m_idx}".encode("utf-8")
+                if zlib.crc32(key) % 100 < 60:
+                    selected.add(m_idx)
+
+    pieces: list[tuple[int, int, str]] = []
+    for m_idx, m in enumerate(matches):
+        if m_idx not in selected:
+            continue
+        term = m.group(0)
+        variants = terms[term]
+        crc_input = f"{seed}:{term}:{state['occurrence']}"
+        state["occurrence"] += 1  # occurrence advances only for substituted matches
+        variant = variants[zlib.crc32(crc_input.encode("utf-8")) % len(variants)]
+        pieces.append((m.start(), m.end(), _render_variant(base_url, term, variant, defaults)))
+
+    out = text
+    for start, end, repl in reversed(pieces):
+        out = out[:start] + repl + out[end:]
+    return out
 
 
 def _protect_and_replace(
@@ -26,20 +74,33 @@ def _protect_and_replace(
     base_url: str,
     seed: str,
     state: dict,
+    intensity: str = "aggressive",
 ) -> str:
     masker = _Masker()
     text = _mask_safe_zones(text, masker)
 
     if term_re is not None:
-        def _replace_term(m: re.Match) -> str:
-            term = m.group(0)
-            variants = terms[term]
-            crc_input = f"{seed}:{term}:{state['occurrence']}"
-            state["occurrence"] += 1
-            variant = variants[zlib.crc32(crc_input.encode("utf-8")) % len(variants)]
-            return _render_variant(base_url, term, variant, defaults)
+        if intensity == "aggressive":
+            def _replace_term(m: re.Match) -> str:
+                term = m.group(0)
+                variants = terms[term]
+                crc_input = f"{seed}:{term}:{state['occurrence']}"
+                state["occurrence"] += 1
+                variant = variants[zlib.crc32(crc_input.encode("utf-8")) % len(variants)]
+                return _render_variant(base_url, term, variant, defaults)
 
-        text = term_re.sub(_replace_term, text)
+            text = term_re.sub(_replace_term, text)
+        else:
+            text = _filtered_replace(
+                text,
+                term_re=term_re,
+                terms=terms,
+                defaults=defaults,
+                base_url=base_url,
+                seed=seed,
+                state=state,
+                intensity=intensity,
+            )
 
     return masker.restore(text)
 
@@ -53,12 +114,14 @@ def _transform_line(
     base_url: str,
     seed: str,
     state: dict,
+    intensity: str = "aggressive",
 ) -> str:
     def handler(segment: str) -> str:
         return _protect_and_replace(
             segment,
             term_re=term_re, terms=terms, defaults=defaults,
             base_url=base_url, seed=seed, state=state,
+            intensity=intensity,
         )
 
     return _scan_summary_aware(line, state, handler)

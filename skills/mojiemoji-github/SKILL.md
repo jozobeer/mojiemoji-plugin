@@ -125,6 +125,8 @@ mojiemoji スタンプと shields.io バッジは**相補的で交換<img src="h
 
 **マントラ**: 「文中に埋める」「文法崩壊しないように自然に埋め込みまくる」。密度は高く*かつ*文法は自然に保つ — どの埋め込みもクリーンな単語<img src="https://mojiemoji.jozo.beer/emoji/%E7%BD%AE%E6%8F%9B?font=pixel&amp;color=ef4444&amp;animation=kirari&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="置換" height="24" align="absmiddle">として読めること、関係ない品詞の間にぎこちなく突っ込まれていないこと。文法的に自然なスロットが無い候補なら、そのフレーズはスタンプせずに諦める。
 
+**INTENSITY（`prestamp.py --intensity`）** は **TONE（calm / neutral / loud）とは直交**する軸で、機械置換のボリュームだけを下げます。既定は `aggressive`（従来互換）。抑えたいときは `normal` または `minimal` を CLI で明示してください。`normal` / `minimal` では出力末尾に `<!-- mojiemoji-intensity:… -->` が自動付与され、catalog-leftovers gate が緩いしきい値を参照します。
+
 ## 2 つの<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%A2%E3%83%BC%E3%83%89?font=noto&amp;color=22c55e&amp;animation=kage_neon&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="モード" height="24" align="absmiddle">
 
 | Mode | Surface | 形式 | デフォルトサイズ |

@@ -28,13 +28,14 @@ def _emoji_replace_line(
     base_url: str,
     seed: str,
     state: dict,
+    max_emoji_run: int = MAX_EMOJI_RUN,
 ) -> str:
     """Run the emoji pass on a single non-fenced line.
 
     Masks the same safe zones as the text pass — including `<img>`
     tags emitted by the text pass — and then replaces Unicode emoji
     that are catalog hits with rendered stamps. Catalog misses stay
-    raw. A run of more than ``MAX_EMOJI_RUN`` adjacent catalog hits
+    raw.     A run of more than ``max_emoji_run`` adjacent catalog hits
     leaves the overflow as raw Unicode to avoid visual crowding.
     """
     masker = _Masker()
@@ -49,7 +50,7 @@ def _emoji_replace_line(
             run_state["run"] = 1
         run_state["last_end"] = m.end()
 
-        if run_state["run"] > MAX_EMOJI_RUN:
+        if run_state["run"] > max_emoji_run:
             return m.group(0)
 
         # The regex absorbs an optional trailing VS16, but the catalog
@@ -77,12 +78,14 @@ def _emoji_transform_line(
     base_url: str,
     seed: str,
     state: dict,
+    max_emoji_run: int = MAX_EMOJI_RUN,
 ) -> str:
     def handler(segment: str) -> str:
         return _emoji_replace_line(
             segment,
             emoji_re=emoji_re, emojis=emojis, defaults=defaults,
             base_url=base_url, seed=seed, state=state,
+            max_emoji_run=max_emoji_run,
         )
 
     return _scan_summary_aware(line, state, handler)

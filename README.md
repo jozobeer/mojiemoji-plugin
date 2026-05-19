@@ -62,6 +62,18 @@ mojiemoji-plugin が掛かった世界:
 | Scripts | `prestamp.py` / `coverage.py` | `prestamp.py` は高頻度語と Unicode 絵文字 (`🎉` / `⚠️` 等カタ<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%AD%E3%82%B0?font=akzk&amp;color=60a5fa&amp;animation=bure&amp;background=transparent&amp;outline=fa60a5&amp;outline_width=2" alt="ログ" height="24" align="absmiddle"> 162 種) を<img src="https://mojiemoji.jozo.beer/emoji/%E6%B1%BA%E5%AE%9A?font=noto&amp;color=fb923c&amp;animation=zairu&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="決定" height="24" align="absmiddle">論的に先<img src="https://mojiemoji.jozo.beer/emoji/%E7%BD%AE%E6%8F%9B?font=hachimaru&amp;color=facc15&amp;animation=norinori&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="置換" height="24" align="absmiddle">(variant 抽選 + safe-zone <img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%9D%E8%AD%B7?font=gothic&amp;color=fdba74&amp;animation=mozaiku&amp;background=transparent&amp;outline=74fdba&amp;outline_width=2" alt="保護" height="24" align="absmiddle"> + 連続絵文字は 2 連までで打ち切り)、`--report-unstamped` で素通し語の JSON <img src="https://mojiemoji.jozo.beer/emoji/%E5%87%BA%E5%8A%9B?font=gothic-bold&amp;color=fb7185&amp;animation=yokomoya&amp;background=transparent&amp;outline=85fb71&amp;outline_width=2" alt="出力" height="24" align="absmiddle">も<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%AF%E8%83%BD?font=kurobara&amp;color=a78bfa&amp;animation=kira&amp;background=transparent&amp;outline_width=0" alt="可能" height="24" align="absmiddle">、`coverage.py` は stamp 密度 / sentence hit rate / 段落偏りを<img src="https://mojiemoji.jozo.beer/emoji/%E8%A8%88%E6%B8%AC?font=kurobara&amp;color=f43f5e&amp;animation=patapata&amp;background=transparent&amp;outline=5ef43f&amp;outline_width=2" alt="計測" height="24" align="absmiddle">し閾値未満を warn または block |
 | Hook (PreToolUse / Bash + MCP) | `mojiemoji_japanese_gate.py` | <img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=maru-bold&amp;color=d946ef&amp;animation=yatta&amp;background=transparent&amp;outline=efd946&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語本文を投稿しようとした時、6 <img src="https://mojiemoji.jozo.beer/emoji/%E5%BF%85%E9%A0%88?font=gothic&amp;color=ec4899&amp;animation=zanzo&amp;background=transparent&amp;outline=99ec48&amp;outline_width=2" alt="必須" height="24" align="absmiddle">パラメータ揃わない mojiemoji <img src="https://mojiemoji.jozo.beer/emoji/URL?font=pixel&amp;color=f87171&amp;animation=ekken&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="URL" height="24" align="absmiddle"> を含むコマンドを **送信前にブロック**。<img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=maru-bold&amp;color=8b5cf6&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="対象" height="24" align="absmiddle">は `gh (issue\|pr\|release) (create\|comment\|review\|edit)` / `gh api .../reviews\|comments\|issues\|releases` (Bash 経路) と、`mcp__*__github_*` (MCP 経路、`github_create_pull_request` / `github_add_issue_comment` / `github_pull_request_review_write` 等の `body` / `description` フィールド) の両方 |
 
+### 🎚 装飾強度モード（intensity）
+
+`prestamp.py` は **TONE（文体のムード）とは別軸**で、カタログ置換の量を `--intensity` で選べます（`coverage.py` 側の密度閾値や leftover-gate も `--intensity` に連動）。既定は従来どおり **aggressive** です。
+
+| 値 | いつ使うか | CLI 例 |
+|---|---|---|
+| `aggressive` | フル装飾・従来互換（カタログ hit をすべて `<img>` に） | `prestamp.py < body.md` |
+| `normal` | 通常の Issue / PR 向けにやや控えめ（文末コメントで gate 緩和） | `prestamp.py --intensity normal < body.md` |
+| `minimal` | 障害報告・レビュー本文など最低限だけ | `prestamp.py --intensity minimal < body.md` |
+
+**例（同じ入力のイメージ）**: aggressive は文中のヒットがすべてスタンプ化されるのに対し、normal は文ごとに先頭・末尾＋抽選で一部だけ、minimal は文ごとに先頭・末尾のみ（絵文字連打も短く）。`normal` / `minimal` では出力末尾に `<!-- mojiemoji-intensity:… -->` が付き、catalog 残存チェックの許容件数が上がります。
+
 ---
 
 ## 🚀 インストール

@@ -20,17 +20,39 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import yaml
 
-SURFACE_THRESHOLDS: dict[str, dict[str, float]] = {
-    "issue-body":   {"min_density": 2.0, "min_sentence_hit": 0.30, "min_paragraph_hit": 0.40, "max_consecutive_unstamped_paragraphs": 2},
-    "pr-body":      {"min_density": 2.0, "min_sentence_hit": 0.30, "min_paragraph_hit": 0.40, "max_consecutive_unstamped_paragraphs": 2},
-    "review-body":  {"min_density": 2.5, "min_sentence_hit": 0.35, "min_paragraph_hit": 0.50, "max_consecutive_unstamped_paragraphs": 1},
-    "comment-body": {"min_density": 2.5, "min_sentence_hit": 0.35, "min_paragraph_hit": 0.50, "max_consecutive_unstamped_paragraphs": 1},
-    "release-note": {"min_density": 1.8, "min_sentence_hit": 0.25, "min_paragraph_hit": 0.40, "max_consecutive_unstamped_paragraphs": 2},
-}
+from lib.sentence import SENTENCE_SEP_RE
+
+
+class _SurfaceThresholdsDict(dict):
+    def __getitem__(self, key: Any) -> Any:
+        if isinstance(key, str):
+            return super().__getitem__((key, "aggressive"))
+        return super().__getitem__(key)
+
+
+SURFACE_THRESHOLDS: _SurfaceThresholdsDict = _SurfaceThresholdsDict(
+    {
+        ("issue-body", "aggressive"): {"min_density": 2.0, "min_sentence_hit": 0.30, "min_paragraph_hit": 0.40, "max_consecutive_unstamped_paragraphs": 2},
+        ("issue-body", "normal"): {"min_density": 1.2, "min_sentence_hit": 0.18, "min_paragraph_hit": 0.24, "max_consecutive_unstamped_paragraphs": 3},
+        ("issue-body", "minimal"): {"min_density": 0.4, "min_sentence_hit": 0.06, "min_paragraph_hit": 0.08, "max_consecutive_unstamped_paragraphs": 5},
+        ("pr-body", "aggressive"): {"min_density": 2.0, "min_sentence_hit": 0.30, "min_paragraph_hit": 0.40, "max_consecutive_unstamped_paragraphs": 2},
+        ("pr-body", "normal"): {"min_density": 1.2, "min_sentence_hit": 0.18, "min_paragraph_hit": 0.24, "max_consecutive_unstamped_paragraphs": 3},
+        ("pr-body", "minimal"): {"min_density": 0.4, "min_sentence_hit": 0.06, "min_paragraph_hit": 0.08, "max_consecutive_unstamped_paragraphs": 5},
+        ("review-body", "aggressive"): {"min_density": 2.5, "min_sentence_hit": 0.35, "min_paragraph_hit": 0.50, "max_consecutive_unstamped_paragraphs": 1},
+        ("review-body", "normal"): {"min_density": 1.5, "min_sentence_hit": 0.21, "min_paragraph_hit": 0.30, "max_consecutive_unstamped_paragraphs": 2},
+        ("review-body", "minimal"): {"min_density": 0.5, "min_sentence_hit": 0.07, "min_paragraph_hit": 0.10, "max_consecutive_unstamped_paragraphs": 4},
+        ("comment-body", "aggressive"): {"min_density": 2.5, "min_sentence_hit": 0.35, "min_paragraph_hit": 0.50, "max_consecutive_unstamped_paragraphs": 1},
+        ("comment-body", "normal"): {"min_density": 1.5, "min_sentence_hit": 0.21, "min_paragraph_hit": 0.30, "max_consecutive_unstamped_paragraphs": 2},
+        ("comment-body", "minimal"): {"min_density": 0.5, "min_sentence_hit": 0.07, "min_paragraph_hit": 0.10, "max_consecutive_unstamped_paragraphs": 4},
+        ("release-note", "aggressive"): {"min_density": 1.8, "min_sentence_hit": 0.25, "min_paragraph_hit": 0.40, "max_consecutive_unstamped_paragraphs": 2},
+        ("release-note", "normal"): {"min_density": 1.1, "min_sentence_hit": 0.15, "min_paragraph_hit": 0.24, "max_consecutive_unstamped_paragraphs": 3},
+        ("release-note", "minimal"): {"min_density": 0.4, "min_sentence_hit": 0.05, "min_paragraph_hit": 0.08, "max_consecutive_unstamped_paragraphs": 5},
+    }
+)
 
 # Match only actual rendered stamps (<img src="…mojiemoji…">), not bare URLs
 # in markdown links or prose.
@@ -40,7 +62,6 @@ _STAMP_URL_RE = re.compile(
 
 # Hiragana / Katakana / CJK Unified Ideographs.
 _JAPANESE_CHAR_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
-_SENTENCE_SEP_RE = re.compile(r"[。．！？!?\n]+")
 
 # Unicode emoji ranges: Miscellaneous Symbols, Dingbats, Emoticons,
 # Supplemental Symbols and Pictographs, etc.
@@ -101,7 +122,7 @@ def measure(text: str) -> dict[str, object]:
     # `?` in `?font=...` query strings does not fragment sentences (which
     # would also break the per-sentence stamp-hit check below).
     text_for_sentences = _STAMP_URL_RE.sub(" __STAMP__ ", text)
-    sentences = [s for s in (s.strip() for s in _SENTENCE_SEP_RE.split(text_for_sentences)) if s]
+    sentences = [s for s in (s.strip() for s in SENTENCE_SEP_RE.split(text_for_sentences)) if s]
     sentence_hits = sum(1 for s in sentences if "__STAMP__" in s)
     sentence_hit_rate = 0.0 if not sentences else sentence_hits / len(sentences)
 
@@ -217,11 +238,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         description="Measure mojiemoji stamp density on a markdown body.",
         usage="coverage.py [--surface SURFACE] [--mode warn|block] < input.md",
     )
+    surface_choices = sorted({s for (s, _) in SURFACE_THRESHOLDS.keys()})
     parser.add_argument(
         "--surface",
         default="issue-body",
-        choices=list(SURFACE_THRESHOLDS.keys()),
+        choices=surface_choices,
         help="Surface type for thresholds",
+    )
+    parser.add_argument(
+        "--intensity",
+        default="aggressive",
+        choices=["aggressive", "normal", "minimal"],
+        help="Threshold tier (default: aggressive — same as pre-intensity behavior).",
     )
     parser.add_argument(
         "--mode",
@@ -232,7 +260,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     text = sys.stdin.read()
-    threshold = SURFACE_THRESHOLDS[args.surface]
+    threshold = SURFACE_THRESHOLDS[(args.surface, args.intensity)]
     metrics = measure(text)
 
     print(

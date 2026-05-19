@@ -45,6 +45,8 @@ dispatcher は以下のようなブロックを送ってくる:
 SURFACE: issue-body | pr-body | review-summary | review-inline-comment | reply | release-note
 MODE:    block | inline | mixed
 TONE:    calm | neutral | loud
+INTENSITY は別軸で、prestamp.py 側で処理されるため本 subagent は INTENSITY 非対応。
+flavor 選定は INTENSITY によらず常に同じ。
 PHRASES:
 - <phrase> — <短い一節での意図>
 - <phrase> — <意図>

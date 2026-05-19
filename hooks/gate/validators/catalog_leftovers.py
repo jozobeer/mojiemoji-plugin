@@ -25,6 +25,9 @@ CATALOG_PATH = (
 )
 CATALOG_LEFTOVER_BLOCK_THRESHOLD = 10
 
+_INTENSITY_SENTINEL_RE = re.compile(r"<!--\s*mojiemoji-intensity:(normal|minimal)\s*-->")
+_INTENSITY_THRESHOLDS = {None: CATALOG_LEFTOVER_BLOCK_THRESHOLD, "normal": 30, "minimal": 100}
+
 
 _catalog_terms_cache: frozenset | None = None
 
@@ -79,6 +82,9 @@ def validate_catalog_leftovers(text: str) -> int:
     if not catalog:
         return 0
     stripped = _strip_decoration(text)
+    m = _INTENSITY_SENTINEL_RE.search(stripped)
+    intensity = m.group(1) if m else None
+    threshold = _INTENSITY_THRESHOLDS[intensity]
     hits: list[tuple[str, int]] = []
     for term in catalog:
         # ASCII keys (URL, PR, OS, CI, …) need word boundaries so
@@ -89,13 +95,16 @@ def validate_catalog_leftovers(text: str) -> int:
         if n > 0:
             hits.append((term, n))
     total = sum(n for _, n in hits)
-    if total < CATALOG_LEFTOVER_BLOCK_THRESHOLD:
+    if total < threshold:
         return 0
     hits.sort(key=lambda x: -x[1])
     top = ", ".join(f"{t}×{n}" if n > 1 else t for t, n in hits[:20])
     rest = f" (他 {len(hits) - 20} 語)" if len(hits) > 20 else ""
+    intensity_note = ""
+    if intensity is not None:
+        intensity_note = f"（intensity={intensity} のため残存しきい値 {threshold} 件）"
     sys.stderr.write(
-        f"🚧 prestamp.py 未通過: catalog 登録済の 2+ 字語が plain で {total} 個残存\n\n"
+        f"🚧 prestamp.py 未通過: catalog 登録済の 2+ 字語が plain で {total} 個残存{intensity_note}\n\n"
         f"残存語 (top 20): {top}{rest}\n\n"
         f"対応: body を投稿する前に prestamp.py で機械的下処理を通してください\n"
         f"  $ python3 \"${{CLAUDE_PLUGIN_ROOT}}/skills/mojiemoji-github/scripts/prestamp.py\" \\\n"
