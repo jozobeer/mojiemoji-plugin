@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import bisect
 import html
 import re
 import sys
@@ -27,9 +28,21 @@ class Finding:
     message: str
 
 
-def iter_mojiemoji_urls(text: str) -> Iterable[tuple[int, str]]:
+def line_offsets(text: str) -> list[int]:
+    return [match.start() for match in re.finditer("\n", text)]
+
+
+def line_for_offset(offsets: Sequence[int], position: int) -> int:
+    return bisect.bisect_left(offsets, position) + 1
+
+
+def iter_mojiemoji_urls(
+    text: str,
+    offsets: Sequence[int] | None = None,
+) -> Iterable[tuple[int, str]]:
+    line_starts = offsets if offsets is not None else line_offsets(text)
     for match in MOJI_URL_RE.finditer(text):
-        line = text.count("\n", 0, match.start()) + 1
+        line = line_for_offset(line_starts, match.start())
         yield line, html.unescape(match.group(0))
 
 
@@ -66,8 +79,8 @@ def head_status(url: str, timeout: float) -> int:
         raise RuntimeError(str(exc.reason)) from exc
 
 
-def lint_text(
-    text: str,
+def lint_urls(
+    urls: Iterable[tuple[int, str]],
     *,
     source: str = "<stdin>",
     timeout: float = 5.0,
@@ -76,7 +89,7 @@ def lint_text(
     findings: list[Finding] = []
     status = status_for_url or (lambda url: head_status(url, timeout))
 
-    for line, url in iter_mojiemoji_urls(text):
+    for line, url in urls:
         local_finding = color_finding(source, line, url)
         if local_finding is not None:
             findings.append(local_finding)
@@ -98,6 +111,21 @@ def lint_text(
     return findings
 
 
+def lint_text(
+    text: str,
+    *,
+    source: str = "<stdin>",
+    timeout: float = 5.0,
+    status_for_url: StatusChecker | None = None,
+) -> list[Finding]:
+    return lint_urls(
+        iter_mojiemoji_urls(text),
+        source=source,
+        timeout=timeout,
+        status_for_url=status_for_url,
+    )
+
+
 def documents(paths: Sequence[str]) -> Iterable[tuple[str, str]]:
     if not paths:
         yield "<stdin>", sys.stdin.read()
@@ -113,7 +141,10 @@ def documents(paths: Sequence[str]) -> Iterable[tuple[str, str]]:
             continue
 
         path = Path(raw_path)
-        yield str(path), path.read_text(encoding="utf-8")
+        try:
+            yield str(path), path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise SystemExit(f"error: cannot read {path}: {exc}") from exc
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -141,9 +172,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     url_count = 0
 
     for source, text in documents(opts.paths):
-        urls = list(iter_mojiemoji_urls(text))
+        urls = list(iter_mojiemoji_urls(text, line_offsets(text)))
         url_count += len(urls)
-        all_findings.extend(lint_text(text, source=source, timeout=opts.timeout))
+        all_findings.extend(lint_urls(urls, source=source, timeout=opts.timeout))
 
     if all_findings:
         for finding in all_findings:

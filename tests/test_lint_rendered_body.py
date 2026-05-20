@@ -10,8 +10,8 @@ from conftest import LINT_RENDERED_BODY, stamp_img, run_py
 
 def load_module():
     spec = importlib.util.spec_from_file_location("lint_rendered_body", LINT_RENDERED_BODY)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
     assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
@@ -36,6 +36,16 @@ def test_http_non_200_blocks() -> None:
 
     assert len(findings) == 1
     assert findings[0].message == "HTTP 400"
+
+
+def test_line_number_uses_precomputed_offsets() -> None:
+    mod = load_module()
+    body = f"line 1\nline 2\n{stamp_img(color='red')}\n"
+
+    findings = mod.lint_text(body, status_for_url=lambda _url: 200)
+
+    assert len(findings) == 1
+    assert findings[0].line == 3
 
 
 def test_head_status_uses_linter_user_agent(monkeypatch) -> None:
@@ -84,3 +94,11 @@ def test_cli_exits_2_for_named_color_without_http() -> None:
     assert proc.returncode == 2
     assert "color must be 6-digit hex" in proc.stderr
     assert "color=red" in proc.stderr
+
+
+def test_cli_missing_file_exits_without_traceback() -> None:
+    proc = run_py(LINT_RENDERED_BODY, "", "/no/such/mojiemoji-body.md")
+
+    assert proc.returncode == 1
+    assert "error: cannot read /no/such/mojiemoji-body.md" in proc.stderr
+    assert "Traceback" not in proc.stderr
