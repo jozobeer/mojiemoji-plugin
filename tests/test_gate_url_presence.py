@@ -13,7 +13,7 @@ Exit code contract: 0 → allow, 2 → block.
 
 from __future__ import annotations
 
-from conftest import stamp_img, stamp_url
+from conftest import assert_skill_agent_guidance, stamp_img, stamp_url
 
 JP_BODY = "これは日本語の本文です。"
 JP_PARAGRAPH = (
@@ -51,6 +51,7 @@ class TestZeroStamps:
         )
         assert result.returncode == 2
         assert "mojiemoji" in result.stderr.lower()
+        assert_skill_agent_guidance(result.stderr)
 
 
 class TestLgtmStamp:

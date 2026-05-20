@@ -112,3 +112,11 @@ def stamp_img(**kwargs) -> str:
     alt = kwargs.pop("alt", kwargs.get("text", "テスト"))
     url = stamp_url(**kwargs)
     return f'<img src="{url}" alt="{alt}" height="24" align="absmiddle">'
+
+
+def assert_skill_agent_guidance(stderr: str) -> None:
+    assert "`Skill(mojiemoji-github)`" in stderr
+    assert "`Agent` ツール" in stderr
+    assert 'subagent_type: "mojiemoji-selector"' in stderr
+    assert "`mojiemoji-github:mojiemoji-selector`" in stderr
+    assert "Skill ツールには渡せない" in stderr
