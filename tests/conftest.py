@@ -16,6 +16,9 @@ HOOK = REPO_ROOT / "hooks" / "mojiemoji_japanese_gate.py"
 PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.py"
 COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.py"
 GENERATE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "generate_catalog.py"
+LINT_RENDERED_BODY = (
+    REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "lint_rendered_body.py"
+)
 
 
 def run_py(script: Path, text: str, *args: str) -> subprocess.CompletedProcess[str]:

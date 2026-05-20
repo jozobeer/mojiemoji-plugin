@@ -99,12 +99,10 @@ for m in re.finditer(r'mojiemoji.jozo.beer/emoji/([^?]+)', content):
 #     ヒット 0 行であるべき。
 grep -E '^!\[[^]]*\]\(https://mojiemoji' "$SNIPPETS" && echo "✗ BLOCK STAMP — convert to inline <img> form"
 
-# 11. ライブ URL チェック — 全スタンプが HTTP 200 を返すこと
-#     (grep では見えない、漢字のエンコードミスや正準外のフレーズタイポを捕捉)。
-grep -oE 'https://mojiemoji\.jozo\.beer/[^"<)]+' "$SNIPPETS" | while read u; do
-  code=$(curl -sI -o /dev/null -w "%{http_code}" "$u")
-  [ "$code" = "200" ] || echo "✗ HTTP $code: $u"
-done
+# 11. rendered-body lint — 全スタンプが HTTP 200 を返すこと、
+#     かつ named color が混入していないことを確認する。
+#     named color はサービス側が一部だけ 200 を返すため、curl だけでは捕捉できない。
+uv run python skills/mojiemoji-github/scripts/lint_rendered_body.py "$SNIPPETS"
 
 # 12. animation 多様性 — distinct 値 12 種以上、本文全体で同じ animation の
 #     使用は 2 回以下。
