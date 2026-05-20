@@ -167,6 +167,14 @@ scripts/mojiemoji_markdown.py --text 'マジで' --inline \
 | Chore / 雑務 | `雑務` / `整備` / `更新` | (装飾控えめ) | minimal |
 | Cosmetic / 微調整 | (装飾控えめ、1 スタンプで足る場合あり) | — | light |
 
+上の表にある `minimal` / `light` 等は **TONE（ムード）** のラベルです。**INTENSITY（volume）** — `prestamp.py --intensity {aggressive,normal,minimal}` で決める機械置換の量 — とは別概念です。
+
+| 想定シーン | 推奨 INTENSITY |
+|---|---|
+| お祝い・リリース告知など派手に載せたいとき | `aggressive`（既定のまま） |
+| 通常の Issue / PR 本文 | 既定は aggressive のまま互換維持。やや抑えるなら **`normal` を明示** |
+| 障害報告・レビュー本文・chore タスクなど静かめ | `minimal` |
+
 ### <img src="https://mojiemoji.jozo.beer/emoji/PR?font=maru&amp;color=34d399&amp;animation=gatagata&amp;background=transparent&amp;outline=9934d3&amp;outline_width=2" alt="PR" height="24" align="absmiddle"> 本文(`gh pr create`)
 
 | <img src="https://mojiemoji.jozo.beer/emoji/PR?font=hachimaru&amp;color=ef4444&amp;animation=bure&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="PR" height="24" align="absmiddle"> タイプ | 先頭文に埋め込む語(例) | 締め文に埋め込む語(例) | トーン |

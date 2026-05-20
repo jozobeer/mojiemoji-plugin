@@ -22,6 +22,7 @@ from lib.constants import DEFAULT_BASE_URL
 from prestamp.catalog import (
     DEFAULT_CATALOG_PATH,
     DEFAULT_EMOJI_CATALOG_PATH,
+    MAX_EMOJI_RUN,
     build_emoji_re,
     build_term_re,
     load_catalog,
@@ -40,6 +41,7 @@ def transform(
     emoji_catalog_path: Optional[Path] = None,
     base_url: str = DEFAULT_BASE_URL,
     seed: str = "0",
+    intensity: str = "aggressive",
 ) -> str:
     """Transform markdown text by replacing catalog hits with mojiemoji stamps.
 
@@ -71,6 +73,7 @@ def transform(
         emoji_re = build_emoji_re(emojis)
 
     state = {"occurrence": 0, "in_summary": False}
+    max_emoji_run = 1 if intensity == "minimal" else MAX_EMOJI_RUN
 
     # Pass 1 — text catalog.
     pass1 = []
@@ -80,6 +83,7 @@ def transform(
                 line,
                 term_re=term_re, terms=terms, defaults=defaults,
                 base_url=base_url, seed=seed, state=state,
+                intensity=intensity,
             ))
         else:
             pass1.append(line)
@@ -100,6 +104,7 @@ def transform(
                 line,
                 emoji_re=emoji_re, emojis=emojis, defaults=emoji_defaults,
                 base_url=base_url, seed=seed, state=state,
+                max_emoji_run=max_emoji_run,
             ))
         else:
             pass2.append(line)
@@ -152,6 +157,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             "--report-unstamped for pipelines that need both outputs."
         ),
     )
+    parser.add_argument(
+        "--intensity",
+        default="aggressive",
+        choices=["aggressive", "normal", "minimal"],
+        help="Catalog substitution density: aggressive (default), normal, or minimal.",
+    )
     args = parser.parse_args(argv)
 
     text = sys.stdin.read()
@@ -161,6 +172,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         emoji_catalog_path=args.emoji_catalog,
         base_url=args.base_url,
         seed=args.seed,
+        intensity=args.intensity,
     )
 
     if args.report_unstamped:
@@ -174,6 +186,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         with open(args.report_unstamped_to, "w", encoding="utf-8") as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
             f.write("\n")
+
+    if args.intensity in ("normal", "minimal"):
+        output += f"<!-- mojiemoji-intensity:{args.intensity} -->\n"
 
     sys.stdout.write(output)
     return 0
