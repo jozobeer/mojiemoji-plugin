@@ -159,11 +159,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     parser.add_argument(
         "--intensity",
-        default="aggressive",
+        default=None,
         choices=["aggressive", "normal", "minimal"],
-        help="Catalog substitution density: aggressive (default), normal, or minimal.",
+        help=(
+            "Catalog substitution density: aggressive, normal, or minimal. "
+            "Defaults to config value (~/.config/mojiemoji/config.json) or "
+            "'aggressive' if unset."
+        ),
     )
     args = parser.parse_args(argv)
+
+    from lib.config import get_intensity as _get_config_intensity
+
+    resolved_intensity = args.intensity or _get_config_intensity() or "aggressive"
 
     text = sys.stdin.read()
     output = transform(
@@ -172,7 +180,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         emoji_catalog_path=args.emoji_catalog,
         base_url=args.base_url,
         seed=args.seed,
-        intensity=args.intensity,
+        intensity=resolved_intensity,
     )
 
     if args.report_unstamped:
@@ -187,8 +195,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             json.dump(report, f, ensure_ascii=False, indent=2)
             f.write("\n")
 
-    if args.intensity in ("normal", "minimal"):
-        output += f"<!-- mojiemoji-intensity:{args.intensity} -->\n"
+    if resolved_intensity in ("normal", "minimal"):
+        output += f"<!-- mojiemoji-intensity:{resolved_intensity} -->\n"
 
     sys.stdout.write(output)
     return 0
