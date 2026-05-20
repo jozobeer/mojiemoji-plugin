@@ -13,7 +13,7 @@ Exit code contract:
 
 from __future__ import annotations
 
-from conftest import stamp_img, stamp_url
+from conftest import assert_skill_agent_guidance, stamp_img, stamp_url
 
 JP_BODY = "これは日本語の本文です。"
 
@@ -29,6 +29,7 @@ class TestMissingParams:
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
         )
         assert result.returncode == 2
+        assert_skill_agent_guidance(result.stderr)
 
     def test_jp_body_with_url_missing_background_blocks(self, run_hook):
         bad_url = stamp_url(background=None)
