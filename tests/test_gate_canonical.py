@@ -14,7 +14,7 @@ Exit code contract: 0 → allow, 2 → block.
 
 from __future__ import annotations
 
-from conftest import stamp_img
+from conftest import assert_skill_agent_guidance, stamp_img
 
 JP_BODY = "これは日本語の本文です。"
 JP_PARAGRAPH = (
@@ -50,6 +50,7 @@ class TestNonCanonicalValues:
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
         )
         assert result.returncode == 2
+        assert_skill_agent_guidance(result.stderr)
 
 
 class TestAnimationConflicts:
