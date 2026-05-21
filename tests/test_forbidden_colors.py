@@ -79,17 +79,27 @@ def test_shipped_catalogs_have_no_forbidden_colors() -> None:
     normalizer."""
     from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
 
+    def color_entries(value: object):
+        if isinstance(value, dict):
+            for field in ("color", "outline"):
+                val = value.get(field)
+                if isinstance(val, str):
+                    yield field, val.lstrip("#").lower()
+            for child in value.values():
+                yield from color_entries(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from color_entries(child)
+
     bad = []
     for path in [CATALOG_DIR / "prestamp-catalog.yml", CATALOG_DIR / "emoji-catalog.yml"]:
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         top_key = "terms" if "prestamp" in path.name else "emojis"
         for term, variants in (data.get(top_key) or {}).items():
-            for v in variants or []:
-                for field in ("color", "outline"):
-                    val = (v.get(field) or "").lstrip("#").lower()
-                    if val in FORBIDDEN_COLOR_REPLACEMENTS:
-                        bad.append(f"{path.name}: {term} {field}={val}")
+            for field, val in color_entries(variants or []):
+                if val in FORBIDDEN_COLOR_REPLACEMENTS:
+                    bad.append(f"{path.name}: {term} {field}={val}")
     assert not bad, "Forbidden colors found in catalog:\n  " + "\n  ".join(bad)
 
 

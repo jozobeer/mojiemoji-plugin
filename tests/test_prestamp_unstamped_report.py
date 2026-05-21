@@ -74,6 +74,19 @@ def test_prestamp_unstamped_report_skips_summary_content() -> None:
     assert "対象外" not in terms
 
 
+def test_prestamp_unstamped_report_excludes_hangul_yi_pua() -> None:
+    body = "한국어 ꀀ \ue000 と 未収録単語 は混在しても日本語候補だけ対象。\n"
+    proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")
+
+    assert proc.returncode == 0
+    terms = {entry["term"] for entry in json.loads(proc.stdout)["unstamped"]}
+
+    assert "未収録単語" in terms
+    assert "한국어" not in terms
+    assert "ꀀ" not in terms
+    assert "\ue000" not in terms
+
+
 def test_prestamp_unstamped_report_excludes_pure_hiragana() -> None:
     body = "ひらがな ばかり と かんじが まじる いっぽうで 漢字熟語 は 対象。\n"
     proc = run_py(PRESTAMP, body, "--seed", "1", "--report-unstamped")

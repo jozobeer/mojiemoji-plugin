@@ -2,7 +2,8 @@
 # Verify that the canonical font / animation allowlists in
 # `lib/constants.py` (the SSOT consumed by both the hook and skill
 # scripts) match the lists documented in parameters.md, plus the
-# generator's raw Tailwind palette has no overlap with FORBIDDEN_COLORS.
+# generator's raw Tailwind palette has no overlap with rejected or
+# cleanup-replacement forbidden colors.
 #
 # Drift between these locations is the root cause of multiple silent
 # failures (the hook rejects a value the docs say is valid, accepts a
@@ -31,14 +32,15 @@ PARAMS="$REPO_ROOT/skills/mojiemoji-github/references/parameters.md"
 EXTRACT="$REPO_ROOT/scripts/extract_hook_set.py"
 GENERATOR="$REPO_ROOT/skills/mojiemoji-github/scripts/generate_catalog.py"
 LIB_CONSTANTS="$REPO_ROOT/skills/mojiemoji-github/scripts/lib/constants.py"
+LIB_FORBIDDEN_COLORS="$REPO_ROOT/skills/mojiemoji-github/scripts/lib/forbidden_colors.py"
 
-python3 - "$PARAMS" "$EXTRACT" "$GENERATOR" "$LIB_CONSTANTS" <<'PY'
+python3 - "$PARAMS" "$EXTRACT" "$GENERATOR" "$LIB_CONSTANTS" "$LIB_FORBIDDEN_COLORS" <<'PY'
 import ast
 import re
 import subprocess
 import sys
 
-params_path, extract_path, generator_path, lib_path = sys.argv[1:5]
+params_path, extract_path, generator_path, lib_path, forbidden_path = sys.argv[1:6]
 
 
 def lib_set(name: str) -> set[str]:
@@ -78,6 +80,33 @@ def find_tuple_literal(tree, name, source_path):
 
 
 raw_palette = find_tuple_literal(gen_tree, "_RAW_TAILWIND_PALETTE", generator_path)
+
+
+def find_dict_keys(tree, name, source_path):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+            value = node.value
+        elif isinstance(node, ast.Assign):
+            targets = list(node.targets)
+            value = node.value
+        else:
+            continue
+        if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            if isinstance(value, ast.Dict):
+                return {
+                    key.value for key in value.keys
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str)
+                }
+    raise SystemExit(f"missing {name} in {source_path}")
+
+
+forbidden_tree = ast.parse(open(forbidden_path, encoding="utf-8").read())
+replacement_forbidden = find_dict_keys(
+    forbidden_tree,
+    "FORBIDDEN_COLOR_REPLACEMENTS",
+    forbidden_path,
+)
 
 # --- Extract from parameters.md (fenced code blocks under headers) --------
 params_src = open(params_path, encoding="utf-8").read()
@@ -124,14 +153,16 @@ if errors:
     sys.exit(1)
 
 # --- FORBIDDEN ∩ TAILWIND drift -------------------------------------------
-overlap = raw_palette & lib_forbidden
+palette_forbidden = lib_forbidden | replacement_forbidden
+overlap = raw_palette & palette_forbidden
 if overlap:
     print(
-        f"[drift] _RAW_TAILWIND_PALETTE ∩ FORBIDDEN_COLORS = "
+        f"[drift] _RAW_TAILWIND_PALETTE ∩ generator-forbidden colors = "
         f"{sorted(overlap)}\n"
         f"  These colors are in generate_catalog's raw palette but the "
-        f"hook rejects them; runtime filter currently strips them, but "
-        f"the source pool should be the single provenance.",
+        f"hook or cleanup normalizer rejects them; runtime filter "
+        f"currently strips them, but the source pool should be the "
+        f"single provenance.",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -143,6 +174,6 @@ print(
     f"COLOR_SHIFTING_ANIMATIONS ({len(lib_color_shifting)}), "
     f"ROTATIONAL_ANIMATIONS ({len(lib_rotational)}) "
     f"present in lib (single source); "
-    f"FORBIDDEN_COLORS ∩ TAILWIND palette = ∅"
+    f"generator-forbidden colors ∩ TAILWIND palette = ∅"
 )
 PY

@@ -29,7 +29,7 @@ from prestamp.catalog import (
     load_emoji_catalog,
 )
 from prestamp.emoji_pass import _emoji_transform_line
-from prestamp.lines import _walk_lines_outside_fences
+from prestamp.lines import _observe_summary_tags, _walk_lines_outside_fences_with_reason
 from prestamp.text_pass import _transform_line
 from prestamp.unstamped_report import report_unstamped
 
@@ -77,7 +77,7 @@ def transform(
 
     # Pass 1 — text catalog.
     pass1 = []
-    for line, is_prose in _walk_lines_outside_fences(text):
+    for line, is_prose, reason in _walk_lines_outside_fences_with_reason(text):
         if is_prose:
             pass1.append(_transform_line(
                 line,
@@ -86,6 +86,8 @@ def transform(
                 intensity=intensity,
             ))
         else:
+            if reason == "disabled":
+                _observe_summary_tags(line, state)
             pass1.append(line)
 
     if emoji_re is None:
@@ -98,7 +100,7 @@ def transform(
     # False, but reset defensively so pass 2 starts clean.
     state["in_summary"] = False
     pass2 = []
-    for line, is_prose in _walk_lines_outside_fences("".join(pass1)):
+    for line, is_prose, reason in _walk_lines_outside_fences_with_reason("".join(pass1)):
         if is_prose:
             pass2.append(_emoji_transform_line(
                 line,
@@ -107,6 +109,8 @@ def transform(
                 max_emoji_run=max_emoji_run,
             ))
         else:
+            if reason == "disabled":
+                _observe_summary_tags(line, state)
             pass2.append(line)
     return "".join(pass2)
 

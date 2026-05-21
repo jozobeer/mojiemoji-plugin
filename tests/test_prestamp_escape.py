@@ -94,3 +94,34 @@ def test_prestamp_off_on_markers_render_invisibly() -> None:
     assert proc.returncode == 0
     assert "<!-- mojiemoji:off -->" in proc.stdout
     assert "<!-- mojiemoji:on -->" in proc.stdout
+
+
+def test_prestamp_off_marker_inside_fence_is_literal() -> None:
+    body = (
+        "```md\n"
+        "<!-- mojiemoji:off -->\n"
+        "```\n"
+        "ここから修正は stamp。\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "1")
+
+    assert proc.returncode == 0
+    assert "<!-- mojiemoji:off -->" in proc.stdout
+    assert "<img" in proc.stdout.split("```\n", 2)[-1]
+
+
+def test_prestamp_summary_close_inside_off_region_resumes_body() -> None:
+    body = (
+        "<details>\n"
+        "<summary>確認\n"
+        "<!-- mojiemoji:off -->\n"
+        "</summary>\n"
+        "<!-- mojiemoji:on -->\n"
+        "詳細の修正は stamp。\n"
+        "</details>\n"
+    )
+    proc = run_py(PRESTAMP, body, "--seed", "1")
+
+    assert proc.returncode == 0
+    after = proc.stdout.split("<!-- mojiemoji:on -->", 1)[1]
+    assert "<img" in after

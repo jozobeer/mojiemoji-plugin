@@ -1,6 +1,6 @@
 ---
 name: mojiemoji-selector
-description: 'Agent ツール専用: subagent_type="mojiemoji-selector" で呼ぶ。Skill(mojiemoji-github:mojiemoji-selector) では呼べない。GitHub markdown 用 mojiemoji スタンプのフォント・色・アニメーション・速度を選定し、貼り付け<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%AF%E8%83%BD?font=kurobara&amp;color=a78bfa&amp;animation=kira&amp;background=transparent&amp;outline_width=0" alt="可能" height="24" align="absmiddle">なスニペットを<img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=maru&amp;color=facc15&amp;animation=tate_scroll&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="生成" height="24" align="absmiddle">する。'
+description: 'Agent ツール専用: Agent(subagent_type: "mojiemoji-selector") で呼ぶ。Skill(mojiemoji-github:mojiemoji-selector) では呼べない。GitHub markdown 用 mojiemoji スタンプのフォント・色・アニメーション・速度を選定し、貼り付け<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%AF%E8%83%BD?font=kurobara&amp;color=a78bfa&amp;animation=kira&amp;background=transparent&amp;outline_width=0" alt="可能" height="24" align="absmiddle">なスニペットを<img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=maru&amp;color=facc15&amp;animation=tate_scroll&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="生成" height="24" align="absmiddle">する。'
 model: haiku
 color: "#F472B6"
 tools: Read, Glob, Bash

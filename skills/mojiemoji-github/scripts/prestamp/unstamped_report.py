@@ -14,7 +14,11 @@ from __future__ import annotations
 import re
 
 from prestamp.boundaries import JAPANESE_RUN_RE
-from prestamp.lines import _scan_summary_aware, _walk_lines_outside_fences
+from prestamp.lines import (
+    _observe_summary_tags,
+    _scan_summary_aware,
+    _walk_lines_outside_fences_with_reason,
+)
 from prestamp.masker import _Masker, _mask_safe_zones
 
 UNSTAMPED_CONTEXT_RADIUS = 20
@@ -57,9 +61,11 @@ def report_unstamped(text: str) -> dict:
         return segment
 
     state = {"in_summary": False}
-    for line, is_prose in _walk_lines_outside_fences(text):
+    for line, is_prose, reason in _walk_lines_outside_fences_with_reason(text):
         if is_prose:
             _scan_summary_aware(line, state, observe)
+        elif reason == "disabled":
+            _observe_summary_tags(line, state)
 
     return {
         "unstamped": [

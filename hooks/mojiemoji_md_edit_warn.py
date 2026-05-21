@@ -30,21 +30,13 @@ something the author should look at.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
-DOC_GLOBS = (
-    "README.md",
-    "CHANGELOG.md",
-    "docs/",
-    "agents/",
-)
 SKILL_MD_SUFFIX = "SKILL.md"
-JP_CHARS = set()
-for lo, hi in (("぀", "ゟ"), ("゠", "ヿ"), ("一", "鿿")):
-    for code in range(ord(lo), ord(hi) + 1):
-        JP_CHARS.add(chr(code))
+JP_RE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]")
 
 
 def _is_documentation_md(path: Path, repo_root: Path) -> bool:
@@ -65,7 +57,7 @@ def _is_documentation_md(path: Path, repo_root: Path) -> bool:
 
 
 def _has_japanese(text: str) -> bool:
-    return any(ch in JP_CHARS for ch in text)
+    return JP_RE.search(text) is not None
 
 
 def _find_repo_root(start: Path) -> Path | None:

@@ -32,30 +32,28 @@ from lib.constants import (
     ROTATIONAL_ANIMATIONS,
 )
 from lib.flavor import Flavor
+from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+from lib.japanese_ranges import HAN_RANGE, HIRAGANA_RANGE, KATAKANA_RANGE
 
 
 # Tailwind palette used for variant generation. Curated to exclude
-# hook-forbidden colors (Tailwind 600+ on red/orange/yellow/green/blue
-# that render black-on-dark in GitHub's dark theme). The runtime
-# `FORBIDDEN_COLORS` filter is a defense in depth — kept so that any
-# future palette regression still gets sanitized — but the source
-# pool is the single provenance.
-# `scripts/verify-canonical-lists.sh` enforces
-# `_RAW_TAILWIND_PALETTE ∩ FORBIDDEN_COLORS = ∅`.
+# hook-forbidden colors and dark-theme-dim cleanup replacements. The
+# runtime filter is defense in depth — kept so any future palette
+# regression still gets sanitized — but the source pool remains the
+# single provenance.
+# `scripts/verify-lists-vs-docs.sh` enforces that the raw palette has
+# no overlap with either forbidden set.
 _RAW_TAILWIND_PALETTE = (
-    "ef4444", "f97316", "ea580c", "f59e0b", "d97706",
+    "ef4444", "f97316", "fb923c", "f59e0b", "fbbf24",
     "eab308", "22c55e", "34d399", "10b981",
-    "06b6d4", "0891b2", "3b82f6", "60a5fa", "8b5cf6",
-    "7c3aed", "a855f7", "c084fc", "d946ef", "ec4899", "db2777",
+    "06b6d4", "22d3ee", "3b82f6", "60a5fa", "8b5cf6",
+    "a78bfa", "a855f7", "c084fc", "d946ef", "ec4899",
     "f472b6", "fb7185", "f43f5e", "fdba74",
 )
-TAILWIND_PALETTE = tuple(c for c in _RAW_TAILWIND_PALETTE if c not in FORBIDDEN_COLORS)
+_GENERATOR_FORBIDDEN_COLORS = FORBIDDEN_COLORS | set(FORBIDDEN_COLOR_REPLACEMENTS)
+TAILWIND_PALETTE = tuple(c for c in _RAW_TAILWIND_PALETTE if c not in _GENERATOR_FORBIDDEN_COLORS)
 
 POOLED_ANIMATIONS = tuple(a for a in CANONICAL_ANIMATIONS if a not in INLINE_PROBLEMATIC_ANIMATIONS)
-
-HAN_RANGE = "㐀-䶿一-鿿豈-﫿"
-HIRAGANA_RANGE = "぀-ゟ"
-KATAKANA_RANGE = "゠-ヿ"
 
 _HAN_RE = re.compile(f"[{HAN_RANGE}]")
 _HIRA_RE = re.compile(f"[{HIRAGANA_RANGE}]")

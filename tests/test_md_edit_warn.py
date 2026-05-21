@@ -14,6 +14,7 @@ code is always 0. These tests verify three properties:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -32,7 +33,7 @@ def _run(payload: dict, cwd: Path) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         cwd=str(cwd),
-        env={"CLAUDE_PLUGIN_ROOT": str(REPO_ROOT)},
+        env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(REPO_ROOT)},
         timeout=15,
     )
 

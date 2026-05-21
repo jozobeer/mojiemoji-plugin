@@ -104,7 +104,7 @@ subagent は歴史的にこれらを落としがちなので、**以下の行を
 
 ```
 - Every URL MUST include &background=transparent
-- Animation MUST come from the canonical list (see references/parameters.md § Valid animation values). For rotational animations (`kaiten`, `spin`) pair with `speed=step` or `slow` — they are unreadable at `normal`/`fast`
+- Animation MUST come from the canonical list (see references/parameters.md § Valid animation values). For rotational animations (`kaiten`, `kage_kaiten`) pair with `speed=step` or `slow` — they are unreadable at `normal`/`fast`
 - Font MUST come from the canonical list (see references/parameters.md § Valid font values); never `della` (correct: `dela`)
 - Color MUST be dark-mode-safe (Tailwind 300–500 range; never 600+ or near-black). See references/parameters.md § Dark-mode-safe color palette.
 - For inline mode: height=20 is the observed user default. **Confirmed block-only**: `bakusan` (radial-burst obscures letterforms at small heights). **Likely problematic inline**: `chuuou_zoom`, `mozaiku`, `kage_*` shadow effects. Substitute `gatagata` / `bure` / `tenmetsu` / `shuchusen` / `zanzo` for inline impact moods.
@@ -125,7 +125,7 @@ MODE: inline
 CONSTRAINTS:
 - FLAVOR GATE OVERRIDE: render factual/design terms; do not skip.
 - All inline; height=20 (matches user's observed body style)
-- Animation required; only use names from the canonical 34 in references/parameters.md. Rotational animations (`kaiten`, or `spin` if present) require `speed=step` or `slow` — `normal`/`fast` is unreadably fast for rotational glyphs
+- Animation required; only use names from the canonical 34 in references/parameters.md. Rotational animations (`kaiten`, `kage_kaiten`) require `speed=step` or `slow` — `normal`/`fast` is unreadably fast for rotational glyphs
 - Animation diversity: 12+ distinct values across the body; no animation more than 2× across distinct terms
 - Include at least 3 picks from the underused tier (ekken, tate_ekken, neruneru, patapata, mabataki, mozaiku, tatemoya, yokomoya, zairu, zanzo, chirichiri, kage_kaiten, kage_bokashi, kage_neon, kirari, yatta, kaiten, psycho)
 - Avoid reusing the "safe defaults" (bane, nami, mochimochi, bure) more than once each per body — they're the historical bias the user has flagged
@@ -134,7 +134,7 @@ CONSTRAINTS:
 - Color: dark-mode-safe (Tailwind 300–500 range), bias toward 300–400
 - background=transparent in every URL
 - outline=darker outline_width=2 in every URL (auto-relative dark halo per stamp; never use outline=ffffff — white blends with light Tailwind 300–400 fills)
-- Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use an emoji — prefer mojiemoji-rendered if the emoji is in data/emoji-catalog.yml (162 supported, includes 🎉 🔥 ✨ 💯 ⚠ ❤ 😂 🎊 🚨 🤖 etc.), fall back to plain Unicode for unsupported codepoints (e.g. 🚀 = U+1F680, 🪐 = U+1FA90).
+- Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use an emoji — prefer mojiemoji-rendered if the emoji is in skills/mojiemoji-github/data/emoji-catalog.yml (162 supported, includes 🎉 🔥 ✨ 💯 ⚠ ❤ 😂 🎊 🚨 🤖 etc.), fall back to plain Unicode for unsupported codepoints (e.g. 🚀 = U+1F680, 🪐 = U+1FA90).
 ```
 
 ## 直接スクリプト(単一フレーズのファスト<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%91%E3%82%B9?font=chikara&amp;color=facc15&amp;animation=patapata&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="パス" height="24" align="absmiddle">)

@@ -77,3 +77,13 @@ class TestCatalogLeftovers:
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
         )
         assert result.returncode == 0, result.stderr
+
+    def test_ascii_terms_inside_larger_words_do_not_count(self, run_hook):
+        # Regression for #98: naive substring matching counted `OS`
+        # inside POST and `CI` inside ASCII, tripping the leftover
+        # threshold even though no standalone catalog term was present.
+        body = f"{JP_PARAGRAPH} {' '.join(['POST', 'ASCII'] * 12)} {stamp_img()}"
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
+        )
+        assert result.returncode == 0, result.stderr
