@@ -10,10 +10,19 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import sys
 
+import pytest
 import yaml
 
 from conftest import GENERATE, REPO_ROOT, run_py
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _add_scripts_to_path() -> None:
+    scripts_dir = str(GENERATE.parent)
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
 
 
 def _load_generate_catalog_module():
