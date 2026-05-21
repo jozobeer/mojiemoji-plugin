@@ -12,11 +12,15 @@ from __future__ import annotations
 
 import re
 
+from lib.japanese_ranges import HAN_RANGE, HIRAGANA_RANGE, KATAKANA_RANGE
+
 
 _IDENT_RE = re.compile(r"\A[a-zA-Z][a-zA-Z0-9_]*\Z")
 _HEX6_RE = re.compile(r"\A[0-9a-f]{6}\Z")
 _LEADING_DIGIT_RE = re.compile(r"\A\d")
-_SAFE_TERM_KEY_RE = re.compile(r"\A[㐀-䶿一-鿿豈-﫿぀-ゟ゠-ヿA-Za-z0-9_]+\Z")
+_SAFE_TERM_KEY_RE = re.compile(
+    rf"\A[{HAN_RANGE}{HIRAGANA_RANGE}{KATAKANA_RANGE}A-Za-z0-9_]+\Z"
+)
 
 
 def yaml_value(value: object) -> str:

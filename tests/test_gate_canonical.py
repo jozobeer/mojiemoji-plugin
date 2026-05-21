@@ -14,6 +14,8 @@ Exit code contract: 0 → allow, 2 → block.
 
 from __future__ import annotations
 
+import pytest
+
 from conftest import assert_skill_agent_guidance, stamp_img
 
 JP_BODY = "これは日本語の本文です。"
@@ -42,17 +44,17 @@ class TestNonCanonicalValues:
         )
         assert result.returncode == 2
 
-    def test_named_color_blocks(self, run_hook):
+    @pytest.mark.parametrize("color", ["vivid-purple", "teal", "red", "blue", "indigo"])
+    def test_named_color_blocks(self, run_hook, color: str):
         # Named palette tokens (`red` / `teal` / `vivid-purple` etc.)
         # are forbidden because service acceptance is inconsistent (#110)
         # and they often fail dark-mode contrast.
-        for color in ["vivid-purple", "teal", "red", "blue", "indigo"]:
-            body = f'{JP_BODY} {stamp_img(color=color)}'
-            result = run_hook(
-                {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
-            )
-            assert result.returncode == 2, f"Expected {color} to be blocked"
-            assert_skill_agent_guidance(result.stderr)
+        body = f'{JP_BODY} {stamp_img(color=color)}'
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
+        )
+        assert result.returncode == 2, f"Expected {color} to be blocked"
+        assert_skill_agent_guidance(result.stderr)
 
 
 class TestAnimationConflicts:

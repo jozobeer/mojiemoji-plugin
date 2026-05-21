@@ -28,17 +28,12 @@ from lib.term_boundaries import (
     ASCII_LEFT_GUARD,
     ASCII_RIGHT_GUARD,
 )
+from lib.japanese_ranges import (
+    HAN_RANGE,
+    HIRAGANA_RANGE,
+    KATAKANA_RANGE,
+)
 
-# Explicit Unicode escapes prevent the ambiguity that bit #118: the
-# character `豈` exists at both U+8C48 (CJK Unified Ideographs) and
-# U+F900 (CJK Compatibility Ideographs). The visually identical glyph
-# typed in source code defaults to U+8C48, which would over-extend the
-# range to U+8C48-U+FAFF — covering Hangul, Yi, surrogates, and the
-# private-use area. Spelling each range bound with \u keeps intent
-# auditable and prevents copy-paste recurrence.
-HAN_RANGE = "㐀-䶿一-鿿豈-﫿"
-HIRAGANA_RANGE = "぀-ゟ"
-KATAKANA_RANGE = "゠-ヿ"
 SINGLE_HAN_LEFT_GUARD = f"(?<![{HAN_RANGE}_])"
 SINGLE_DIGIT_LEFT_GUARD = f"(?<=[{HAN_RANGE}{HIRAGANA_RANGE}{KATAKANA_RANGE}])"
 SINGLE_DIGIT_RIGHT_GUARD = r"(?![A-Za-z0-9_.])"

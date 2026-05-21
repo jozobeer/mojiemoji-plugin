@@ -7,14 +7,16 @@ named palette entries too — visually the same problem.
 
 This map is the SSOT for "catalog must not ship these colors":
 
-  - `scripts/normalize-catalog-colors.py` consumes it to rewrite both
-    `prestamp-catalog.yml` and `emoji-catalog.yml` (#97 cleanup).
-  - `scripts/prestamp.py` keeps it wired into `_normalize_color_value`
+  - `skills/mojiemoji-github/scripts/normalize_catalog_colors.py`
+    consumes it to rewrite both `prestamp-catalog.yml` and
+    `emoji-catalog.yml` (#97 cleanup).
+  - `skills/mojiemoji-github/scripts/prestamp.py` keeps it wired into
+    `_normalize_color_value`
     as a safety net for any author who hand-writes a forbidden hex
     into a body before running the script.
-  - `.github/workflows/catalog-drift-check.yml` (extension of #81)
-    fails CI when a catalog `color:` / `outline:` is re-introduced
-    from this set.
+  - `.github/workflows/on-pr.yml` runs `tests/test_forbidden_colors.py`
+    and `scripts/verify-lists-vs-docs.sh`, failing CI when a catalog or
+    generator palette re-introduces a value from this set.
 
 The hook's `canonical` validator (`hooks/gate/validators/canonical.py`)
 imports a smaller `FORBIDDEN_COLORS` set from `lib/constants.py`
@@ -22,7 +24,7 @@ covering only the truly-black + already-rejected-on-URL subset. The
 cleanup map here is a superset — it includes Tailwind 500-band colors
 that still render but are dim on dark backgrounds, so prestamp prefers
 the matching 400-series for catalog output. Drift between the two
-sets is intentional and tested via test_forbidden_color_sets.
+sets is intentional and tested via tests/test_forbidden_colors.py.
 """
 
 from __future__ import annotations

@@ -158,13 +158,12 @@ def test_helper_constants_match_prestamp_constants() -> None:
         # CJK Unified Ideographs
         ("一", True),
         ("鿿", True),
-        # CJK Compatibility Ideographs (the U+F900 `豈`, NOT the U+8C48 one)
-        ("豈", True),
-        ("﫿", True),
+        # CJK Compatibility Ideographs: U+F900-U+FAFF.
+        ("\uf900", True),
+        ("\ufaff", True),
         # Hangul — must NOT match. `한` is U+D55C, well inside the over-
         # extended U+8C48-U+FAFF range the pre-#118 code accidentally
-        # covered. If this assertion ever fires, the `豈` in
-        # boundaries.py has reverted to U+8C48.
+        # covered.
         ("한", False),
         ("가", False),  # `가` — first Hangul syllable
         ("힣", False),  # `힣` — last Hangul syllable

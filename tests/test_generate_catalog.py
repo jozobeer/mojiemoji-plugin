@@ -8,11 +8,20 @@ and the digit-key quoting required for YAML→Regexp.union safety.
 
 from __future__ import annotations
 
+import importlib.util
 import re
 
 import yaml
 
 from conftest import GENERATE, REPO_ROOT, run_py
+
+
+def _load_generate_catalog_module():
+    spec = importlib.util.spec_from_file_location("generate_catalog", GENERATE)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_generate_catalog_emits_diverse_variants_per_term() -> None:
@@ -112,3 +121,20 @@ def test_catalog_loads_with_string_keys_for_digits() -> None:
     data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
     int_keys = [k for k in data["terms"].keys() if isinstance(k, int)]
     assert int_keys == [], f"integer keys leaked into catalog: {int_keys}"
+
+
+def test_generate_catalog_han_range_excludes_hangul_yi_pua() -> None:
+    generate_catalog = _load_generate_catalog_module()
+
+    assert generate_catalog.char_classes("語日本")["kanji"] == 3
+    assert generate_catalog.char_classes("한국어")["kanji"] == 0
+    assert generate_catalog.char_classes("ꀀ")["kanji"] == 0
+    assert generate_catalog.char_classes("\ue000")["kanji"] == 0
+
+
+def test_generate_catalog_palette_excludes_forbidden_replacement_keys() -> None:
+    generate_catalog = _load_generate_catalog_module()
+    from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+
+    forbidden = set(FORBIDDEN_COLOR_REPLACEMENTS)
+    assert not (set(generate_catalog.TAILWIND_PALETTE) & forbidden)
