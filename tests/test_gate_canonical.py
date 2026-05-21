@@ -43,14 +43,16 @@ class TestNonCanonicalValues:
         assert result.returncode == 2
 
     def test_named_color_blocks(self, run_hook):
-        # `vivid-purple` is a named palette token, service silently
-        # falls back to black on dark mode.
-        body = f'{JP_BODY} {stamp_img(color="vivid-purple")}'
-        result = run_hook(
-            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
-        )
-        assert result.returncode == 2
-        assert_skill_agent_guidance(result.stderr)
+        # Named palette tokens (`red` / `teal` / `vivid-purple` etc.)
+        # are forbidden because service acceptance is inconsistent (#110)
+        # and they often fail dark-mode contrast.
+        for color in ["vivid-purple", "teal", "red", "blue", "indigo"]:
+            body = f'{JP_BODY} {stamp_img(color=color)}'
+            result = run_hook(
+                {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
+            )
+            assert result.returncode == 2, f"Expected {color} to be blocked"
+            assert_skill_agent_guidance(result.stderr)
 
 
 class TestAnimationConflicts:
