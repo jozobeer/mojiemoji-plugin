@@ -57,10 +57,30 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 from gate.extract import JP_RE, MOJI_URL_RE, extract_inspect_text  # noqa: E402
+from gate.extract import forces_pr_body, is_pr_body_submission, pr_body_target_repo  # noqa: E402
 from gate.validators import (  # noqa: E402
     PIPELINE,
     validate_catalog_leftovers,
     validate_schema_version,
+)
+from lib.repo_policy import POLICY_LEAKS, POLICY_UNKNOWN, repo_policy_state  # noqa: E402
+
+_PR_BODY_LEAK_REMINDER = (
+    "🚫 このリポジトリは PR body を commit message にコピーする設定です\n"
+    "\n"
+    "検出: squash / merge commit message が `PR_BODY` のリポジトリに、mojiemoji\n"
+    "stamp を含む PR body を投稿しようとしています。GitHub が PR body を squash /\n"
+    "merge commit に転記するため、`<img src=\"https://mojiemoji.jozo.beer/...\">`\n"
+    "の HTML が commit 履歴に恒久的に残ってしまいます (issue #138)。\n"
+    "\n"
+    "## 対処\n"
+    "1. PR body から mojiemoji stamp を外して投稿する (推奨。本文の装飾は不要)\n"
+    "2. どうしても装飾したいなら、投稿経路に応じて FORCE を明示する:\n"
+    "   - Bash: command 先頭に `MOJIEMOJI_FORCE_PR_BODY=1` を付ける\n"
+    "   - MCP: body 内に `MOJIEMOJI_FORCE_PR_BODY=1` を含める\n"
+    "\n"
+    "issue / review / comment など他の surface は通常どおり装飾して構いません。\n"
+    "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
 )
 
 
@@ -76,6 +96,25 @@ def main() -> int:
     jp_texts = [text for text in inspect_texts if JP_RE.search(text)]
     if not jp_texts:
         return 0
+    cwd = data.get("cwd", "")
+    if is_pr_body_submission(data) and not forces_pr_body(data):
+        owner, repo = pr_body_target_repo(data) or (None, None)
+        state = repo_policy_state(
+            owner=owner,
+            repo=repo,
+            cwd=Path(cwd) if cwd else None,
+        )
+        has_stamp = any(MOJI_URL_RE.search(text) for text in jp_texts)
+        # Undecorated body on a leaking / undetectable repo: allow without
+        # forcing decoration (default-safe — keeps commit history clean).
+        if not has_stamp and state in (POLICY_LEAKS, POLICY_UNKNOWN):
+            return 0
+        # Decorated body on a confirmed-leaking repo: block so the stamps
+        # don't bleed into squash/merge commit messages. UNKNOWN falls
+        # through to normal validation rather than blocking on a guess.
+        if has_stamp and state == POLICY_LEAKS:
+            sys.stderr.write(_PR_BODY_LEAK_REMINDER)
+            return 2
 
     for inspect_text in jp_texts:
         urls = MOJI_URL_RE.findall(inspect_text)

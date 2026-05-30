@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from lib.constants import DEFAULT_BASE_URL
+from lib.repo_policy import should_skip_pr_body
 
 from prestamp.catalog import (
     DEFAULT_CATALOG_PATH,
@@ -125,7 +126,10 @@ prestamp_text = transform
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Replace catalog terms in markdown with mojiemoji stamps.",
-        usage="prestamp.py [--seed SEED] [--base-url URL] [--catalog PATH] < input.md > output.md",
+        usage=(
+            "prestamp.py [--seed SEED] [--base-url URL] "
+            "[--catalog PATH] [--surface SURFACE] < input.md > output.md"
+        ),
     )
     parser.add_argument("--seed", default="0", help="Seed for deterministic flavor selection")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Base URL for the mojiemoji service")
@@ -171,6 +175,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             "'aggressive' if unset."
         ),
     )
+    parser.add_argument(
+        "--surface",
+        default="issue-body",
+        choices=["issue-body", "pr-body", "review-body", "comment-body", "release-note"],
+        help="GitHub surface policy gate. pr-body may skip decoration based on repo settings.",
+    )
     args = parser.parse_args(argv)
 
     from lib.config import get_intensity as _get_config_intensity
@@ -178,6 +188,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     resolved_intensity = args.intensity or _get_config_intensity() or "aggressive"
 
     text = sys.stdin.read()
+    skip = args.surface == "pr-body" and should_skip_pr_body()
+
+    # Always transform — the unstamped report is a catalog-gap analysis of
+    # the body's Japanese and is surface-independent, so a pr-body skip must
+    # not suppress it. Only the markdown stdout output respects `skip`.
     output = transform(
         text,
         catalog_path=args.catalog,
@@ -198,6 +213,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         with open(args.report_unstamped_to, "w", encoding="utf-8") as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
             f.write("\n")
+
+    if skip:
+        sys.stdout.write(text)
+        return 0
 
     if resolved_intensity in ("normal", "minimal"):
         output += f"<!-- mojiemoji-intensity:{resolved_intensity} -->\n"

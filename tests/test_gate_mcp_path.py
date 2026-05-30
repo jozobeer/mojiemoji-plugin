@@ -39,7 +39,7 @@ class TestMcpPath:
     @pytest.mark.parametrize(
         "tool_name",
         [
-            "mcp__github__github_create_pull_request",
+            "mcp__github__github_issue_write",
             "mcp__mcpm_profile_base__github_add_issue_comment",
             "mcp__gh__github_pull_request_review_write",
         ],
@@ -48,13 +48,18 @@ class TestMcpPath:
         result = run_hook({"tool_name": tool_name, "tool_input": {"body": JP_BODY}})
         assert result.returncode == 2, f"{tool_name} should have been blocked"
 
+    def test_create_pull_request_body_allows_plain_japanese_when_policy_unknown(self, run_hook):
+        result = run_hook(
+            {"tool_name": "mcp__github__github_create_pull_request", "tool_input": {"body": JP_BODY}}
+        )
+        assert result.returncode == 0, result.stderr
+
     # Defense-in-depth: if a future matcher broadens to non-`github`
     # aliases (`mcp__octo__*`, etc.), the hook logic itself must still
     # recognize the GH operation suffix.
     @pytest.mark.parametrize(
         "tool_name",
         [
-            "mcp__octo__create_pull_request",
             "mcp__octo__pull_request_review_write",
             "mcp__octo__issue_write",
             "mcp__octo__add_issue_comment",
@@ -63,6 +68,10 @@ class TestMcpPath:
     def test_aliased_server_name_blocks_when_routed(self, run_hook, tool_name):
         result = run_hook({"tool_name": tool_name, "tool_input": {"body": JP_BODY}})
         assert result.returncode == 2, f"{tool_name} should have been blocked"
+
+    def test_aliased_create_pull_request_allows_plain_japanese_when_policy_unknown(self, run_hook):
+        result = run_hook({"tool_name": "mcp__octo__create_pull_request", "tool_input": {"body": JP_BODY}})
+        assert result.returncode == 0, result.stderr
 
     def test_decorated_jp_body_passes(self, run_hook):
         body = f"{JP_PARAGRAPH} {stamp_img()}"

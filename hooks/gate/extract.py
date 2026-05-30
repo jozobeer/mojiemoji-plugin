@@ -22,6 +22,11 @@ import re
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # High-level `gh` commands that publish bodies.
 GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review|edit)")
+GH_PR_BODY_RE = re.compile(r"gh\s+pr\s+(create|edit)\b")
+# `-R owner/repo` / `--repo owner/repo` / `--repo=owner/repo` select a
+# target repo other than the cwd's origin. Optional `HOST/` prefix is
+# tolerated; `_split_owner_repo` keeps the trailing owner/repo segments.
+REPO_FLAG_RE = re.compile(r"(?:-R|--repo)(?:\s+|=)(['\"]?)([^'\"\s]+)\1")
 # Raw REST POSTs that skills like cross-repo-review use to publish reviews,
 # comments, issues, or releases. We match the resource segment so we don't
 # fire on GET / read-only calls.
@@ -30,6 +35,7 @@ GH_API_RE = re.compile(
 )
 STAMP_MARKER = "mojiemoji.jozo.beer"
 BYPASS_MARKER = "MOJIEMOJI_HOOK_DISABLED=1"
+FORCE_MARKER = "MOJIEMOJI_FORCE_PR_BODY=1"
 # Match every mojiemoji URL up to the first URL/HTML delimiter so we can
 # verify per-URL query parameters. Delimiters: whitespace, `"`, `<`, `>`, `)`.
 MOJI_URL_RE = re.compile(r"https?://mojiemoji\.jozo\.beer/[^\s\"<>)]+")
@@ -118,6 +124,10 @@ MCP_GH_RE = re.compile(
     r"issue_read|issue_write|sub_issue_write|"
     r"create_release|update_release"
     r")",
+    re.IGNORECASE,
+)
+MCP_PR_BODY_RE = re.compile(
+    r"^mcp__.*?(?:create_pull_request|update_pull_request)",
     re.IGNORECASE,
 )
 # Body-class fields across the MCP GitHub tool family. Title /
@@ -362,4 +372,55 @@ def extract_inspect_text(data: dict):
         return _route_bash(data)
     if MCP_GH_RE.match(tool_name):
         return _route_mcp(tool_input)
+    return None
+
+
+def is_pr_body_submission(data: dict) -> bool:
+    """True when a hook payload targets the PR body surface itself."""
+    tool_name = data.get("tool_name", "")
+    tool_input = data.get("tool_input", {}) or {}
+    if tool_name == "Bash":
+        command = tool_input.get("command", "")
+        return bool(GH_PR_BODY_RE.search(command))
+    return bool(MCP_PR_BODY_RE.match(tool_name))
+
+
+def forces_pr_body(data: dict) -> bool:
+    """True when a submission opts out of the repo-policy PR body gate.
+
+    Bash callers prefix the env marker on the command line (mirroring the
+    bypass idiom). MCP callers have no shell prefix, so — like
+    `MOJIEMOJI_HOOK_DISABLED=1` on the MCP path — the marker is honored
+    when it appears inside the body text the caller directly controls.
+    """
+    tool_input = data.get("tool_input", {}) or {}
+    if data.get("tool_name") == "Bash":
+        return FORCE_MARKER in tool_input.get("command", "")
+    return any(FORCE_MARKER in piece for piece in collect_body_text(tool_input, BODY_FIELDS))
+
+
+def _split_owner_repo(value: str) -> tuple[str, str] | None:
+    parts = [part for part in value.strip().removesuffix(".git").split("/") if part]
+    if len(parts) < 2:
+        return None
+    return parts[-2], parts[-1]
+
+
+def pr_body_target_repo(data: dict) -> tuple[str, str] | None:
+    """Resolve the repo a PR-body submission targets, ignoring the cwd.
+
+    `gh pr create -R owner/repo` and the MCP `create_pull_request`
+    tool (`tool_input.owner` / `.repo`) can target a repo other than the
+    one the working directory points at. Returns ``None`` when no explicit
+    target is present, leaving the caller to fall back to cwd resolution.
+    """
+    tool_name = data.get("tool_name", "")
+    tool_input = data.get("tool_input", {}) or {}
+    if tool_name == "Bash":
+        match = REPO_FLAG_RE.search(tool_input.get("command", ""))
+        return _split_owner_repo(match.group(2)) if match else None
+    owner = tool_input.get("owner")
+    repo = tool_input.get("repo")
+    if isinstance(owner, str) and owner and isinstance(repo, str) and repo:
+        return owner, repo
     return None
