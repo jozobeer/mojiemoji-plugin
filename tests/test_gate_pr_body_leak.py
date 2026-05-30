@@ -114,6 +114,34 @@ class TestDecoratedLeakBlock:
         assert result.returncode == 0, result.stderr
 
 
+class TestUnknownRepoFallThrough:
+    """UNKNOWN policy must never trigger the active block (only LEAKS does).
+
+    cwd=tmp_path has no git remote, so the repo resolves to UNKNOWN. A
+    decorated PR body there is NOT blocked on a guess — it falls through
+    to the normal stamp validation pipeline. This guards the discriminator
+    against a regression that collapses the block back onto LEAKS ∪ UNKNOWN
+    and starts rejecting offline / unauthenticated users.
+    """
+
+    def test_decorated_pr_body_unknown_repo_passes_valid_stamp(self, run_hook):
+        body = f"{JP_PARAGRAPH} {stamp_img()}"
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_decorated_pr_body_unknown_repo_still_validates_stamp(self, run_hook):
+        # Malformed stamp (missing required params) must still be caught —
+        # proving the body reached validation, not the policy block.
+        bad = "https://mojiemoji.jozo.beer/emoji/%E3%83%86%E3%82%B9%E3%83%88?font=gothic-bold"
+        body = f'{JP_PARAGRAPH} <img src="{bad}" alt="テスト" height="24" align="absmiddle">'
+        result = run_hook(
+            {"tool_name": "Bash", "tool_input": {"command": f'gh pr create --body "{body}"'}}
+        )
+        assert result.returncode == 2, result.stderr
+
+
 class TestMcpTargetRepo:
     """MCP create_pull_request resolves owner/repo from tool_input."""
 
