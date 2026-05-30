@@ -21,6 +21,15 @@ from lib import repo_policy  # noqa: E402
 
 BODY = "これは修正と確認を含むPR本文です。\n"
 
+# Subprocess tests run prestamp/coverage with cwd=REPO_ROOT, so the policy
+# layer resolves the repo from *this checkout's* origin. Seed the cache and
+# address repo_policy_state under that same key (not a hard-coded slug) so
+# the suite stays deterministic in forks and clones with a different origin.
+_DEFAULT_OWNER, _DEFAULT_REPO = repo_policy.current_repo(cwd=REPO_ROOT) or (
+    "jozobeer",
+    "mojiemoji-plugin",
+)
+
 
 def _completed(stdout: str, returncode: int = 0) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr="")
@@ -40,8 +49,8 @@ def _runner_for(*, remote: str, api: dict | None = None, api_returncode: int = 0
 def _write_policy_cache(
     xdg_cache_home: Path,
     *,
-    owner: str = "jozobeer",
-    repo: str = "mojiemoji-plugin",
+    owner: str = _DEFAULT_OWNER,
+    repo: str = _DEFAULT_REPO,
     squash: str,
     merge: str,
     fetched_at: datetime | None = None,
@@ -103,8 +112,8 @@ def test_repo_policy_classifies_pr_body_leaks_from_cache(
     _write_policy_cache(tmp_path, squash=squash, merge=merge)
 
     state = repo_policy.repo_policy_state(
-        owner="jozobeer",
-        repo="mojiemoji-plugin",
+        owner=_DEFAULT_OWNER,
+        repo=_DEFAULT_REPO,
         env={"XDG_CACHE_HOME": str(tmp_path)},
         runner=_runner_for(remote=""),
     )
