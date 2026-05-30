@@ -56,11 +56,29 @@ F_BODY_RE = re.compile(r"-F\s+body=@(['\"]?)([^'\"\s|;&)]+)\1")
 # strip rule is safe. Value forms covered: `--flag "v"`, `--flag 'v'`,
 # `--flag=v`, `--flag v`. Lookbehind on the short-form alternative
 # prevents `--flag-with-t` from being mis-stripped as `-t`.
+SHELL_FLAG_VALUE = r"(?:\"[^\"]*\"|'[^']*'|[^\s\"']+)"
 NON_BODY_FLAGS_RE = re.compile(
     r"(?:--(?:title|label|reviewer|assignee|milestone|head|base)|"
     r"(?<!\S)-[tlramHB])"
     r"(?:\s+|=)"
-    r"(?:\"[^\"]*\"|'[^']*'|[^\s\"']+)"
+    rf"(?P<value>{SHELL_FLAG_VALUE})"
+)
+# Body-class inline flags are the counterweight to non-body variable
+# stripping: if the same shell variable is later used as `--body` /
+# `--notes`, its assignment remains inspectable so variable-routed body
+# prose cannot bypass the gate.
+BODY_FLAGS_RE = re.compile(
+    r"(?:--(?:body|notes)|(?<!\S)-[bn])"
+    r"(?:\s+|=)"
+    rf"(?P<value>{SHELL_FLAG_VALUE})"
+)
+SHELL_VARIABLE_RE = re.compile(
+    r"^\$(?:([A-Za-z_][A-Za-z_0-9]*)|\{([A-Za-z_][A-Za-z_0-9]*)\})$"
+)
+SHELL_ASSIGNMENT_LINE_RE = re.compile(
+    r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z_0-9]*)="
+    r"(?:\"[^\"]*\"|'[^']*'|\$\"[^\"]*\"|\$'[^']*'|[^\s\"'|;&()<>]+)"
+    r"\s*;?\s*$"
 )
 # Script files referenced via interpreter invocation. The 2026-05-12
 # triage-review incident bypassed file-body inspection by building the JSON
@@ -221,6 +239,47 @@ def collect_body_text(obj, target_keys):
     return pieces
 
 
+def _shell_variable_name(value):
+    """Return the variable name for a simple `$name` flag value."""
+    text = value.strip()
+    if len(text) >= 2 and text[0] == text[-1] == "'":
+        return None
+    if len(text) >= 2 and text[0] == text[-1] == '"':
+        text = text[1:-1]
+    match = SHELL_VARIABLE_RE.match(text)
+    if not match:
+        return None
+    return match.group(1) or match.group(2)
+
+
+def _flag_variable_names(regex, command):
+    """Return simple shell variables used as values for `regex` flags."""
+    return {
+        name
+        for match in regex.finditer(command)
+        if (name := _shell_variable_name(match.group("value")))
+    }
+
+
+def _strip_non_body_assignment_lines(command):
+    """Remove simple assignment lines that feed non-body metadata flags."""
+    names = _flag_variable_names(NON_BODY_FLAGS_RE, command) - _flag_variable_names(
+        BODY_FLAGS_RE,
+        command,
+    )
+    if not names:
+        return command
+    return "\n".join(
+        ""
+        if (
+            (match := SHELL_ASSIGNMENT_LINE_RE.match(line))
+            and match.group(1) in names
+        )
+        else line
+        for line in command.splitlines()
+    )
+
+
 def _route_bash(data: dict):
     """Return inspectable body pieces for a Bash tool call, or `None` to skip the gate.
 
@@ -256,7 +315,10 @@ def _route_bash(data: dict):
     # an inspect surface. Without this, Japanese in `--title` etc.
     # would be required to carry mojiemoji decoration — contradicting
     # the documented policy that titles / labels are out of scope.
-    inspected_command = NON_BODY_FLAGS_RE.sub("", command)
+    inspected_command = NON_BODY_FLAGS_RE.sub(
+        "",
+        _strip_non_body_assignment_lines(command),
+    )
     pieces = [inspected_command]
     pieces.extend(file_bodies)
     if script_body:
