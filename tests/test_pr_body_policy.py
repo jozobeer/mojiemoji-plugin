@@ -316,6 +316,44 @@ def test_prestamp_pr_body_force_decorates_even_when_policy_leaks(tmp_path: Path)
     assert "<img" in proc.stdout
 
 
+def test_prestamp_pr_body_skip_still_writes_unstamped_report(tmp_path: Path) -> None:
+    _write_policy_cache(tmp_path, squash="PR_BODY", merge="PR_TITLE")
+    report_path = tmp_path / "report.json"
+    proc = _run_py(
+        PRESTAMP,
+        BODY,
+        "--surface",
+        "pr-body",
+        "--report-unstamped-to",
+        str(report_path),
+        env={"XDG_CACHE_HOME": str(tmp_path)},
+    )
+
+    assert proc.returncode == 0
+    # Body stays undecorated on stdout (policy skip)...
+    assert proc.stdout == BODY
+    assert "<img" not in proc.stdout
+    # ...but the report contract is still honored.
+    assert report_path.exists()
+    assert "unstamped" in json.loads(report_path.read_text())
+
+
+def test_prestamp_pr_body_skip_report_unstamped_emits_report(tmp_path: Path) -> None:
+    _write_policy_cache(tmp_path, squash="PR_BODY", merge="PR_TITLE")
+    proc = _run_py(
+        PRESTAMP,
+        BODY,
+        "--surface",
+        "pr-body",
+        "--report-unstamped",
+        env={"XDG_CACHE_HOME": str(tmp_path)},
+    )
+
+    assert proc.returncode == 0
+    # stdout is the JSON report, not the (skipped) body.
+    assert "unstamped" in json.loads(proc.stdout)
+
+
 def test_coverage_pr_body_skips_when_policy_leaks(tmp_path: Path) -> None:
     _write_policy_cache(tmp_path, squash="COMMIT_MESSAGES", merge="PR_BODY")
     proc = _run_py(
