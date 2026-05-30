@@ -112,6 +112,74 @@ def test_repo_policy_classifies_pr_body_leaks_from_cache(
     assert state == repo_policy.POLICY_LEAKS
 
 
+def test_policy_state_defaults_absent_allow_flags_to_true() -> None:
+    # Pre-existing cache entries carry no allow_* flags; classification
+    # must stay conservative (LEAKS) rather than silently downgrade.
+    assert (
+        repo_policy.policy_state(
+            {"squash_merge_commit_message": "PR_BODY", "merge_commit_message": "PR_TITLE"}
+        )
+        == repo_policy.POLICY_LEAKS
+    )
+
+
+@pytest.mark.parametrize(
+    ("squash", "merge", "allow_squash", "allow_merge"),
+    [
+        ("PR_BODY", "PR_TITLE", False, True),
+        ("COMMIT_MESSAGES", "PR_BODY", True, False),
+        ("PR_BODY", "PR_BODY", False, False),
+    ],
+)
+def test_policy_state_safe_when_pr_body_method_disabled(
+    squash: str, merge: str, allow_squash: bool, allow_merge: bool
+) -> None:
+    assert (
+        repo_policy.policy_state(
+            {
+                "squash_merge_commit_message": squash,
+                "merge_commit_message": merge,
+                "allow_squash_merge": allow_squash,
+                "allow_merge_commit": allow_merge,
+            }
+        )
+        == repo_policy.POLICY_SAFE
+    )
+
+
+def test_policy_state_leaks_when_pr_body_method_enabled() -> None:
+    assert (
+        repo_policy.policy_state(
+            {
+                "squash_merge_commit_message": "PR_BODY",
+                "merge_commit_message": "PR_TITLE",
+                "allow_squash_merge": True,
+                "allow_merge_commit": False,
+            }
+        )
+        == repo_policy.POLICY_LEAKS
+    )
+
+
+def test_repo_policy_safe_when_fetched_pr_body_method_disabled(tmp_path: Path) -> None:
+    state = repo_policy.repo_policy_state(
+        owner="o",
+        repo="r",
+        env={"XDG_CACHE_HOME": str(tmp_path)},
+        runner=_runner_for(
+            remote="git@github.com:o/r.git",
+            api={
+                "squash_merge_commit_message": "PR_BODY",
+                "merge_commit_message": "PR_TITLE",
+                "allow_squash_merge": False,
+                "allow_merge_commit": True,
+            },
+        ),
+    )
+
+    assert state == repo_policy.POLICY_SAFE
+
+
 def test_repo_policy_unknown_when_fetch_fails(tmp_path: Path) -> None:
     state = repo_policy.repo_policy_state(
         owner="o",

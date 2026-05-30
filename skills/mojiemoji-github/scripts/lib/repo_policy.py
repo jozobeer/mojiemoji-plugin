@@ -70,10 +70,17 @@ def current_repo(
 
 
 def policy_state(data: Mapping[str, Any]) -> PolicyState:
-    """Classify a GitHub repo API response / cache payload."""
-    if data.get("squash_merge_commit_message") == PR_BODY:
+    """Classify a GitHub repo API response / cache payload.
+
+    A merge method only leaks the PR body if that method copies the body
+    into the commit message AND the method is actually enabled. Absent
+    ``allow_*`` flags (pre-existing cache entries written before this
+    field was tracked) default to True so classification stays
+    conservative rather than silently downgrading to SAFE.
+    """
+    if data.get("squash_merge_commit_message") == PR_BODY and data.get("allow_squash_merge", True):
         return POLICY_LEAKS
-    if data.get("merge_commit_message") == PR_BODY:
+    if data.get("merge_commit_message") == PR_BODY and data.get("allow_merge_commit", True):
         return POLICY_LEAKS
     return POLICY_SAFE
 
@@ -198,6 +205,8 @@ def _fetch_repo_policy(
     return {
         "squash_merge_commit_message": data["squash_merge_commit_message"],
         "merge_commit_message": data["merge_commit_message"],
+        "allow_squash_merge": data.get("allow_squash_merge", True),
+        "allow_merge_commit": data.get("allow_merge_commit", True),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
     }
 
