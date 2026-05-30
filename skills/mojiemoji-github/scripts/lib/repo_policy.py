@@ -40,7 +40,10 @@ def repo_from_remote_url(url: str) -> Optional[tuple[str, str]]:
         return _owner_repo_from_path(cleaned.removeprefix("git@github.com:"))
 
     parsed = urlparse(cleaned)
-    if parsed.netloc != "github.com":
+    # `hostname` strips any `user@` / `:port` so `ssh://git@github.com/o/r`
+    # resolves to `github.com`; `netloc` would keep the `git@` userinfo and
+    # never match.
+    if parsed.hostname != "github.com":
         return None
     return _owner_repo_from_path(parsed.path.lstrip("/"))
 

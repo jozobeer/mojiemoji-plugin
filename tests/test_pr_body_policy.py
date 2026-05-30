@@ -170,6 +170,32 @@ def test_repo_policy_re_fetches_broken_json_cache(tmp_path: Path) -> None:
     assert state == repo_policy.POLICY_SAFE
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ssh://git@github.com/o/r.git",
+        "ssh://git@github.com/o/r",
+        "git@github.com:o/r.git",
+        "https://github.com/o/r.git",
+        "https://user@github.com/o/r",
+    ],
+)
+def test_repo_from_remote_url_parses_github_forms(url: str) -> None:
+    assert repo_policy.repo_from_remote_url(url) == ("o", "r")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ssh://git@gitlab.com/o/r.git",
+        "https://example.com/o/r",
+        "",
+    ],
+)
+def test_repo_from_remote_url_rejects_non_github(url: str) -> None:
+    assert repo_policy.repo_from_remote_url(url) is None
+
+
 def test_force_env_disables_skip_even_for_unknown_repo() -> None:
     assert not repo_policy.should_skip_pr_body(
         env={"MOJIEMOJI_FORCE_PR_BODY": "1"},
