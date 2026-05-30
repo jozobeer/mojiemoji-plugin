@@ -46,12 +46,33 @@ class TestZeroStamps:
         result = run_hook(
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": f'gh pr create --title "x" --body "{JP_BODY}"'},
+                "tool_input": {"command": f'gh issue create --title "x" --body "{JP_BODY}"'},
             }
         )
         assert result.returncode == 2
         assert "mojiemoji" in result.stderr.lower()
         assert_skill_agent_guidance(result.stderr)
+
+    def test_pr_body_without_stamps_is_allowed_when_policy_unknown(self, run_hook):
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh pr create --title "x" --body "{JP_BODY}"'},
+            }
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_force_pr_body_keeps_zero_stamp_gate_enabled(self, run_hook):
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f'MOJIEMOJI_FORCE_PR_BODY=1 gh pr create --title "x" --body "{JP_BODY}"',
+                },
+            }
+        )
+        assert result.returncode == 2
+        assert "mojiemoji" in result.stderr.lower()
 
 
 class TestLgtmStamp:

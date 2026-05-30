@@ -70,11 +70,11 @@ class TestGhEditVariants:
         )
         assert result.returncode == 2
 
-    def test_gh_pr_edit_with_japanese_body_is_blocked(self, run_hook):
+    def test_gh_pr_edit_with_japanese_body_is_allowed_when_policy_unknown(self, run_hook):
         result = run_hook(
             {"tool_name": "Bash", "tool_input": {"command": f'gh pr edit 123 --body "{JP_BODY}"'}}
         )
-        assert result.returncode == 2
+        assert result.returncode == 0
 
     def test_gh_release_edit_with_japanese_notes_is_blocked(self, run_hook):
         result = run_hook(

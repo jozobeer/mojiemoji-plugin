@@ -18,7 +18,7 @@ class TestBypass:
             {
                 "tool_name": "Bash",
                 "tool_input": {
-                    "command": f'MOJIEMOJI_HOOK_DISABLED=1 gh pr create --title "x" --body "{JP_BODY}"'
+                    "command": f'MOJIEMOJI_HOOK_DISABLED=1 gh issue create --title "x" --body "{JP_BODY}"'
                 },
             }
         )
@@ -27,7 +27,7 @@ class TestBypass:
     def test_mcp_bypass_in_body(self, run_hook):
         result = run_hook(
             {
-                "tool_name": "mcp__github__github_create_pull_request",
+                "tool_name": "mcp__github__github_add_issue_comment",
                 "tool_input": {"body": f"MOJIEMOJI_HOOK_DISABLED=1 {JP_BODY}"},
             }
         )
@@ -42,7 +42,7 @@ class TestBypass:
         result = run_hook(
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": f'gh pr create --title "x" --body-file {body_file}'},
+                "tool_input": {"command": f'gh issue create --title "x" --body-file {body_file}'},
             },
             cwd=tmp_path,
         )
@@ -55,7 +55,7 @@ class TestBypass:
             {
                 "tool_name": "Bash",
                 "tool_input": {
-                    "command": f'HOOK_DISABLE=1 gh pr create --title "x" --body "{JP_BODY}"'
+                    "command": f'HOOK_DISABLE=1 gh issue create --title "x" --body "{JP_BODY}"'
                 },
             }
         )

@@ -56,12 +56,14 @@ _HOOKS_DIR = Path(__file__).resolve().parent
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
-from gate.extract import JP_RE, MOJI_URL_RE, extract_inspect_text  # noqa: E402
+from gate.extract import JP_RE, MOJI_URL_RE, command_forces_pr_body, extract_inspect_text  # noqa: E402
+from gate.extract import is_pr_body_submission  # noqa: E402
 from gate.validators import (  # noqa: E402
     PIPELINE,
     validate_catalog_leftovers,
     validate_schema_version,
 )
+from lib.repo_policy import should_skip_pr_body  # noqa: E402
 
 
 def main() -> int:
@@ -75,6 +77,14 @@ def main() -> int:
         return 0
     jp_texts = [text for text in inspect_texts if JP_RE.search(text)]
     if not jp_texts:
+        return 0
+    cwd = data.get("cwd", "")
+    if (
+        is_pr_body_submission(data)
+        and not command_forces_pr_body(data)
+        and not any(MOJI_URL_RE.search(text) for text in jp_texts)
+        and should_skip_pr_body(cwd=Path(cwd) if cwd else None)
+    ):
         return 0
 
     for inspect_text in jp_texts:

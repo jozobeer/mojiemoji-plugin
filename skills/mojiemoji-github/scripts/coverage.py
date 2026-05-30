@@ -24,6 +24,11 @@ from typing import Any, Optional
 
 import yaml
 
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from lib.repo_policy import should_skip_pr_body
 from lib.sentence import SENTENCE_SEP_RE
 
 
@@ -260,6 +265,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     text = sys.stdin.read()
+    if args.surface == "pr-body" and should_skip_pr_body():
+        print(
+            "surface=pr-body policy=skip stamps=0 japanese_chars=0 "
+            "density=0.00 sentence_hit_rate=0.00 paragraph_hit_rate=0.00 "
+            "max_consecutive_unstamped=0"
+        )
+        return 0
+
     threshold = SURFACE_THRESHOLDS[(args.surface, args.intensity)]
     metrics = measure(text)
 

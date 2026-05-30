@@ -22,6 +22,7 @@ import re
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # High-level `gh` commands that publish bodies.
 GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review|edit)")
+GH_PR_BODY_RE = re.compile(r"gh\s+pr\s+(create|edit)\b")
 # Raw REST POSTs that skills like cross-repo-review use to publish reviews,
 # comments, issues, or releases. We match the resource segment so we don't
 # fire on GET / read-only calls.
@@ -100,6 +101,10 @@ MCP_GH_RE = re.compile(
     r"issue_read|issue_write|sub_issue_write|"
     r"create_release|update_release"
     r")",
+    re.IGNORECASE,
+)
+MCP_PR_BODY_RE = re.compile(
+    r"^mcp__.*?(?:create_pull_request|update_pull_request)",
     re.IGNORECASE,
 )
 # Body-class fields across the MCP GitHub tool family. Title /
@@ -301,3 +306,20 @@ def extract_inspect_text(data: dict):
     if MCP_GH_RE.match(tool_name):
         return _route_mcp(tool_input)
     return None
+
+
+def is_pr_body_submission(data: dict) -> bool:
+    """True when a hook payload targets the PR body surface itself."""
+    tool_name = data.get("tool_name", "")
+    tool_input = data.get("tool_input", {}) or {}
+    if tool_name == "Bash":
+        command = tool_input.get("command", "")
+        return bool(GH_PR_BODY_RE.search(command))
+    return bool(MCP_PR_BODY_RE.match(tool_name))
+
+
+def command_forces_pr_body(data: dict) -> bool:
+    """True when a Bash invocation opts out of repo-policy PR body skip."""
+    tool_input = data.get("tool_input", {}) or {}
+    command = tool_input.get("command", "")
+    return "MOJIEMOJI_FORCE_PR_BODY=1" in command
