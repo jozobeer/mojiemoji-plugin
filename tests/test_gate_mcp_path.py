@@ -179,6 +179,30 @@ class TestMcpPath:
         result = run_hook({"tool_name": "Bash", "tool_input": {"command": cmd}}, cwd=tmp_path)
         assert result.returncode == 0, result.stderr
 
+    def test_japanese_title_variable_assignment_with_decorated_body_passes(
+        self,
+        run_hook,
+        tmp_path,
+    ):
+        # Regression for #140: a shell prelude variable can feed a
+        # non-body flag. The assignment line itself is still metadata,
+        # not posting prose, when that variable is consumed by `--title`.
+        body_md = tmp_path / "body.md"
+        body_md.write_text(f"{JP_PARAGRAPH} {stamp_img()}")
+        cmd = f"""title='日本語タイトル'
+gh issue create --title "$title" --body-file {body_md}"""
+        result = run_hook({"tool_name": "Bash", "tool_input": {"command": cmd}}, cwd=tmp_path)
+        assert result.returncode == 0, result.stderr
+
+    def test_body_variable_assignment_reused_as_title_still_blocks(self, run_hook):
+        # If a variable is also used by a body-class flag, keep the
+        # assignment inspectable so variable-routed body prose cannot
+        # bypass the gate.
+        cmd = f"""text='{JP_BODY}'
+gh issue create --title "$text" --body "$text" """
+        result = run_hook({"tool_name": "Bash", "tool_input": {"command": cmd}})
+        assert result.returncode == 2
+
     def test_japanese_label_with_decorated_body_passes(self, run_hook, tmp_path):
         # `--label "バグ"` is metadata, not posting prose.
         body_md = tmp_path / "body.md"

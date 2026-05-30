@@ -20,14 +20,24 @@ def test_intensity_monotonic_img_counts() -> None:
     assert ca >= cn >= cm, (ca, cn, cm)
 
 
-def test_minimal_keeps_only_first_and_last_hit_per_sentence() -> None:
-    # Three catalog hits: first / middle / last in one sentence — minimal drops the middle.
+def test_minimal_keeps_only_first_hit_per_sentence() -> None:
     body = "実装と確認と修正を進めます。\n"
     agg = run_py(PRESTAMP, body, "--intensity", "aggressive").stdout
     minimal = run_py(PRESTAMP, body, "--intensity", "minimal").stdout
-    assert agg.count('<img') == 3
-    assert minimal.count('<img') == 2
+    assert agg.count("<img") == 3
+    assert minimal.count("<img") == 1
+    assert 'alt="実装"' in minimal
     assert 'alt="確認"' not in minimal
+    assert 'alt="修正"' not in minimal
+
+
+def test_normal_keeps_first_and_last_hit_per_sentence() -> None:
+    body = "実装と確認と修正を進めます。\n"
+    normal = run_py(PRESTAMP, body, "--intensity", "normal", "--seed", "0").stdout
+    assert normal.count("<img") == 2
+    assert 'alt="実装"' in normal
+    assert 'alt="修正"' in normal
+    assert 'alt="確認"' not in normal
 
 
 def test_normal_mode_is_deterministic_with_seed() -> None:

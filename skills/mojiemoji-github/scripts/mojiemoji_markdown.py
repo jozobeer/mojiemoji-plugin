@@ -209,6 +209,12 @@ def render(opts: argparse.Namespace) -> str:
     url = f"{base}{path}"
 
     if opts.html:
+        if not opts.height and not opts.width:
+            print(
+                "mojiemoji_markdown.py: --html without --height/--width renders "
+                "at intrinsic size; use --inline or --height for inline stamps.",
+                file=sys.stderr,
+            )
         attrs = [("src", url), ("alt", alt)]
         if opts.height:
             attrs.append(("height", opts.height))

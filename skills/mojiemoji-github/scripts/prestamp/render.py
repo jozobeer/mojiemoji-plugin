@@ -38,7 +38,7 @@ def _render_img(base_url: str, text: str, flavor: dict, defaults: dict) -> str:
     # uses CGI.escapeHTML which also escapes '. Python's html.escape with
     # quote=True does both " and ' since Python 3.2 (' → &#x27;).
     src = html.escape(url, quote=True)
-    return f'<img src="{src}" alt="{alt}" height="24" align="absmiddle">'
+    return f'<img src="{src}" alt="{alt}" height="20" align="absmiddle">'
 
 
 def _render_variant(base_url: str, term: str, variant: dict, defaults: dict) -> str:

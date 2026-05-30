@@ -41,12 +41,8 @@ def _filtered_replace(
         if not indices:
             continue
         selected.add(indices[0])
-        selected.add(indices[-1])
         if intensity == "normal":
-            for m_idx, m in enumerate(matches):
-                key = f"{seed}:intensity:{m.group(0)}:{m_idx}".encode("utf-8")
-                if zlib.crc32(key) % 100 < 60:
-                    selected.add(m_idx)
+            selected.add(indices[-1])
 
     pieces: list[tuple[int, int, str]] = []
     for m_idx, m in enumerate(matches):
