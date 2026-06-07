@@ -41,6 +41,7 @@ HARNESSES=(
   "gemini"
   "cursor"
   "windsurf"
+  "grok"
 )
 
 BAD_ANIMATIONS=(

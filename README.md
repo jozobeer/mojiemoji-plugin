@@ -118,6 +118,28 @@ Claude Code 内で:
 
 ---
 
+### Grok での利用 (Grok only 対応)
+
+Grok ユーザーは **port-policy** スキル (`~/.config/grok/skills/port-policy/SKILL.md`) を使って、このリポの `mojiemoji-github` スキルを Grok 用に copy-then-optimize して利用してください。
+
+**CLI 直接利用 (core または現行スクリプト):**
+
+```bash
+# 推奨 (core 公開後)
+uvx mojiemoji < body.md > decorated.md
+
+# またはこのリポ checkout から (当面)
+python3 scripts/prestamp.py < body.md
+```
+
+**Grok skill としての統合例:**
+
+`~/.config/grok/skills/mojiemoji-github/SKILL.md` に配置 (port-policy で最適化したもの)。
+
+詳細・最小参考実装は本リポの `harnesses/grok/mojiemoji-github/SKILL.md` を参照。Grok の Bash ツール経由で prestamp を呼び、出力のスニペットを本文に埋め込む形になります。slash コマンドや GitHub 投稿系操作の自動トリガーも Grok スキル記述で可能です。
+
+Grok プラグイン機構 (`grok plugin install`) がある場合はそれ経由での導入も追跡中です (本 issue)。
+
 ## 🏗 仕組み — 3 層<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E9%80%A0?font=maru&amp;color=fb923c&amp;animation=neruneru&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="構造" height="24" align="absmiddle">
 
 ```mermaid
@@ -270,9 +292,9 @@ OUTPUT_FILE=/tmp/mojiemoji-release-notes.md \
 
 ## 🔗 <img src="https://mojiemoji.jozo.beer/emoji/%E9%96%A2%E9%80%A3?font=noto&amp;color=f87171&amp;animation=nami&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="関連" height="24" align="absmiddle">リンク
 
-- mojiemoji 本体サービス: https://mojiemoji.jozo.beer
-- Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インドキュメント: https://docs.claude.com/en/docs/claude-code/plugins
-- agent-browser (<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%82%E8%80%83?font=hachimaru&amp;color=22c55e&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="参考" height="24" align="absmiddle">にした<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インマーケットプレイス<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E6%88%90?font=maru-bold&amp;color=22c55e&amp;animation=neruneru&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構成" height="24" align="absmiddle">): https://github.com/vercel-labs/agent-browser
+- mojiemoji 本体サービス: <https://mojiemoji.jozo.beer>
+- Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インドキュメント: <https://docs.claude.com/en/docs/claude-code/plugins>
+- agent-browser (<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%82%E8%80%83?font=hachimaru&amp;color=22c55e&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="参考" height="24" align="absmiddle">にした<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インマーケットプレイス<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E6%88%90?font=maru-bold&amp;color=22c55e&amp;animation=neruneru&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構成" height="24" align="absmiddle">): <https://github.com/vercel-labs/agent-browser>
 
 ---
 
