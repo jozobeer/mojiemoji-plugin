@@ -86,7 +86,7 @@ intensity を毎回 CLI で指定したくない場合は `/mojiemoji-config` <i
 
 Claude Code 内で:
 
-```
+```text
 /plugin marketplace add jozobeer/mojiemoji-plugin
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
@@ -101,16 +101,29 @@ git clone https://github.com/jozobeer/mojiemoji-plugin.git ~/mojiemoji-plugin
 
 Claude Code 内で:
 
-```
+```text
 /plugin marketplace add ~/mojiemoji-plugin
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
+
+### Codex CLI
+
+<!-- mojiemoji:off -->
+Codex では repo marketplace と Codex manifest から `skills/` を公開します。Claude Code の PreToolUse gate はまだ Codex には接続しません。
+
+```bash
+codex plugin marketplace add jozobeer/mojiemoji-plugin
+codex plugin add mojiemoji-plugin@mojiemoji-plugin
+```
+
+詳細: [`docs/harnesses/codex.md`](docs/harnesses/codex.md)
+<!-- mojiemoji:on -->
 
 ### <img src="https://mojiemoji.jozo.beer/emoji/%E5%8B%95%E4%BD%9C?font=pixel&amp;color=8b5cf6&amp;animation=poyoon&amp;background=transparent&amp;outline=f68b5c&amp;outline_width=2" alt="動作" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=noto&amp;color=fb7185&amp;animation=mochimochi&amp;background=transparent&amp;outline=85fb71&amp;outline_width=2" alt="確認" height="24" align="absmiddle">
 
 インストール<img src="https://mojiemoji.jozo.beer/emoji/%E5%BE%8C?font=chikara&amp;color=10b981&amp;animation=mozaiku&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="後" height="24" align="absmiddle">、Claude Code に<img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=toge&amp;color=a855f7&amp;animation=kirari&amp;background=transparent&amp;outline=f7a855&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語 issue を作るよう依頼してみてください。<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%95%E3%83%83%E3%82%AF?font=kurobara&amp;color=22c55e&amp;animation=chirichiri&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="フック" height="24" align="absmiddle"> (`mojiemoji_japanese_gate.py`) が `gh issue create` を一旦止めて、本文を mojiemoji 装飾した上で送信し直すはずです。
 
-```
+```text
 /plugin
 ```
 
@@ -270,9 +283,9 @@ OUTPUT_FILE=/tmp/mojiemoji-release-notes.md \
 
 ## 🔗 <img src="https://mojiemoji.jozo.beer/emoji/%E9%96%A2%E9%80%A3?font=noto&amp;color=f87171&amp;animation=nami&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="関連" height="24" align="absmiddle">リンク
 
-- mojiemoji 本体サービス: https://mojiemoji.jozo.beer
-- Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インドキュメント: https://docs.claude.com/en/docs/claude-code/plugins
-- agent-browser (<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%82%E8%80%83?font=hachimaru&amp;color=22c55e&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="参考" height="24" align="absmiddle">にした<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インマーケットプレイス<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E6%88%90?font=maru-bold&amp;color=22c55e&amp;animation=neruneru&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構成" height="24" align="absmiddle">): https://github.com/vercel-labs/agent-browser
+- mojiemoji 本体サービス: <https://mojiemoji.jozo.beer>
+- Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インドキュメント: <https://docs.claude.com/en/docs/claude-code/plugins>
+- agent-browser (<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%82%E8%80%83?font=hachimaru&amp;color=22c55e&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="参考" height="24" align="absmiddle">にした<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インマーケットプレイス<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E6%88%90?font=maru-bold&amp;color=22c55e&amp;animation=neruneru&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構成" height="24" align="absmiddle">): <https://github.com/vercel-labs/agent-browser>
 
 ---
 

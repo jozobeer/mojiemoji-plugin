@@ -32,10 +32,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate JSON manifests parse
         run: |
-          for f in .claude-plugin/marketplace.json .claude-plugin/plugin.json hooks/hooks.json; do
+          for f in \
+            .agents/plugins/marketplace.json \
+            .claude-plugin/marketplace.json \
+            .claude-plugin/plugin.json \
+            .codex-plugin/plugin.json \
+            hooks/hooks.json \
+            plugins/mojiemoji-plugin/.codex-plugin/plugin.json
+          do
             echo "checking $f"
             python3 -c "import json,sys; json.load(open('$f'))"
           done
+
+  codex-package:
+    name: Codex package sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/sync-codex-plugin-package.sh --check
 
   canonical-drift:
     name: Canonical list drift (hook vs parameters.md)
@@ -52,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck scripts/verify-lists-vs-docs.sh skills/mojiemoji-github/scripts/verify-lists-vs-service.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh scripts/audit-harness-skills.sh
+      - run: shellcheck scripts/verify-lists-vs-docs.sh skills/mojiemoji-github/scripts/verify-lists-vs-service.sh scripts/check-version-bump.sh scripts/prepare-release-notes.sh scripts/audit-harness-skills.sh scripts/sync-codex-plugin-package.sh
 
   catalog-colors:
     name: Catalog forbidden-color guard

@@ -1,0 +1,40 @@
+{
+  "name": "mojiemoji-plugin",
+  "version": "0.24.19",
+  "description": "Codex skills for adding mojiemoji image stamps to GitHub Markdown.",
+  "author": {
+    "name": "jozobeer",
+    "url": "https://github.com/jozobeer"
+  },
+  "homepage": "https://mojiemoji.jozo.beer",
+  "repository": "https://github.com/jozobeer/mojiemoji-plugin",
+  "license": "MIT",
+  "keywords": [
+    "japanese",
+    "github",
+    "markdown",
+    "stamps",
+    "mojiemoji",
+    "pr-review",
+    "issue-template"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Mojiemoji GitHub",
+    "shortDescription": "Add mojiemoji stamps to Japanese GitHub Markdown.",
+    "longDescription": "Use mojiemoji image stamps from mojiemoji.jozo.beer for Japanese GitHub issues, pull requests, reviews, replies, and release notes. This Codex package currently exposes the skills bundle; Claude-only hook gate integration remains separate.",
+    "developerName": "jozobeer",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://mojiemoji.jozo.beer",
+    "defaultPrompt": [
+      "Decorate this Japanese GitHub issue with mojiemoji.",
+      "Prepare a mojiemoji-stamped PR review comment.",
+      "Use mojiemoji for Japanese GitHub Markdown."
+    ],
+    "brandColor": "#EC4899"
+  }
+}
