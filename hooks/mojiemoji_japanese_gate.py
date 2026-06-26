@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse hook: gate Japanese GitHub body submissions without properly-styled mojiemoji stamps.
+"""PreToolUse hook: gate Japanese (and opt-in English/Latin #148) GitHub body submissions without properly-styled mojiemoji stamps.
 
 Fires on two posting paths:
   1. Bash tool with `gh` posting the body:
@@ -56,7 +56,7 @@ _HOOKS_DIR = Path(__file__).resolve().parent
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
-from gate.extract import JP_RE, MOJI_URL_RE, extract_inspect_text  # noqa: E402
+from gate.extract import JP_RE, LATIN_RE, MOJI_URL_RE, extract_inspect_text  # noqa: E402
 from gate.extract import forces_pr_body, is_pr_body_submission, pr_body_target_repo  # noqa: E402
 from gate.validators import (  # noqa: E402
     PIPELINE,
@@ -94,8 +94,24 @@ def main() -> int:
     if inspect_texts is None:
         return 0
     jp_texts = [text for text in inspect_texts if JP_RE.search(text)]
-    if not jp_texts:
+    en_texts = [text for text in inspect_texts if LATIN_RE.search(text)]
+
+    # English/Latin opt-in support (#148). Pure English bodies are NOT gated
+    # by default (to avoid forcing stamps on English-first users).
+    # Opt in for a submission by including the marker:
+    #   MOJIEMOJI_ENGLISH_GATE=1   (in Bash command or inside the body text)
+    english_enabled = any(
+        "MOJIEMOJI_ENGLISH_GATE=1" in (t or "")
+        for t in (inspect_texts or [])
+    ) or "MOJIEMOJI_ENGLISH_GATE=1" in (
+        (data.get("tool_input", {}) or {}).get("command", "")
+    )
+
+    if not jp_texts and not (english_enabled and en_texts):
         return 0
+
+    # Determine which bodies to enforce stamping rules on.
+    active = jp_texts or (en_texts if english_enabled else [])
     cwd = data.get("cwd", "")
     if is_pr_body_submission(data) and not forces_pr_body(data):
         owner, repo = pr_body_target_repo(data) or (None, None)
@@ -104,19 +120,14 @@ def main() -> int:
             repo=repo,
             cwd=Path(cwd) if cwd else None,
         )
-        has_stamp = any(MOJI_URL_RE.search(text) for text in jp_texts)
-        # Undecorated body on a leaking / undetectable repo: allow without
-        # forcing decoration (default-safe — keeps commit history clean).
+        has_stamp = any(MOJI_URL_RE.search(text) for text in active)
         if not has_stamp and state in (POLICY_LEAKS, POLICY_UNKNOWN):
             return 0
-        # Decorated body on a confirmed-leaking repo: block so the stamps
-        # don't bleed into squash/merge commit messages. UNKNOWN falls
-        # through to normal validation rather than blocking on a guess.
         if has_stamp and state == POLICY_LEAKS:
             sys.stderr.write(_PR_BODY_LEAK_REMINDER)
             return 2
 
-    for inspect_text in jp_texts:
+    for inspect_text in active:
         urls = MOJI_URL_RE.findall(inspect_text)
         for stage in PIPELINE:
             rc = stage(urls)
@@ -127,7 +138,7 @@ def main() -> int:
         if rc != 0:
             return rc
 
-    rc = validate_schema_version("\n".join(jp_texts))
+    rc = validate_schema_version("\n".join(active))
     if rc != 0:
         return rc
     return 0

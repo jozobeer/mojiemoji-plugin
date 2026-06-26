@@ -7075,3 +7075,364 @@ terms:
       color: "f472b6"
       outline: "77db27"
       animation: gatagata
+
+  # --- English / Latin terms (i18n / bilingual #148) ---
+  # Generated via generate_catalog.py for whole English words.
+  # These match via ASCII word-boundary guards and work in pure English text.
+  DONE:
+    - font: zero
+      color: "ef4444"
+      outline: "44ef44"
+      animation: ekken
+    - font: pixel
+      color: "34d399"
+      outline: "9934d3"
+      animation: patapata
+    - font: tamanegi
+      color: "a855f7"
+      outline: "f7a855"
+      animation: gatagata
+
+  SHIP:
+    - font: chikara
+      color: "34d399"
+      outline: "9934d3"
+      animation: mabataki
+    - font: gothic
+      color: "c084fc"
+      outline: "fcc084"
+      animation: neruneru
+    - font: pixel
+      color: "fb7185"
+      outline: "85fb71"
+      animation: tenmetsu
+
+  MERGE:
+    - font: hachimaru
+      color: "a78bfa"
+      outline: "faa78b"
+      animation: kaiten
+      speed: slow
+    - font: maru-bold
+      color: "10b981"
+      outline: "8110b9"
+      animation: mabataki
+    - font: akzk
+      color: "ec4899"
+      outline: "99ec48"
+      animation: tatemoya
+
+  REVIEW:
+    - font: toge
+      color: "eab308"
+      outline: "08eab3"
+      animation: kage_kaiten
+      speed: slow
+    - font: zero
+      color: "a78bfa"
+      outline: "faa78b"
+      animation: tatemoya
+    - font: hachimaru
+      color: "06b6d4"
+      outline: "d406b6"
+      animation: kaiten
+      speed: slow
+
+  BUILD:
+    - font: maru
+      color: "fbbf24"
+      outline: "24fbbf"
+      animation: zanzo
+    - font: kurobara
+      color: "60a5fa"
+      outline_width: "0"
+      animation: psycho
+    - font: zero
+      color: "d946ef"
+      outline: "efd946"
+      animation: tenmetsu
+
+  PASS:
+    - font: dela
+      color: "22d3ee"
+      outline: "ee22d3"
+      animation: zairu
+    - font: pixel
+      color: "fbbf24"
+      outline: "24fbbf"
+      animation: mochimochi
+    - font: noto
+      color: "f97316"
+      outline: "16f973"
+      animation: poyoon
+
+  FAIL:
+    - font: maru-bold
+      color: "fb7185"
+      outline: "85fb71"
+      animation: tate_ekken
+    - font: mincho
+      color: "fdba74"
+      outline: "74fdba"
+      animation: neruneru
+    - font: toge
+      color: "a78bfa"
+      outline: "faa78b"
+      animation: mabataki
+
+  TODO:
+    - font: gothic
+      color: "d946ef"
+      outline: "efd946"
+      animation: yoko_scroll
+    - font: mincho
+      color: "34d399"
+      outline: "9934d3"
+      animation: kaiten
+      speed: slow
+    - font: zero
+      color: "06b6d4"
+      outline: "d406b6"
+      animation: ekken
+
+  FIXME:
+    - font: pixel
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: kage_neon
+    - font: kurobara
+      color: "10b981"
+      outline: "8110b9"
+      animation: yatta
+    - font: toge
+      color: "eab308"
+      outline: "08eab3"
+      animation: kirari
+
+  DRAFT:
+    - font: maru-bold
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: tate_scroll
+    - font: akzk
+      color: "60a5fa"
+      outline: "fa60a5"
+      animation: patapata
+    - font: chikara
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: yatta
+
+  READY:
+    - font: akzk
+      color: "eab308"
+      outline: "08eab3"
+      animation: yoko_scroll
+    - font: rampart
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: patapata
+    - font: dela
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: tenmetsu
+
+  CLOSE:
+    - font: gothic-bold
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: yoko_scroll
+    - font: pixel
+      color: "fdba74"
+      outline: "74fdba"
+      animation: mozaiku
+    - font: hachimaru
+      color: "06b6d4"
+      outline: "d406b6"
+      animation: kaiten
+      speed: slow
+
+  ISSUE:
+    - font: tamanegi
+      color: "a855f7"
+      outline: "f7a855"
+      animation: mozaiku
+    - font: gothic-bold
+      color: "f59e0b"
+      outline_width: "0"
+      animation: disco
+    - font: gothic
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: nami
+
+  COMMIT:
+    - font: zero
+      color: "f472b6"
+      outline: "b6f472"
+      animation: poyoon
+    - font: chikara
+      color: "fb7185"
+      outline: "85fb71"
+      animation: bane
+    - font: dela
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: zanzo
+
+  TEST:
+    - font: toge
+      color: "f97316"
+      outline: "16f973"
+      animation: bure
+    - font: akzk
+      color: "ec4899"
+      outline: "99ec48"
+      animation: kage_kaiten
+      speed: slow
+    - font: rampart
+      color: "d946ef"
+      outline: "efd946"
+      animation: tate_scroll
+
+  ERROR:
+    - font: gothic-bold
+      color: "fb7185"
+      outline: "85fb71"
+      animation: yatta
+    - font: mincho
+      color: "ec4899"
+      outline: "99ec48"
+      animation: zairu
+    - font: gothic
+      color: "eab308"
+      outline: "08eab3"
+      animation: tate_ekken
+
+  WARN:
+    - font: gothic
+      color: "fb7185"
+      outline: "85fb71"
+      animation: zanzo
+    - font: tamanegi
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: poyoon
+    - font: hachimaru
+      color: "a855f7"
+      outline: "f7a855"
+      animation: yatta
+
+  NOTE:
+    - font: mincho
+      color: "ec4899"
+      outline: "99ec48"
+      animation: gatagata
+    - font: hachimaru
+      color: "22c55e"
+      outline: "5e22c5"
+      animation: mabataki
+    - font: toge
+      color: "eab308"
+      outline: "08eab3"
+      animation: yurayura
+
+  INFO:
+    - font: akzk
+      color: "f97316"
+      outline: "16f973"
+      animation: kaiten
+      speed: slow
+    - font: kurobara
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: mabataki
+    - font: maru-bold
+      color: "a855f7"
+      outline: "f7a855"
+      animation: poyoon
+
+  LGTM:
+    - font: noto
+      color: "fb7185"
+      outline: "85fb71"
+      animation: mochimochi
+    - font: zero
+      color: "fdba74"
+      outline: "74fdba"
+      animation: yoko_scroll
+    - font: maru-bold
+      color: "22d3ee"
+      outline: "ee22d3"
+      animation: yurayura
+
+  WIP:
+    - font: chikara
+      color: "ef4444"
+      outline: "44ef44"
+      animation: tatemoya
+    - font: noto
+      color: "c084fc"
+      outline: "fcc084"
+      animation: mochimochi
+    - font: rampart
+      color: "fdba74"
+      outline: "74fdba"
+      animation: yokomoya
+
+  PR:
+    - font: maru
+      color: "ef4444"
+      outline: "44ef44"
+      animation: gatagata
+    - font: hachimaru
+      color: "ec4899"
+      outline: "99ec48"
+      animation: bure
+    - font: toge
+      color: "fbbf24"
+      outline: "24fbbf"
+      animation: zairu
+
+  MR:
+    - font: pixel
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: kaiten
+      speed: slow
+    - font: zero
+      color: "ec4899"
+      outline: "99ec48"
+      animation: kage_neon
+    - font: toge
+      color: "fb923c"
+      outline: "3cfb92"
+      animation: shuchusen
+
+  OK:
+    - font: maru-bold
+      color: "c084fc"
+      outline: "fcc084"
+      animation: zanzo
+    - font: dela
+      color: "8b5cf6"
+      outline: "f68b5c"
+      animation: kage_neon
+    - font: maru
+      color: "fdba74"
+      outline_width: "0"
+      animation: psycho
+
+  NG:
+    - font: zero
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: shuchusen
+    - font: dela
+      color: "34d399"
+      outline: "9934d3"
+      animation: tenmetsu
+    - font: noto
+      color: "a78bfa"
+      outline: "faa78b"
+      animation: tate_ekken

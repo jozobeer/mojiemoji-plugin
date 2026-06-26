@@ -37,6 +37,8 @@ from pathlib import Path
 
 SKILL_MD_SUFFIX = "SKILL.md"
 JP_RE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]")
+# Also consider Latin for English/i18n drift warnings (#148)
+LATIN_RE = re.compile(r"[A-Za-z][A-Za-z'-]{2,}")
 
 
 def _is_documentation_md(path: Path, repo_root: Path) -> bool:
@@ -58,6 +60,10 @@ def _is_documentation_md(path: Path, repo_root: Path) -> bool:
 
 def _has_japanese(text: str) -> bool:
     return JP_RE.search(text) is not None
+
+
+def _has_latin(text: str) -> bool:
+    return LATIN_RE.search(text) is not None
 
 
 def _find_repo_root(start: Path) -> Path | None:
@@ -132,7 +138,7 @@ def main() -> int:
         current = file_path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return 0
-    if not _has_japanese(current):
+    if not (_has_japanese(current) or _has_latin(current)):
         return 0
 
     prestamp_root = plugin_root or repo_root

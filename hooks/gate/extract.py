@@ -20,6 +20,9 @@ import os
 import re
 
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
+# Basic Latin (English/i18n) detection for opt-in gate and future bilingual paths (#148).
+# Requires at least a 3-letter-ish word start to avoid matching single letters or codes.
+LATIN_RE = re.compile(r"[A-Za-z][A-Za-z'-]{2,}")
 # High-level `gh` commands that publish bodies.
 GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review|edit)")
 GH_PR_BODY_RE = re.compile(r"gh\s+pr\s+(create|edit)\b")
