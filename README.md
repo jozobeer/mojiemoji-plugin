@@ -138,7 +138,7 @@ python3 skills/mojiemoji-github/scripts/prestamp.py < body.md > decorated.md
 
 mojiemoji は catalog / 変換規則の更新頻度が高いので、harness adapter
 では固定インストールより `uvx mojiemoji` を推奨します。再現性が必要な
-CI や古い本文の再変換だけ、明示的に `mojiemoji==X.Y.Z` を pin します。
+CI や古い本文の再変換だけ、明示的に `mojiemoji@X.Y.Z` を pin します。
 
 **harness adapter 例:**
 
@@ -146,9 +146,9 @@ CI や古い本文の再変換だけ、明示的に `mojiemoji==X.Y.Z` を pin �
 - `harnesses/codex/mojiemoji-github/SKILL.md`
 - `harnesses/opencode/mojiemoji-github/SKILL.md`
 - `harnesses/copilot-cli/mojiemoji-github/SKILL.md`
-- `harnesses/gemini/rules/mojiemoji-github.md`
-- `harnesses/cursor/rules/mojiemoji-github.md`
-- `harnesses/windsurf/rules/mojiemoji-github.md`
+- `harnesses/gemini/.gemini/skills/mojiemoji-github/SKILL.md`
+- `harnesses/cursor/.cursor/rules/mojiemoji-github/RULE.md`
+- `harnesses/windsurf/.windsurf/rules/mojiemoji-github.md`
 
 詳細は `harnesses/README.md` を参照してください。
 `scripts/audit-harness-skills.sh` は repo 内 adapter と

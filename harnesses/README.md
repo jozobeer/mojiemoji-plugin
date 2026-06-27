@@ -44,7 +44,7 @@ Pin versions only when reproducibility matters, such as CI snapshots or
 historical re-renders:
 
 ```bash
-uvx mojiemoji==X.Y.Z < body.md > decorated.md
+uvx mojiemoji@X.Y.Z < body.md > decorated.md
 ```
 
 Do not vendor the catalog into harness-specific plugins. If a harness needs a
@@ -69,15 +69,16 @@ Each adapter must preserve these contracts:
 
 ## Harness Map
 
-| Harness | Reference path | Primary shape |
-| --- | --- | --- |
-| Grok | `harnesses/grok/mojiemoji-github/SKILL.md` | Skill |
-| Codex | `harnesses/codex/mojiemoji-github/SKILL.md` | Skill |
-| OpenCode | `harnesses/opencode/mojiemoji-github/SKILL.md` | Skill |
-| Copilot CLI | `harnesses/copilot-cli/mojiemoji-github/SKILL.md` | Skill |
-| Gemini | `harnesses/gemini/rules/mojiemoji-github.md` | Rule |
-| Cursor | `harnesses/cursor/rules/mojiemoji-github.md` | Rule |
-| Windsurf | `harnesses/windsurf/rules/mojiemoji-github.md` | Rule |
+- Grok skill: `harnesses/grok/mojiemoji-github/SKILL.md`
+- Codex skill: `harnesses/codex/mojiemoji-github/SKILL.md`
+- OpenCode skill: `harnesses/opencode/mojiemoji-github/SKILL.md`
+- Copilot CLI skill: `harnesses/copilot-cli/mojiemoji-github/SKILL.md`
+- Gemini CLI skill:
+  `harnesses/gemini/.gemini/skills/mojiemoji-github/SKILL.md`
+- Cursor project rule:
+  `harnesses/cursor/.cursor/rules/mojiemoji-github/RULE.md`
+- Windsurf workspace rule:
+  `harnesses/windsurf/.windsurf/rules/mojiemoji-github.md`
 
 Run the repo reference audit after editing checked-in adapters:
 

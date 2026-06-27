@@ -2,8 +2,8 @@
 
 The host SKILL.md carries a `<!-- mojiemoji-schema-version: X.Y.Z -->`
 marker. Each AI harness (claude / codex / opencode / gemini /
-copilot-cli) usually keeps a local copy of SKILL.md; when those copies
-fall behind the host, the harness keeps using stale rules.
+copilot-cli / grok) may keep a local or project copy of SKILL.md; when
+those copies fall behind the host, the harness keeps using stale rules.
 
 This stage warns the agent that drift is present, naming each stale
 file and its version delta. Default behaviour is warning-only (rc=0)
@@ -33,13 +33,22 @@ def _harness_skill_paths() -> tuple[tuple[str, Path], ...]:
     so tests can monkeypatch `Path.home()` per test. Names match the
     cross-harness audit script."""
     home = Path.home()
+    cwd = Path.cwd()
     return (
         ("claude", home / ".config" / "claude" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("codex", home / ".config" / "codex" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("opencode", home / ".config" / "opencode" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("copilot-cli", home / ".config" / "copilot-cli" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("copilot-cli (.github)", cwd / ".github" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("copilot-cli (.claude)", cwd / ".claude" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("copilot-cli (.agents)", cwd / ".agents" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("copilot-cli (~/.copilot)", home / ".copilot" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("copilot-cli (~/.agents)", home / ".agents" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("gemini", home / ".config" / "gemini" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("gemini (.gemini)", cwd / ".gemini" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("gemini (~/.gemini)", home / ".gemini" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("gemini (rule)", home / ".config" / "gemini" / "rules" / "mojiemoji-github.md"),
+        ("grok", home / ".config" / "grok" / "skills" / "mojiemoji-github" / "SKILL.md"),
     )
 
 

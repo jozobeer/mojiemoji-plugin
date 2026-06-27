@@ -1,3 +1,8 @@
+---
+trigger: model_decision
+description: Decorate Japanese GitHub Markdown with mojiemoji before posting.
+---
+
 # mojiemoji-github (Windsurf Rule)
 
 When Windsurf prepares Japanese GitHub prose, run the body through the

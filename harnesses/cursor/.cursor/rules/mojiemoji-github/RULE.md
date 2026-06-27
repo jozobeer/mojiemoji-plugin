@@ -1,3 +1,10 @@
+---
+description: Decorate Japanese GitHub Markdown with mojiemoji before posting.
+globs:
+  - "**/*.md"
+alwaysApply: false
+---
+
 # mojiemoji-github (Cursor Rule)
 
 For Japanese GitHub Markdown, Cursor should call the shared mojiemoji core

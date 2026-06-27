@@ -3,6 +3,8 @@ name: mojiemoji-github
 description: Copilot CLI adapter for decorating Japanese GitHub Markdown with the shared mojiemoji core.
 ---
 
+<!-- mojiemoji-schema-version: 2.1.0 -->
+
 # mojiemoji-github (Copilot CLI)
 
 Use this skill when Copilot CLI prepares Japanese GitHub Markdown for issues,

@@ -3,7 +3,7 @@
 # URL/animation/color drift from the canonical lists in this repo.
 #
 # Scans both the checked-in reference adapters under `harnesses/` and known
-# harness-local paths under $HOME/.config. Set MOJIEMOJI_AUDIT_SCOPE to
+# project / personal harness-local paths. Set MOJIEMOJI_AUDIT_SCOPE to
 # `repo`, `local`, or `all` (default) to restrict the scan. Reports violations
 # of any of these 5 contracts (see issue #79 / #144):
 #
@@ -176,12 +176,46 @@ main() {
   for harness in "${HARNESSES[@]}"; do
     local repo_candidates=(
       "$REPO_ROOT/harnesses/$harness/mojiemoji-github/SKILL.md"
+      "$REPO_ROOT/harnesses/$harness/.gemini/skills/mojiemoji-github/SKILL.md"
+      "$REPO_ROOT/harnesses/$harness/.cursor/rules/mojiemoji-github/RULE.md"
+      "$REPO_ROOT/harnesses/$harness/.windsurf/rules/mojiemoji-github.md"
       "$REPO_ROOT/harnesses/$harness/rules/mojiemoji-github.md"
     )
     local local_candidates=(
       "$HOME/.config/$harness/skills/mojiemoji-github/SKILL.md"
       "$HOME/.config/$harness/rules/mojiemoji-github.md"
     )
+    case "$harness" in
+      copilot-cli)
+        local_candidates+=(
+          "$REPO_ROOT/.github/skills/mojiemoji-github/SKILL.md"
+          "$REPO_ROOT/.claude/skills/mojiemoji-github/SKILL.md"
+          "$REPO_ROOT/.agents/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.copilot/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.agents/skills/mojiemoji-github/SKILL.md"
+        )
+        ;;
+      gemini)
+        local_candidates+=(
+          "$REPO_ROOT/.gemini/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.gemini/skills/mojiemoji-github/SKILL.md"
+        )
+        ;;
+      cursor)
+        local_candidates+=(
+          "$REPO_ROOT/.cursor/rules/mojiemoji-github/RULE.md"
+          "$HOME/.cursor/rules/mojiemoji-github/RULE.md"
+        )
+        ;;
+      windsurf)
+        local_candidates+=(
+          "$REPO_ROOT/.windsurf/rules/mojiemoji-github.md"
+          "$REPO_ROOT/.devin/rules/mojiemoji-github.md"
+          "$HOME/.windsurf/rules/mojiemoji-github.md"
+          "$HOME/.devin/rules/mojiemoji-github.md"
+        )
+        ;;
+    esac
     local candidates=()
     if [ "$SCOPE" = "repo" ] || [ "$SCOPE" = "all" ]; then
       candidates+=("${repo_candidates[@]}")
@@ -194,8 +228,10 @@ main() {
       if [ -f "$path" ]; then
         local label="$harness"
         case "$path" in
-          "$REPO_ROOT"/*) label="$harness (repo)" ;;
+          "$REPO_ROOT"/harnesses/*) label="$harness (repo)" ;;
+          "$REPO_ROOT"/*) label="$harness (project)" ;;
           "$HOME"/.config/*) label="$harness (local)" ;;
+          "$HOME"/*) label="$harness (personal)" ;;
         esac
         checked=$((checked + 1))
         if ! audit_skill_file "$path" "$label"; then
@@ -206,8 +242,8 @@ main() {
   done
 
   if [ "$checked" -eq 0 ]; then
-    echo "No harness skill/rule files found for scope '$SCOPE' under harnesses/ or" >&2
-    echo "\$HOME/.config/{${HARNESSES[*]}}/{skills,rules}/mojiemoji-github/" >&2
+    echo "No harness skill/rule files found for scope '$SCOPE' under checked-in adapters or" >&2
+    echo "known project / personal harness paths." >&2
     exit 2
   fi
 

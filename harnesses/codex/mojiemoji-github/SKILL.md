@@ -3,6 +3,8 @@ name: mojiemoji-github
 description: GitHub issue / PR / review / release bodies for Codex should run through the shared mojiemoji core before posting Japanese Markdown.
 ---
 
+<!-- mojiemoji-schema-version: 2.1.0 -->
+
 # mojiemoji-github (Codex)
 
 Use this skill when Codex is preparing Japanese GitHub Markdown for an

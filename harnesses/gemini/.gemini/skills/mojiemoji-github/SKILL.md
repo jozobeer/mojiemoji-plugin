@@ -1,4 +1,11 @@
-# mojiemoji-github (Gemini Rule)
+---
+name: mojiemoji-github
+description: Gemini CLI adapter for decorating Japanese GitHub Markdown with the shared mojiemoji core.
+---
+
+<!-- mojiemoji-schema-version: 2.1.0 -->
+
+# mojiemoji-github (Gemini CLI)
 
 When Gemini prepares Japanese GitHub Markdown for an issue, PR, review,
 comment, or release note, run the text through the shared mojiemoji core
