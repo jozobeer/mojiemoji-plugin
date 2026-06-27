@@ -86,7 +86,7 @@ intensity を毎回 CLI で指定したくない場合は `/mojiemoji-config` <i
 
 Claude Code 内で:
 
-```
+```text
 /plugin marketplace add jozobeer/mojiemoji-plugin
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
@@ -101,7 +101,7 @@ git clone https://github.com/jozobeer/mojiemoji-plugin.git ~/mojiemoji-plugin
 
 Claude Code 内で:
 
-```
+```text
 /plugin marketplace add ~/mojiemoji-plugin
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
@@ -110,7 +110,7 @@ Claude Code 内で:
 
 インストール<img src="https://mojiemoji.jozo.beer/emoji/%E5%BE%8C?font=chikara&amp;color=10b981&amp;animation=mozaiku&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="後" height="24" align="absmiddle">、Claude Code に<img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=toge&amp;color=a855f7&amp;animation=kirari&amp;background=transparent&amp;outline=f7a855&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語 issue を作るよう依頼してみてください。<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%95%E3%83%83%E3%82%AF?font=kurobara&amp;color=22c55e&amp;animation=chirichiri&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="フック" height="24" align="absmiddle"> (`mojiemoji_japanese_gate.py`) が `gh issue create` を一旦止めて、本文を mojiemoji 装飾した上で送信し直すはずです。
 
-```
+```text
 /plugin
 ```
 
@@ -118,27 +118,47 @@ Claude Code 内で:
 
 ---
 
-### Grok での利用 (Grok only 対応)
+<!-- mojiemoji:off -->
+### 他 harness での利用
 
-Grok ユーザーは **port-policy** スキル (`~/.config/grok/skills/port-policy/SKILL.md`) を使って、このリポの `mojiemoji-github` スキルを Grok 用に copy-then-optimize して利用してください。
+Claude Code 以外の harness は、各 harness の skill / rule /
+terminal hook から共有 core を呼ぶ薄い adapter として統合します。
+catalog や URL 仕様を harness ごとにコピーして増やさず、core を
+一箇所の SSOT にします。
 
-**CLI 直接利用 (core または現行スクリプト):**
+**CLI 直接利用:**
 
 ```bash
 # 推奨 (core 公開後)
 uvx mojiemoji < body.md > decorated.md
 
-# またはこのリポ checkout から (当面)
-python3 scripts/prestamp.py < body.md
+# core 公開前 / この repo checkout から
+python3 skills/mojiemoji-github/scripts/prestamp.py < body.md > decorated.md
 ```
 
-**Grok skill としての統合例:**
+mojiemoji は catalog / 変換規則の更新頻度が高いので、harness adapter
+では固定インストールより `uvx mojiemoji` を推奨します。再現性が必要な
+CI や古い本文の再変換だけ、明示的に `mojiemoji==X.Y.Z` を pin します。
 
-`~/.config/grok/skills/mojiemoji-github/SKILL.md` に配置 (port-policy で最適化したもの)。
+**harness adapter 例:**
 
-詳細・最小参考実装は本リポの `harnesses/grok/mojiemoji-github/SKILL.md` を参照。Grok の Bash ツール経由で prestamp を呼び、出力のスニペットを本文に埋め込む形になります。slash コマンドや GitHub 投稿系操作の自動トリガーも Grok スキル記述で可能です。
+- `harnesses/grok/mojiemoji-github/SKILL.md`
+- `harnesses/codex/mojiemoji-github/SKILL.md`
+- `harnesses/opencode/mojiemoji-github/SKILL.md`
+- `harnesses/copilot-cli/mojiemoji-github/SKILL.md`
+- `harnesses/gemini/rules/mojiemoji-github.md`
+- `harnesses/cursor/rules/mojiemoji-github.md`
+- `harnesses/windsurf/rules/mojiemoji-github.md`
 
-Grok プラグイン機構 (`grok plugin install`) がある場合はそれ経由での導入も追跡中です (本 issue)。
+詳細は `harnesses/README.md` を参照してください。
+`scripts/audit-harness-skills.sh` は repo 内 adapter と
+`$HOME/.config/<harness>/...` の local copy の両方を検査します。
+
+各 harness の gate は harness-local に実装します。Claude の
+PreToolUse hook を他 harness に持ち込むのではなく、Codex/Gemini/
+Cursor/Windsurf などの skill、rule、terminal hook、MCP wrapper から
+`uvx mojiemoji` または fallback の `prestamp.py` を呼びます。
+<!-- mojiemoji:on -->
 
 ## 🏗 仕組み — 3 層<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E9%80%A0?font=maru&amp;color=fb923c&amp;animation=neruneru&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="構造" height="24" align="absmiddle">
 
