@@ -75,6 +75,47 @@ class TestZeroStamps:
         assert "mojiemoji" in result.stderr.lower()
 
 
+class TestEnglishOptIn:
+    """English/Latin gating is opt-in and validates posted body surfaces."""
+
+    def test_body_file_command_is_not_validated_as_english_body(self, run_hook, tmp_path):
+        (tmp_path / "body.md").write_text(
+            f"Release is ready. {stamp_img(text='DONE', alt='DONE')}",
+            encoding="utf-8",
+        )
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": (
+                        "MOJIEMOJI_ENGLISH_GATE=1 "
+                        "gh issue create --title x --body-file body.md"
+                    ),
+                },
+            },
+            cwd=tmp_path,
+        )
+
+        assert result.returncode == 0, result.stderr
+
+    def test_mixed_payload_validates_japanese_and_english_bodies(self, run_hook):
+        jp_summary = f"MOJIEMOJI_ENGLISH_GATE=1 日本語 summary {stamp_img()}"
+        result = run_hook(
+            {
+                "tool_name": "mcp__github__github_pull_request_review_write",
+                "tool_input": {
+                    "body": jp_summary,
+                    "comments": [
+                        {"body": "This English inline review needs a stamp."},
+                    ],
+                },
+            }
+        )
+
+        assert result.returncode == 2
+        assert "mojiemoji" in result.stderr.lower()
+
+
 class TestLgtmStamp:
     """LGTM mojiemoji is not treated specially by the hook. Both inline
     `<img>` and `![alt](url)` markdown block-image forms are allowed

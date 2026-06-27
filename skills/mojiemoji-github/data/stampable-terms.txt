@@ -2,8 +2,9 @@
 # (feat/37-verification-checks @ fcc3bb4)
 # Consumed by scripts/generate_catalog.py to produce per-term variants.
 # To add a term, append under the matching category; the generator filters
-# out terms exceeding the single-stamp length rule (kanji <=2, kata <=3,
-# ascii <=3, hira <=4) with a stderr notice.
+# out terms exceeding the single-stamp length rule.
+#   - JP: kanji<=2, kata<=3, hira<=4
+#   - pure ASCII/Latin (English/i18n #148): ascii<=8 (longer whole words OK)
 
 
 # 状態 / 完成度
@@ -555,3 +556,38 @@ POC
 7
 8
 9
+
+# English / Latin terms (bilingual / i18n support — see #148)
+# These are whole English/dev words. Prestamp already matches standalone
+# ASCII terms via word-boundary guards, so they work in pure English text.
+# Longer than old ascii<=3 because English uses spaces, not JP compounds.
+# Add common GitHub/issue/PR/review terminology here.
+DONE
+SHIP
+MERGE
+REVIEW
+COMMIT
+PUSH
+PULL
+BUILD
+PASS
+FAIL
+TEST
+FIX
+TODO
+FIXME
+NOTE
+WARN
+ERROR
+INFO
+OK
+NG
+WIP
+LGTM
+READY
+DRAFT
+CLOSE
+OPEN
+ISSUE
+PR
+MR
