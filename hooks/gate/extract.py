@@ -20,6 +20,9 @@ import os
 import re
 
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
+# Basic Latin (English/i18n) detection for opt-in gate and future bilingual paths (#148).
+# Requires at least a 3-letter-ish word start to avoid matching single letters or codes.
+LATIN_RE = re.compile(r"[A-Za-z][A-Za-z'-]{2,}")
 # High-level `gh` commands that publish bodies.
 GH_HIGH_RE = re.compile(r"gh\s+(issue|pr|release)\s+(create|comment|review|edit)")
 GH_PR_BODY_RE = re.compile(r"gh\s+pr\s+(create|edit)\b")
@@ -47,6 +50,7 @@ BODY_FILE_RE = re.compile(
     r"(?:--body-file|--input)(?:\s+|=)(['\"]?)([^'\"\s|;&)]+)\1"
 )
 F_BODY_RE = re.compile(r"-F\s+body=@(['\"]?)([^'\"\s|;&)]+)\1")
+INLINE_BODY_FIELD_RE = re.compile(r"(?:-[fF]\s+body=|--field\s+body=)(?!@)")
 # Non-body flag/value pairs to strip from the command before treating
 # it as an inspect surface. Title / label / reviewer / assignee /
 # milestone / head / base values are metadata, not posting prose — they
@@ -329,7 +333,14 @@ def _route_bash(data: dict):
         "",
         _strip_non_body_assignment_lines(command),
     )
-    pieces = [inspected_command]
+    has_inline_body = bool(
+        BODY_FLAGS_RE.search(command) or INLINE_BODY_FIELD_RE.search(command)
+    )
+    pieces = (
+        [inspected_command]
+        if has_inline_body or not (file_bodies or script_body)
+        else []
+    )
     pieces.extend(file_bodies)
     if script_body:
         pieces.append(script_body)

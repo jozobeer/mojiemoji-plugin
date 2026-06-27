@@ -1,9 +1,9 @@
 """Tests for prestamp.py masker behavior.
 
 Safe-zone masking: inline code, fenced code, link targets, badge URLs,
-existing `<img>` tags, `<details>/<summary>` headers, and the
-backticked-`<summary>` regression that used to flip the state machine
-silently. Covers term stamping at the prose layer.
+existing `<img>` tags, `<details>/<summary>` headers, GitHub alert
+markers, and the backticked-`<summary>` regression that used to flip the
+state machine silently. Covers term stamping at the prose layer.
 """
 
 from __future__ import annotations
@@ -98,3 +98,14 @@ def test_prestamp_skips_details_summary_but_stamps_details_body() -> None:
     assert proc.returncode == 0
     assert "<summary>修正方針</summary>" in proc.stdout
     assert 'align="absmiddle"' in proc.stdout
+
+
+def test_prestamp_preserves_github_alert_marker() -> None:
+    body = "> [!NOTE]\n> 修正の確認をお願いします。\n"
+    proc = run_py(PRESTAMP, body, "--seed", "14")
+
+    assert proc.returncode == 0
+    assert "> [!NOTE]" in proc.stdout
+    assert "[!<img" not in proc.stdout
+    assert 'alt="修正"' in proc.stdout
+    assert 'alt="確認"' in proc.stdout
