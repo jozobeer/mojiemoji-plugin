@@ -86,7 +86,7 @@ intensity を毎回 CLI で指定したくない場合は `/mojiemoji-config` <i
 
 Claude Code 内で:
 
-```
+```text
 /plugin marketplace add jozobeer/mojiemoji-plugin
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
@@ -101,7 +101,7 @@ git clone https://github.com/jozobeer/mojiemoji-plugin.git ~/mojiemoji-plugin
 
 Claude Code 内で:
 
-```
+```text
 /plugin marketplace add ~/mojiemoji-plugin
 /plugin install mojiemoji-github@mojiemoji-plugin
 ```
@@ -110,13 +110,55 @@ Claude Code 内で:
 
 インストール<img src="https://mojiemoji.jozo.beer/emoji/%E5%BE%8C?font=chikara&amp;color=10b981&amp;animation=mozaiku&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="後" height="24" align="absmiddle">、Claude Code に<img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=toge&amp;color=a855f7&amp;animation=kirari&amp;background=transparent&amp;outline=f7a855&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語 issue を作るよう依頼してみてください。<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%95%E3%83%83%E3%82%AF?font=kurobara&amp;color=22c55e&amp;animation=chirichiri&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="フック" height="24" align="absmiddle"> (`mojiemoji_japanese_gate.py`) が `gh issue create` を一旦止めて、本文を mojiemoji 装飾した上で送信し直すはずです。
 
-```
+```text
 /plugin
 ```
 
 で `mojiemoji-github` が `enabled` になっていれば <img src="https://mojiemoji.jozo.beer/emoji/%E5%B0%8E%E5%85%A5?font=chikara&color=a855f7&animation=zanzo&background=transparent&outline=f7a855&outline_width=2" alt="導入" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%AE%8C%E4%BA%86?font=hachimaru&color=10b981&animation=yatta&background=transparent&outline=8110b9&outline_width=2" alt="完了" height="24" align="absmiddle"> <img src="https://mojiemoji.jozo.beer/emoji/%F0%9F%8E%8A?font=maru-bold&amp;color=fbbf24&amp;animation=patapata&amp;background=transparent&amp;outline=24fbbf&amp;outline_width=2" alt="🎊" height="24" align="absmiddle">
 
 ---
+
+<!-- mojiemoji:off -->
+### 他 harness での利用
+
+Claude Code 以外の harness は、各 harness の skill / rule /
+terminal hook から共有 core を呼ぶ薄い adapter として統合します。
+catalog や URL 仕様を harness ごとにコピーして増やさず、core を
+一箇所の SSOT にします。
+
+**CLI 直接利用:**
+
+```bash
+# 推奨 (core 公開後)
+uvx mojiemoji < body.md > decorated.md
+
+# core 公開前 / この repo checkout から
+python3 skills/mojiemoji-github/scripts/prestamp.py < body.md > decorated.md
+```
+
+mojiemoji は catalog / 変換規則の更新頻度が高いので、harness adapter
+では固定インストールより `uvx mojiemoji` を推奨します。再現性が必要な
+CI や古い本文の再変換だけ、明示的に `mojiemoji@X.Y.Z` を pin します。
+
+**harness adapter 例:**
+
+- `harnesses/grok/mojiemoji-github/SKILL.md`
+- `harnesses/codex/mojiemoji-github/SKILL.md`
+- `harnesses/opencode/mojiemoji-github/SKILL.md`
+- `harnesses/copilot-cli/mojiemoji-github/SKILL.md`
+- `harnesses/gemini/.gemini/skills/mojiemoji-github/SKILL.md`
+- `harnesses/cursor/.cursor/rules/mojiemoji-github/RULE.md`
+- `harnesses/windsurf/.windsurf/rules/mojiemoji-github.md`
+
+詳細は `harnesses/README.md` を参照してください。
+`scripts/audit-harness-skills.sh` は repo 内 adapter と
+`$HOME/.config/<harness>/...` の local copy の両方を検査します。
+
+各 harness の gate は harness-local に実装します。Claude の
+PreToolUse hook を他 harness に持ち込むのではなく、Codex/Gemini/
+Cursor/Windsurf などの skill、rule、terminal hook、MCP wrapper から
+`uvx mojiemoji` または fallback の `prestamp.py` を呼びます。
+<!-- mojiemoji:on -->
 
 ## 🏗 仕組み — 3 層<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E9%80%A0?font=maru&amp;color=fb923c&amp;animation=neruneru&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="構造" height="24" align="absmiddle">
 
@@ -176,7 +218,7 @@ mojiemoji の画像 <img src="https://mojiemoji.jozo.beer/emoji/URL?font=noto&am
 ### ✓ Plugin 単独で<img src="https://mojiemoji.jozo.beer/emoji/%E5%86%8D%E7%8F%BE?font=rampart&amp;color=34d399&amp;animation=tatemoya&amp;background=transparent&amp;outline=9934d3&amp;outline_width=2" alt="再現" height="24" align="absmiddle">されるもの
 
 - **<img src="https://mojiemoji.jozo.beer/emoji/%E7%99%BA%E7%81%AB?font=maru-bold&color=fb923c&animation=kirari&background=transparent&outline=3cfb92&outline_width=2" alt="発火" height="24" align="absmiddle"> surface の完全列挙** — `gh issue/pr/release create` / raw `gh api .../reviews` / MCP GitHub ツール / subagent 駆動の一括投稿、いずれの経路でも<img src="https://mojiemoji.jozo.beer/emoji/%E6%97%A5?font=tamanegi&amp;color=f87171&amp;animation=kage_neon&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="日" height="24" align="absmiddle">本語 body 投稿前に gate が発火する(SKILL.md § Hard pre-action gate)
-- **<img src="https://mojiemoji.jozo.beer/emoji/%E8%A3%85%E9%A3%BE?font=kurobara&color=a855f7&animation=tatemoya&background=transparent&outline=f7a855&outline_width=2" alt="装飾" height="24" align="absmiddle"> ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / LGTM は他スタンプと<img src="https://mojiemoji.jozo.beer/emoji/%E5%90%8C%E7%AD%89?font=zero&amp;color=eab308&amp;animation=kage_neon&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="同等" height="24" align="absmiddle">(mojiemoji 単独なら自由、他 LGTM-imagery skill 併用時のみ mojiemoji は inline <img src="https://mojiemoji.jozo.beer/emoji/%E6%8E%A8%E5%A5%A8?font=tamanegi&amp;color=22d3ee&amp;animation=yokomoya&amp;background=transparent&amp;outline=b20891&amp;outline_width=2" alt="推奨" height="24" align="absmiddle">) / do-not-stamp リスト(<img src="https://mojiemoji.jozo.beer/emoji/API?font=maru-bold&amp;color=3b82f6&amp;animation=tenmetsu&amp;background=transparent&amp;outline=f63b82&amp;outline_width=2" alt="API" height="24" align="absmiddle"> 名 / file path / <img src="https://mojiemoji.jozo.beer/emoji/%E8%AD%98%E5%88%A5?font=noto&amp;color=60a5fa&amp;animation=patapata&amp;background=transparent&amp;outline=fa60a5&amp;outline_width=2" alt="識別" height="24" align="absmiddle">子)
+- **<img src="https://mojiemoji.jozo.beer/emoji/%E8%A3%85%E9%A3%BE?font=kurobara&color=a855f7&animation=tatemoya&background=transparent&outline=f7a855&outline_width=2" alt="装飾" height="24" align="absmiddle"> ポリシー** — inline-saturation default / surface 別の badge + stamp ルール / <img src="https://mojiemoji.jozo.beer/emoji/LGTM?font=zero&amp;color=fdba74&amp;animation=yoko_scroll&amp;background=transparent&amp;outline=74fdba&amp;outline_width=2" alt="LGTM" height="20" align="absmiddle"> は他スタンプと<img src="https://mojiemoji.jozo.beer/emoji/%E5%90%8C%E7%AD%89?font=zero&amp;color=eab308&amp;animation=kage_neon&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="同等" height="24" align="absmiddle">(mojiemoji 単独なら自由、他 <img src="https://mojiemoji.jozo.beer/emoji/LGTM?font=maru-bold&amp;color=22d3ee&amp;animation=yurayura&amp;background=transparent&amp;outline=ee22d3&amp;outline_width=2" alt="LGTM" height="20" align="absmiddle">-imagery skill 併用時のみ mojiemoji は inline <img src="https://mojiemoji.jozo.beer/emoji/%E6%8E%A8%E5%A5%A8?font=tamanegi&amp;color=22d3ee&amp;animation=yokomoya&amp;background=transparent&amp;outline=b20891&amp;outline_width=2" alt="推奨" height="24" align="absmiddle">) / do-not-stamp リスト(<img src="https://mojiemoji.jozo.beer/emoji/API?font=maru-bold&amp;color=3b82f6&amp;animation=tenmetsu&amp;background=transparent&amp;outline=f63b82&amp;outline_width=2" alt="API" height="24" align="absmiddle"> 名 / file path / <img src="https://mojiemoji.jozo.beer/emoji/%E8%AD%98%E5%88%A5?font=noto&amp;color=60a5fa&amp;animation=patapata&amp;background=transparent&amp;outline=fa60a5&amp;outline_width=2" alt="識別" height="24" align="absmiddle">子)
 - **<img src="https://mojiemoji.jozo.beer/emoji/URL?font=noto&amp;color=8b5cf6&amp;animation=kaiten&amp;speed=slow&amp;background=transparent&amp;outline=f68b5c&amp;outline_width=2" alt="URL" height="24" align="absmiddle"> canonical <img src="https://mojiemoji.jozo.beer/emoji/%E4%BB%95%E6%A7%98?font=pixel&amp;color=3b82f6&amp;animation=norinori&amp;background=transparent&amp;outline=f63b82&amp;outline_width=2" alt="仕様" height="24" align="absmiddle">** — 通常は 6 <img src="https://mojiemoji.jozo.beer/emoji/%E5%BF%85%E9%A0%88?font=gothic&amp;color=ec4899&amp;animation=zanzo&amp;background=transparent&amp;outline=99ec48&amp;outline_width=2" alt="必須" height="24" align="absmiddle">パラメータ(font / color / animation / background / outline / outline_width)、rotational アニメは<img src="https://mojiemoji.jozo.beer/emoji/%E8%BF%BD%E5%8A%A0?font=gothic&amp;color=ec4899&amp;animation=zanzo&amp;background=transparent&amp;outline=99ec48&amp;outline_width=2" alt="追加" height="24" align="absmiddle">で speed <img src="https://mojiemoji.jozo.beer/emoji/%E5%BF%85%E9%A0%88?font=akzk&amp;color=60a5fa&amp;animation=ekken&amp;background=transparent&amp;outline=fa60a5&amp;outline_width=2" alt="必須" height="24" align="absmiddle">、`disco` / `psycho` / `kira` 等の color-shifting アニメは outline 系を省略する <img src="https://mojiemoji.jozo.beer/emoji/%E4%BE%8B%E5%A4%96?font=akzk&color=f472b6&animation=mozaiku&background=transparent&outline=b6f472&outline_width=2" alt="例外" height="24" align="absmiddle">(4 パラメータ運用)、ダーク<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%A2%E3%83%BC%E3%83%89?font=zero&amp;color=60a5fa&amp;animation=yokomoya&amp;background=transparent&amp;outline=eb2563&amp;outline_width=2" alt="モード" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E5%BF%9C?font=maru&amp;color=fdba74&amp;animation=chirichiri&amp;background=transparent&amp;outline=74fdba&amp;outline_width=2" alt="対応" height="24" align="absmiddle"> hex 帯
 - **PreToolUse hook** — 未装飾 body の submission を block(`gh` / raw `gh api` / MCP / subagent 経由すべて)
 - **mojiemoji-selector subagent** — 複数フレーズ・カタ<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%AD%E3%82%B0?font=maru-bold&amp;color=10b981&amp;animation=tatemoya&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="ログ" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=dela&amp;color=fb923c&amp;animation=ekken&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="生成" height="24" align="absmiddle">・<img src="https://mojiemoji.jozo.beer/emoji/%E9%85%8D%E7%BD%AE?font=gothic&amp;color=f59e0b&amp;animation=bure&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="配置" height="24" align="absmiddle"><img src="https://mojiemoji.jozo.beer/emoji/%E5%88%A4%E6%96%AD?font=akzk&amp;color=3b82f6&amp;animation=tate_ekken&amp;background=transparent&amp;outline=f63b82&amp;outline_width=2" alt="判断" height="24" align="absmiddle">のデリゲート先。`Agent` ツールで `subagent_type: "mojiemoji-selector"` を指定する。`mojiemoji-github:mojiemoji-selector` は agent list の<img src="https://mojiemoji.jozo.beer/emoji/%E8%A1%A8%E7%A4%BA?font=gothic&amp;color=a855f7&amp;animation=bure&amp;background=transparent&amp;outline=f7a855&amp;outline_width=2" alt="表示" height="24" align="absmiddle">名であり、Skill ツール引数ではない。
@@ -188,7 +230,7 @@ mojiemoji の画像 <img src="https://mojiemoji.jozo.beer/emoji/URL?font=noto&am
 
 - `make-issue` / `make-pr` / `address-review` / `triage-review` / `cross-repo-review` / `vibes-review` / `copilot-review` / `good-morning` 等の review/issue/<img src="https://mojiemoji.jozo.beer/emoji/PR?font=maru&amp;color=34d399&amp;animation=gatagata&amp;background=transparent&amp;outline=9934d3&amp;outline_width=2" alt="PR" height="24" align="absmiddle"> ワークフロー skills
 - `pr-reviewer` / `review-responder` 等のレビュー特化 subagents
-- LGTM 画像<img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=maru&amp;color=facc15&amp;animation=tate_scroll&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="生成" height="24" align="absmiddle">系の skill(本<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インは mojiemoji LGTM の使用自体は何ら<img src="https://mojiemoji.jozo.beer/emoji/%E5%88%B6%E9%99%90?font=maru-bold&amp;color=eab308&amp;animation=kage_kaiten&amp;speed=slow&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="制限" height="24" align="absmiddle">しない。別の LGTM-imagery skill を併用するときに「mojiemoji の block-image を重ねない」という<img src="https://mojiemoji.jozo.beer/emoji/%E7%B7%A8%E9%9B%86?font=zero&amp;color=f43f5e&amp;animation=yurayura&amp;background=transparent&amp;outline=5ef43f&amp;outline_width=2" alt="編集" height="24" align="absmiddle">ガイドラインを SKILL.md で示すだけで、その別 skill の<img src="https://mojiemoji.jozo.beer/emoji/%E5%AD%98%E5%9C%A8?font=hachimaru&amp;color=f59e0b&amp;animation=kage_kaiten&amp;speed=slow&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="存在" height="24" align="absmiddle">は user 環境依存)
+- <img src="https://mojiemoji.jozo.beer/emoji/LGTM?font=maru-bold&amp;color=22d3ee&amp;animation=yurayura&amp;background=transparent&amp;outline=ee22d3&amp;outline_width=2" alt="LGTM" height="20" align="absmiddle"> 画像<img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=maru&amp;color=facc15&amp;animation=tate_scroll&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="生成" height="24" align="absmiddle">系の skill(本<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インは mojiemoji <img src="https://mojiemoji.jozo.beer/emoji/LGTM?font=maru-bold&amp;color=22d3ee&amp;animation=yurayura&amp;background=transparent&amp;outline=ee22d3&amp;outline_width=2" alt="LGTM" height="20" align="absmiddle"> の使用自体は何ら<img src="https://mojiemoji.jozo.beer/emoji/%E5%88%B6%E9%99%90?font=maru-bold&amp;color=eab308&amp;animation=kage_kaiten&amp;speed=slow&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="制限" height="24" align="absmiddle">しない。別の <img src="https://mojiemoji.jozo.beer/emoji/LGTM?font=maru-bold&amp;color=22d3ee&amp;animation=yurayura&amp;background=transparent&amp;outline=ee22d3&amp;outline_width=2" alt="LGTM" height="20" align="absmiddle">-imagery skill を併用するときに「mojiemoji の block-image を重ねない」という<img src="https://mojiemoji.jozo.beer/emoji/%E7%B7%A8%E9%9B%86?font=zero&amp;color=f43f5e&amp;animation=yurayura&amp;background=transparent&amp;outline=5ef43f&amp;outline_width=2" alt="編集" height="24" align="absmiddle">ガイドラインを SKILL.md で示すだけで、その別 skill の<img src="https://mojiemoji.jozo.beer/emoji/%E5%AD%98%E5%9C%A8?font=hachimaru&amp;color=f59e0b&amp;animation=kage_kaiten&amp;speed=slow&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="存在" height="24" align="absmiddle">は user 環境依存)
 
 これらの<img src="https://mojiemoji.jozo.beer/emoji/%E3%82%B9%E3%82%AD%E3%83%AB?font=hachimaru&amp;color=60a5fa&amp;animation=kage_neon&amp;background=transparent&amp;outline=eb2563&amp;outline_width=2" alt="スキル" height="24" align="absmiddle">が mojiemoji を使う場合、本<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=akzk&amp;color=d946ef&amp;animation=yatta&amp;background=transparent&amp;outline=efd946&amp;outline_width=2" alt="プラグ" height="24" align="absmiddle">インの skill / hook を呼ぶ形で integration するのが正しい<img src="https://mojiemoji.jozo.beer/emoji/%E8%A8%AD%E8%A8%88?font=gothic-bold&amp;color=06b6d4&amp;animation=kirari&amp;background=transparent&amp;outline=d406b6&amp;outline_width=2" alt="設計" height="24" align="absmiddle">。逆方向(plugin が user-personal skill を仮定する)は依存方向として<img src="https://mojiemoji.jozo.beer/emoji/%E7%A6%81%E6%AD%A2?font=tamanegi&amp;color=22c55e&amp;animation=kira&amp;background=transparent&amp;outline_width=0" alt="禁止" height="24" align="absmiddle">。
 
@@ -270,9 +312,9 @@ OUTPUT_FILE=/tmp/mojiemoji-release-notes.md \
 
 ## 🔗 <img src="https://mojiemoji.jozo.beer/emoji/%E9%96%A2%E9%80%A3?font=noto&amp;color=f87171&amp;animation=nami&amp;background=transparent&amp;outline=26dc26&amp;outline_width=2" alt="関連" height="24" align="absmiddle">リンク
 
-- mojiemoji 本体サービス: https://mojiemoji.jozo.beer
-- Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インドキュメント: https://docs.claude.com/en/docs/claude-code/plugins
-- agent-browser (<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%82%E8%80%83?font=hachimaru&amp;color=22c55e&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="参考" height="24" align="absmiddle">にした<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インマーケットプレイス<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E6%88%90?font=maru-bold&amp;color=22c55e&amp;animation=neruneru&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構成" height="24" align="absmiddle">): https://github.com/vercel-labs/agent-browser
+- mojiemoji 本体サービス: <https://mojiemoji.jozo.beer>
+- Claude Code <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インドキュメント: <https://docs.claude.com/en/docs/claude-code/plugins>
+- agent-browser (<img src="https://mojiemoji.jozo.beer/emoji/%E5%8F%82%E8%80%83?font=hachimaru&amp;color=22c55e&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="参考" height="24" align="absmiddle">にした<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%97%E3%83%A9%E3%82%B0?font=kurobara&amp;color=60a5fa&amp;animation=psycho&amp;background=transparent&amp;outline_width=0" alt="プラグ" height="24" align="absmiddle">インマーケットプレイス<img src="https://mojiemoji.jozo.beer/emoji/%E6%A7%8B%E6%88%90?font=maru-bold&amp;color=22c55e&amp;animation=neruneru&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="構成" height="24" align="absmiddle">): <https://github.com/vercel-labs/agent-browser>
 
 ---
 

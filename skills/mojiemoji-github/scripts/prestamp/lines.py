@@ -4,7 +4,9 @@ Both transform passes (text catalog, emoji catalog) walk the input the
 same way: they skip CommonMark fenced code blocks, honor the
 ``<!-- mojiemoji:off -->`` / ``:on`` author-controlled escape (#91), and
 preserve content inside ``<summary>…</summary>`` so disclosure-widget
-headings are stamp-free.
+headings are stamp-free. GitHub alert marker lines (``> [!NOTE]`` etc.)
+are also preserved verbatim because stamping their label breaks the
+alert syntax.
 
 Off markers are recognized only outside fenced code. Once an off-region
 starts, its body stays raw without flipping ``in_fence``, so the
@@ -36,6 +38,10 @@ DISABLE_CLOSE_LINE_RE = re.compile(r"^\s*<!--\s*mojiemoji:on\s*-->\s*$")
 
 _SUMMARY_OPEN_RE = re.compile(r"<summary\b[^>]*>")
 _SUMMARY_CLOSE_RE = re.compile(r"</summary>")
+ALERT_MARKER_LINE_RE = re.compile(
+    r"^\s{0,3}>\s*\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$",
+    re.IGNORECASE,
+)
 
 
 def _inside_inline_code(line: str, pos: int) -> bool:
@@ -152,6 +158,10 @@ def _walk_lines_outside_fences_with_reason(text: str):
             yield line, False, "fence"
             continue
 
+        if ALERT_MARKER_LINE_RE.match(line):
+            yield line, False, "alert"
+            continue
+
         yield line, True, "prose"
 
 
@@ -165,6 +175,7 @@ __all__ = [
     "DISABLE_CLOSE_LINE_RE",
     "DISABLE_OPEN_LINE_RE",
     "FENCE_RE",
+    "ALERT_MARKER_LINE_RE",
     "_observe_summary_tags",
     "_scan_summary_aware",
     "_walk_lines_outside_fences",
