@@ -71,6 +71,16 @@ def test_generate_catalog_splits_3plus_kanji_via_compound_variant() -> None:
     assert "text: 検知" in proc.stdout
 
 
+def test_generate_catalog_splits_long_ascii_mixed_japanese_terms() -> None:
+    proc = run_py(GENERATE, "GitHub対応\n", "--seed", "1", "--variants", "1")
+
+    assert proc.returncode == 0
+    assert "GitHub対応:" in proc.stdout
+    assert "chunks:" in proc.stdout
+    assert "text: GitHub" in proc.stdout
+    assert "text: 対応" in proc.stdout
+
+
 def test_generate_catalog_skips_unsplittable_terms() -> None:
     # 4 hiragana is single-stamp OK; use a long single-script run with
     # no valid 2-stamp decomposition.
@@ -130,6 +140,22 @@ def test_catalog_loads_with_string_keys_for_digits() -> None:
     data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
     int_keys = [k for k in data["terms"].keys() if isinstance(k, int)]
     assert int_keys == [], f"integer keys leaked into catalog: {int_keys}"
+
+
+def test_live_prestamp_catalog_has_no_duplicate_term_keys() -> None:
+    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+    keys = re.findall(r"(?m)^  ([^\s:\n][^:\n]*):$", catalog_path.read_text(encoding="utf-8"))
+    duplicates = sorted({key for key in keys if keys.count(key) > 1})
+
+    assert duplicates == []
+
+
+def test_advertised_english_terms_exist_in_runtime_catalog() -> None:
+    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+    data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
+
+    for term in ["PUSH", "PULL", "FIX", "OPEN"]:
+        assert term in data["terms"]
 
 
 def test_generate_catalog_han_range_excludes_hangul_yi_pua() -> None:

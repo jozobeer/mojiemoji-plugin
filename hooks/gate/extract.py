@@ -50,6 +50,7 @@ BODY_FILE_RE = re.compile(
     r"(?:--body-file|--input)(?:\s+|=)(['\"]?)([^'\"\s|;&)]+)\1"
 )
 F_BODY_RE = re.compile(r"-F\s+body=@(['\"]?)([^'\"\s|;&)]+)\1")
+INLINE_BODY_FIELD_RE = re.compile(r"(?:-[fF]\s+body=|--field\s+body=)(?!@)")
 # Non-body flag/value pairs to strip from the command before treating
 # it as an inspect surface. Title / label / reviewer / assignee /
 # milestone / head / base values are metadata, not posting prose — they
@@ -332,7 +333,14 @@ def _route_bash(data: dict):
         "",
         _strip_non_body_assignment_lines(command),
     )
-    pieces = [inspected_command]
+    has_inline_body = bool(
+        BODY_FLAGS_RE.search(command) or INLINE_BODY_FIELD_RE.search(command)
+    )
+    pieces = (
+        [inspected_command]
+        if has_inline_body or not (file_bodies or script_body)
+        else []
+    )
     pieces.extend(file_bodies)
     if script_body:
         pieces.append(script_body)

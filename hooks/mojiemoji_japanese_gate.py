@@ -110,8 +110,13 @@ def main() -> int:
     if not jp_texts and not (english_enabled and en_texts):
         return 0
 
-    # Determine which bodies to enforce stamping rules on.
-    active = jp_texts or (en_texts if english_enabled else [])
+    # Determine which bodies to enforce stamping rules on. Japanese and
+    # opt-in English bodies are both active when a payload mixes them.
+    active = [
+        text
+        for text in inspect_texts
+        if JP_RE.search(text) or (english_enabled and LATIN_RE.search(text))
+    ]
     cwd = data.get("cwd", "")
     if is_pr_body_submission(data) and not forces_pr_body(data):
         owner, repo = pr_body_target_repo(data) or (None, None)

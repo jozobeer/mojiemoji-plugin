@@ -7252,6 +7252,20 @@ terms:
       animation: kaiten
       speed: slow
 
+  OPEN:
+    - font: noto
+      color: "a855f7"
+      outline: "f7a855"
+      animation: ekken
+    - font: toge
+      color: "fb923c"
+      outline: "3cfb92"
+      animation: tenmetsu
+    - font: kurobara
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: yatta
+
   ISSUE:
     - font: tamanegi
       color: "a855f7"
@@ -7280,6 +7294,36 @@ terms:
       outline: "f68b5c"
       animation: zanzo
 
+  PUSH:
+    - font: rampart
+      color: "10b981"
+      outline: "8110b9"
+      animation: kage_kaiten
+      speed: slow
+    - font: dela
+      color: "fb923c"
+      outline: "3cfb92"
+      animation: gatagata
+    - font: akzk
+      color: "fdba74"
+      outline: "74fdba"
+      animation: tate_scroll
+
+  PULL:
+    - font: tamanegi
+      color: "f97316"
+      outline: "16f973"
+      animation: bane
+    - font: gothic
+      color: "3b82f6"
+      outline: "f63b82"
+      animation: shuchusen
+    - font: toge
+      color: "a855f7"
+      outline: "f7a855"
+      animation: kaiten
+      speed: slow
+
   TEST:
     - font: toge
       color: "f97316"
@@ -7294,6 +7338,20 @@ terms:
       color: "d946ef"
       outline: "efd946"
       animation: tate_scroll
+
+  FIX:
+    - font: gothic
+      color: "f59e0b"
+      outline: "0bf59e"
+      animation: nami
+    - font: gothic-bold
+      color: "eab308"
+      outline: "08eab3"
+      animation: tate_scroll
+    - font: hachimaru
+      color: "d946ef"
+      outline: "efd946"
+      animation: ekken
 
   ERROR:
     - font: gothic-bold
@@ -7365,49 +7423,6 @@ terms:
       color: "22d3ee"
       outline: "ee22d3"
       animation: yurayura
-
-  WIP:
-    - font: chikara
-      color: "ef4444"
-      outline: "44ef44"
-      animation: tatemoya
-    - font: noto
-      color: "c084fc"
-      outline: "fcc084"
-      animation: mochimochi
-    - font: rampart
-      color: "fdba74"
-      outline: "74fdba"
-      animation: yokomoya
-
-  PR:
-    - font: maru
-      color: "ef4444"
-      outline: "44ef44"
-      animation: gatagata
-    - font: hachimaru
-      color: "ec4899"
-      outline: "99ec48"
-      animation: bure
-    - font: toge
-      color: "fbbf24"
-      outline: "24fbbf"
-      animation: zairu
-
-  MR:
-    - font: pixel
-      color: "3b82f6"
-      outline: "f63b82"
-      animation: kaiten
-      speed: slow
-    - font: zero
-      color: "ec4899"
-      outline: "99ec48"
-      animation: kage_neon
-    - font: toge
-      color: "fb923c"
-      outline: "3cfb92"
-      animation: shuchusen
 
   OK:
     - font: maru-bold

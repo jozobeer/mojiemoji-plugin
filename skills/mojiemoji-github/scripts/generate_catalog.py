@@ -77,7 +77,12 @@ def fits_single_stamp(term: str) -> bool:
     jp_chars = c["kanji"] + c["kata"] + c["hira"]
     if jp_chars > 0:
         # Traditional JP morpheme limits (kanji compounds, katakana runs, hiragana)
-        return c["kanji"] <= 2 and c["kata"] <= 3 and c["hira"] <= 4
+        return (
+            c["kanji"] <= 2
+            and c["kata"] <= 3
+            and c["hira"] <= 4
+            and c["ascii"] <= 3
+        )
     # Pure ASCII/Latin terms for English + dev terminology (i18n #148).
     # English words are whole words (not JP-style compounds), so allow
     # up to ~8 chars (e.g. MERGE, REVIEW, SHIP, TODO, PASS, FAIL...).
