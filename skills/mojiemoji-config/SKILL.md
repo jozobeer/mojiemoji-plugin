@@ -28,7 +28,7 @@ allowed-tools:
 ## <img src="https://mojiemoji.jozo.beer/emoji/%E8%A8%AD%E5%AE%9A?font=maru&amp;color=60a5fa&amp;animation=yurayura&amp;background=transparent&amp;outline=eb2563&amp;outline_width=2" alt="設定" height="24" align="absmiddle">の<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=toge&amp;color=f59e0b&amp;animation=zanzo&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="確認" height="24" align="absmiddle">
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts'); from lib.config import get_intensity, get_config_path; print(f'config={get_config_path()}'); print(f'intensity={get_intensity() or \"(unset, default aggressive)\"}')"
+python3 -c "import os, sys; root = os.environ.get('PLUGIN_ROOT') or os.environ.get('CLAUDE_PLUGIN_ROOT') or '.'; sys.path.insert(0, f'{root}/skills/mojiemoji-github/scripts'); from lib.config import get_intensity, get_config_path; print(f'config={get_config_path()}'); print(f'intensity={get_intensity() or \"(unset, default aggressive)\"}')"
 ```
 
 ## intensity の<img src="https://mojiemoji.jozo.beer/emoji/%E5%A4%89%E6%9B%B4?font=hachimaru&amp;color=eab308&amp;animation=yokomoya&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="変更" height="24" align="absmiddle">
@@ -36,21 +36,21 @@ python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}/skills/mojiemo
 `aggressive` / `normal` / `minimal` のいずれかを<img src="https://mojiemoji.jozo.beer/emoji/%E4%BF%9D%E5%AD%98?font=akzk&amp;color=10b981&amp;animation=shuchusen&amp;background=transparent&amp;outline=8110b9&amp;outline_width=2" alt="保存" height="24" align="absmiddle">します。
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts'); from lib.config import set_intensity; set_intensity('normal')"
+python3 -c "import os, sys; root = os.environ.get('PLUGIN_ROOT') or os.environ.get('CLAUDE_PLUGIN_ROOT') or '.'; sys.path.insert(0, f'{root}/skills/mojiemoji-github/scripts'); from lib.config import set_intensity; set_intensity('normal')"
 ```
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts'); from lib.config import set_intensity; set_intensity('minimal')"
+python3 -c "import os, sys; root = os.environ.get('PLUGIN_ROOT') or os.environ.get('CLAUDE_PLUGIN_ROOT') or '.'; sys.path.insert(0, f'{root}/skills/mojiemoji-github/scripts'); from lib.config import set_intensity; set_intensity('minimal')"
 ```
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts'); from lib.config import set_intensity; set_intensity('aggressive')"
+python3 -c "import os, sys; root = os.environ.get('PLUGIN_ROOT') or os.environ.get('CLAUDE_PLUGIN_ROOT') or '.'; sys.path.insert(0, f'{root}/skills/mojiemoji-github/scripts'); from lib.config import set_intensity; set_intensity('aggressive')"
 ```
 
 ## intensity の unset
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts'); from lib.config import unset_intensity; unset_intensity()"
+python3 -c "import os, sys; root = os.environ.get('PLUGIN_ROOT') or os.environ.get('CLAUDE_PLUGIN_ROOT') or '.'; sys.path.insert(0, f'{root}/skills/mojiemoji-github/scripts'); from lib.config import unset_intensity; unset_intensity()"
 ```
 
 ## config ファイルの場所

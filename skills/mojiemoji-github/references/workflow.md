@@ -82,6 +82,7 @@ SKILL_DIR: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github
 2 つの正解経路:
 
 1. **subprocess 経由でヘルパースクリプトを叩く**:
+
    ```python
    import subprocess
    def render(text, font, color, anim):
@@ -93,6 +94,7 @@ SKILL_DIR: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github
            capture_output=True, text=True, check=True
        ).stdout.strip()
    ```
+
    毎フレーズで font / color / animation を変えること(さもなくば issue #166 の単調本文と<img src="https://mojiemoji.jozo.beer/emoji/%E5%90%8C%E3%81%98?font=hachimaru&amp;color=f472b6&amp;animation=yurayura&amp;background=transparent&amp;outline=b6f472&amp;outline_width=2" alt="同じ" height="24" align="absmiddle">轍を踏む)。
 2. **`mojiemoji-selector` に先にバッチをレンダリングさせる**: subagent からスニペット表を受け取り、Python 側ではそれを*不透明な `<img>` 文字列*として変数展開のみする。Python は body 組み立ての糊にとどめ、<img src="https://mojiemoji.jozo.beer/emoji/URL?font=noto&amp;color=8b5cf6&amp;animation=kaiten&amp;speed=slow&amp;background=transparent&amp;outline=f68b5c&amp;outline_width=2" alt="URL" height="24" align="absmiddle"> クエリには触れない。
 
@@ -110,7 +112,7 @@ subagent は歴史的にこれらを落としがちなので、**以下の行を
 - For inline mode: height=20 is the observed user default. **Confirmed block-only**: `bakusan` (radial-burst obscures letterforms at small heights). **Likely problematic inline**: `chuuou_zoom`, `mozaiku`, `kage_*` shadow effects. Substitute `gatagata` / `bure` / `tenmetsu` / `shuchusen` / `zanzo` for inline impact moods.
 - For inline mode with 4+ char phrases: split into two adjacent single-line stamps (matching font/color/animation), do NOT use `%0A` line break in the URL
 - Outline: use `outline=darker outline_width=2` (auto-relative dark halo per stamp). Never use `outline=ffffff` — white blends with light Tailwind 300–400 fills and erases the letterform edges.
-- **Animation diversity**: across the full PHRASES list, use **12+ distinct values** from the canonical 34 (see references/parameters.md § Valid animation values). **No animation may appear more than 2×** across distinct terms. Same-term recurrences (e.g. 仕様 × 5) are exempt — count distinct *terms*, not occurrences. Single-animation bodies are the issue #166 anti-pattern.
+- **Animation diversity**: across the full PHRASES list, use **12+ distinct values** from the canonical 36 (see references/parameters.md § Valid animation values). **No animation may appear more than 2×** across distinct terms. Same-term recurrences (e.g. 仕様 × 5) are exempt — count distinct *terms*, not occurrences. Single-animation bodies are the issue #166 anti-pattern.
 - **Underused tier requirement**: include at least **3 stamps using animations from the underused tier** (ekken, tate_ekken, neruneru, patapata, mabataki, mozaiku, tatemoya, yokomoya, zairu, zanzo, chirichiri, kage_kaiten, kage_bokashi, kage_neon, kirari, yatta, kaiten, psycho). The user has flagged a recurring bias toward "safe defaults" (`bane`, `nami`, `mochimochi`, `bure`); this rule forces breakout from that comfort zone.
 - **Font diversity**: mix at least **3–4 distinct fonts** from the canonical 16. Picking display fonts (`akzk`, `zero`, `kurobara`, `hachimaru`, `chikara`, `tamanegi`, `toge`, `rampart`) for the loudest words and `gothic-bold` / `maru-bold` / `noto` for readability-sensitive ones works well.
 - **Color diversity**: use **4+ distinct hex values** across the body, all from the dark-mode-safe palette (Tailwind 300–500). Single-color body is also the #166 anti-pattern (15 stamps, all `60a5fa`).
@@ -125,7 +127,7 @@ MODE: inline
 CONSTRAINTS:
 - FLAVOR GATE OVERRIDE: render factual/design terms; do not skip.
 - All inline; height=20 (matches user's observed body style)
-- Animation required; only use names from the canonical 34 in references/parameters.md. Rotational animations (`kaiten`, `kage_kaiten`) require `speed=step` or `slow` — `normal`/`fast` is unreadably fast for rotational glyphs
+- Animation required; only use names from the canonical 36 in references/parameters.md. Rotational animations (`kaiten`, `kage_kaiten`) require `speed=step` or `slow` — `normal`/`fast` is unreadably fast for rotational glyphs
 - Animation diversity: 12+ distinct values across the body; no animation more than 2× across distinct terms
 - Include at least 3 picks from the underused tier (ekken, tate_ekken, neruneru, patapata, mabataki, mozaiku, tatemoya, yokomoya, zairu, zanzo, chirichiri, kage_kaiten, kage_bokashi, kage_neon, kirari, yatta, kaiten, psycho)
 - Avoid reusing the "safe defaults" (bane, nami, mochimochi, bure) more than once each per body — they're the historical bias the user has flagged

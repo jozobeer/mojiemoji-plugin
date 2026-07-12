@@ -21,18 +21,44 @@ set -euo pipefail
 
 SERVICE_URL="${MOJIEMOJI_BASE_URL:-https://mojiemoji.jozo.beer/}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="${CLAUDE_PLUGIN_ROOT:-$SCRIPT_DIR/../../..}"
+
+root_with_constants() {
+    local root="$1"
+    [[ -n "$root" && -f "$root/skills/mojiemoji-github/scripts/lib/constants.py" ]]
+}
+
+find_plugin_root() {
+    local candidate
+
+    for candidate in "${PLUGIN_ROOT:-}" "${CLAUDE_PLUGIN_ROOT:-}" "$SCRIPT_DIR/../../.."; do
+        if root_with_constants "$candidate"; then
+            cd "$candidate" && pwd
+            return 0
+        fi
+    done
+
+    candidate="$SCRIPT_DIR"
+    while [[ "$candidate" != "/" ]]; do
+        if root_with_constants "$candidate"; then
+            cd "$candidate" && pwd
+            return 0
+        fi
+        candidate="$(dirname "$candidate")"
+    done
+
+    return 1
+}
+
+REPO_ROOT="$(find_plugin_root)" || {
+    printf 'plugin root not found from %s\n' "$SCRIPT_DIR" >&2
+    exit 2
+}
 # `LIB_CONSTANTS_PATH` is the SSOT for canonical sets after #101.
 # `HOOK_PATH` is kept as a fallback for callers that still set it.
 LIB_CONSTANTS_PATH="${LIB_CONSTANTS_PATH:-${HOOK_PATH:-$REPO_ROOT/skills/mojiemoji-github/scripts/lib/constants.py}}"
-EXTRACT="${EXTRACT_HOOK_SET:-$REPO_ROOT/scripts/extract_hook_set.py}"
 
 if [[ ! -f "$LIB_CONSTANTS_PATH" ]]; then
     printf 'lib/constants.py not found: %s\n' "$LIB_CONSTANTS_PATH" >&2
-    exit 2
-fi
-if [[ ! -f "$EXTRACT" ]]; then
-    printf 'extract_hook_set.py not found: %s\n' "$EXTRACT" >&2
     exit 2
 fi
 
@@ -61,6 +87,54 @@ extract_options() {
     ' "$html" | sort -u
 }
 
+extract_set() {
+    local name="$1" path="$2"
+    python3 - "$name" "$path" <<'PY'
+import ast
+import sys
+
+name, path = sys.argv[1], sys.argv[2]
+tree = ast.parse(open(path, encoding="utf-8").read())
+
+for node in ast.walk(tree):
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+        value = node.value
+    elif isinstance(node, ast.AnnAssign) and node.value is not None:
+        targets = [node.target]
+        value = node.value
+    else:
+        continue
+
+    for target in targets:
+        if not (isinstance(target, ast.Name) and target.id == name):
+            continue
+        if isinstance(value, (ast.Set, ast.Tuple, ast.List)):
+            elts = value.elts
+        elif (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and value.func.id == "frozenset"
+            and value.args
+            and isinstance(value.args[0], (ast.Set, ast.Tuple, ast.List))
+        ):
+            elts = value.args[0].elts
+        else:
+            raise SystemExit(f"{name} in {path} is not a supported literal")
+
+        result = set()
+        for elt in elts:
+            if not (isinstance(elt, ast.Constant) and isinstance(elt.value, str)):
+                raise SystemExit(f"{name} in {path} contains a non-string element")
+            result.add(elt.value)
+        for value in sorted(result):
+            print(value)
+        raise SystemExit(0)
+
+raise SystemExit(f"missing {name} in {path}")
+PY
+}
+
 service_fonts="$tmpdir/service-fonts.txt"
 service_anims="$tmpdir/service-anims.txt"
 lib_fonts="$tmpdir/lib-fonts.txt"
@@ -68,8 +142,8 @@ lib_anims="$tmpdir/lib-anims.txt"
 
 extract_options font-select      "$tmpdir/form.html" > "$service_fonts"
 extract_options animation-select "$tmpdir/form.html" > "$service_anims"
-python3 "$EXTRACT" CANONICAL_FONTS      "$LIB_CONSTANTS_PATH" | sort -u > "$lib_fonts"
-python3 "$EXTRACT" CANONICAL_ANIMATIONS "$LIB_CONSTANTS_PATH" | sort -u > "$lib_anims"
+extract_set CANONICAL_FONTS      "$LIB_CONSTANTS_PATH" | sort -u > "$lib_fonts"
+extract_set CANONICAL_ANIMATIONS "$LIB_CONSTANTS_PATH" | sort -u > "$lib_anims"
 
 drift=0
 

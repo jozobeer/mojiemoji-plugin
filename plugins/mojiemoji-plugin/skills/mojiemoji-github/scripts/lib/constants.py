@@ -30,11 +30,12 @@ CANONICAL_FONTS: tuple[str, ...] = (
 
 CANONICAL_ANIMATIONS: tuple[str, ...] = (
     "bakusan", "bane", "bure", "chirichiri", "chuuou_zoom", "disco",
-    "ekken", "gatagata", "kage_bokashi", "kage_kaiten", "kage_neon",
-    "kaiten", "kira", "kirari", "mabataki", "mochimochi", "mozaiku",
-    "nami", "neruneru", "norinori", "patapata", "poyoon", "psycho",
-    "shuchusen", "tate_ekken", "tate_scroll", "tatemoya", "tenmetsu",
-    "yatta", "yoko_scroll", "yokomoya", "yurayura", "zairu", "zanzo",
+    "darker_zairu", "ekken", "gatagata", "kage_bokashi", "kage_kaiten",
+    "kage_neon", "kaiten", "kira", "kirari", "lighter_zairu",
+    "mabataki", "mochimochi", "mozaiku", "nami", "neruneru", "norinori",
+    "patapata", "poyoon", "psycho", "shuchusen", "tate_ekken",
+    "tate_scroll", "tatemoya", "tenmetsu", "yatta", "yoko_scroll",
+    "yokomoya", "yurayura", "zairu", "zanzo",
 )
 
 

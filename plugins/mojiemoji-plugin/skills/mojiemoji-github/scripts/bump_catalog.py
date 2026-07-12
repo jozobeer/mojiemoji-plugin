@@ -28,7 +28,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError as exc:
+    raise SystemExit(
+        "PyYAML is required to read mojiemoji catalogs. Install it with "
+        "`python3 -m pip install --user 'pyyaml>=6.0'`, or run from the "
+        "repository with `uv run ...`."
+    ) from exc
 
 from lib.cache_path import default_cache_file
 from lib.flavor import Flavor
@@ -36,10 +43,48 @@ from lib.yaml_helpers import emit_term_key
 
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPTS_DIR.parent.parent.parent
-DEFAULT_CATALOG = SCRIPTS_DIR.parent / "data" / "prestamp-catalog.yml"
-DEFAULT_PLUGIN_JSON = REPO_ROOT / ".claude-plugin" / "plugin.json"
 CACHE_STATS_SCRIPT = SCRIPTS_DIR / "cache_stats.py"
+
+
+def canonical_repo_root(start: Path = SCRIPTS_DIR) -> Path | None:
+    """Return the source checkout root, not an installed package mirror."""
+    for candidate in (start, *start.parents):
+        if (
+            (candidate / ".claude-plugin" / "plugin.json").is_file()
+            and (candidate / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml").is_file()
+        ):
+            return candidate
+    return None
+
+
+def required_source_path(path: Path | None, label: str) -> Path:
+    if path is not None:
+        return path
+
+    raise SystemExit(
+        f"bump-catalog: canonical {label} not found. Run from the source "
+        f"checkout or pass --{label.replace('_', '-')} explicitly; refusing "
+        "to mutate an installed Codex package cache."
+    )
+
+
+def json_version_bumped(path: Path) -> tuple[str, str] | None:
+    if not path.is_file():
+        return None
+
+    plugin = json.loads(path.read_text(encoding="utf-8"))
+    version = plugin.get("version", "0.0.0")
+    parts = [int(p) if p.isdigit() else 0 for p in version.split(".")]
+    while len(parts) < 3:
+        parts.append(0)
+    parts[2] += 1
+    bumped = ".".join(str(p) for p in parts)
+    plugin["version"] = bumped
+    path.write_text(
+        json.dumps(plugin, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return version, bumped
 
 
 def render_variant_lines(flavor: dict, indent: str = "    ") -> list[str]:
@@ -63,10 +108,21 @@ def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    source_root = canonical_repo_root()
+    default_catalog = (
+        source_root / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+        if source_root else None
+    )
+    default_plugin_json = source_root / ".claude-plugin" / "plugin.json" if source_root else None
+    default_codex_plugin_json = source_root / ".codex-plugin" / "plugin.json" if source_root else None
+    sync_script = source_root / "scripts" / "sync-codex-plugin-package.sh" if source_root else None
+    package_dir = source_root / "plugins" / "mojiemoji-plugin" if source_root else None
+
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--cache")
-    parser.add_argument("--catalog", default=str(DEFAULT_CATALOG))
-    parser.add_argument("--plugin-json", dest="plugin_json", default=str(DEFAULT_PLUGIN_JSON))
+    parser.add_argument("--catalog")
+    parser.add_argument("--plugin-json", dest="plugin_json")
+    parser.add_argument("--codex-plugin-json", dest="codex_plugin_json")
     parser.add_argument("--threshold", type=int, default=2)
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument("--dry-run", dest="mode", action="store_const", const="dry_run")
@@ -76,8 +132,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     cache_file = args.cache or default_cache_file()
-    catalog_path = Path(args.catalog)
-    plugin_json_path = Path(args.plugin_json)
+    catalog_path = Path(args.catalog) if args.catalog else required_source_path(default_catalog, "catalog")
+    plugin_json_path = Path(args.plugin_json) if args.plugin_json else default_plugin_json
+    codex_plugin_json_path = (
+        Path(args.codex_plugin_json) if args.codex_plugin_json else default_codex_plugin_json
+    )
 
     if not catalog_path.is_file():
         print(f"catalog not found: {catalog_path}", file=sys.stderr)
@@ -195,21 +254,28 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.mode == "apply":
         return 0
 
-    # --- 5. Bump plugin.json patch version (PR mode only) ---------------
-    if plugin_json_path.is_file():
-        plugin = json.loads(plugin_json_path.read_text(encoding="utf-8"))
-        version = plugin.get("version", "0.0.0")
-        parts = [int(p) if p.isdigit() else 0 for p in version.split(".")]
-        while len(parts) < 3:
-            parts.append(0)
-        parts[2] += 1
-        bumped = ".".join(str(p) for p in parts)
-        plugin["version"] = bumped
-        plugin_json_path.write_text(
-            json.dumps(plugin, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
+    # --- 5. Bump plugin manifest patch versions (PR mode only) ----------
+    if plugin_json_path is None:
+        raise SystemExit(
+            "bump-catalog: canonical plugin_json not found. Run --pr from "
+            "the source checkout or pass --plugin-json explicitly."
         )
-        print(f"bump-catalog: plugin.json {version} -> {bumped}")
+
+    bumped = json_version_bumped(plugin_json_path)
+    if bumped is not None:
+        version, next_version = bumped
+        print(f"bump-catalog: plugin.json {version} -> {next_version}")
+
+    if codex_plugin_json_path is not None:
+        codex_bumped = json_version_bumped(codex_plugin_json_path)
+        if codex_bumped is not None:
+            version, next_version = codex_bumped
+            print(f"bump-catalog: codex plugin.json {version} -> {next_version}")
+
+    if sync_script is not None and sync_script.is_file():
+        sync_proc = subprocess.run([str(sync_script)])
+        if sync_proc.returncode != 0:
+            return sync_proc.returncode or 1
 
     # --- 6. Git: branch + commit + PR -----------------------------------
     git_root_result = subprocess.run(
@@ -221,9 +287,26 @@ def main(argv: Optional[list[str]] = None) -> int:
     def relativize(p: Path) -> str:
         return str(p.resolve().relative_to(git_repo_root))
 
-    catalog_rel = relativize(catalog_path)
-    plugin_json_rel = relativize(plugin_json_path) if plugin_json_path.is_file() else None
-    intended_paths = [p for p in (catalog_rel, plugin_json_rel) if p]
+    intended_paths = {
+        relativize(catalog_path),
+        *((
+            relativize(plugin_json_path),
+        ) if plugin_json_path.is_file() else ()),
+        *((
+            relativize(codex_plugin_json_path),
+        ) if codex_plugin_json_path is not None and codex_plugin_json_path.is_file() else ()),
+    }
+    package_paths: list[str] = []
+    if package_dir is not None and package_dir.exists():
+        package_paths.extend([
+            relativize(package_dir / ".codex-plugin"),
+            relativize(package_dir / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"),
+        ])
+    intended_prefixes = tuple(f"{path}/" for path in package_paths if (git_repo_root / path).is_dir())
+    intended_paths.update(path for path in package_paths if (git_repo_root / path).exists())
+
+    def intended(path: str) -> bool:
+        return path in intended_paths or path.startswith(intended_prefixes)
 
     # Verify clean tree (excluding our intended paths).
     status_proc = subprocess.run(
@@ -237,7 +320,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         path = line[3:].strip()
         if " -> " in path:
             path = path.split(" -> ")[-1].strip()
-        if path not in intended_paths:
+        if not intended(path):
             dirty.append(line)
     if dirty:
         print(
@@ -254,7 +337,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 subprocess.run(["git", "stash", "pop"])
             sys.exit(r.returncode)
 
-    run_or_exit(["git", "stash", "push", "-m", "bump-catalog-temp", "--", *intended_paths])
+    run_or_exit(["git", "stash", "push", "-m", "bump-catalog-temp", "--", *sorted(intended_paths)])
     run_or_exit(["git", "fetch", "origin", "main"])
     run_or_exit(["git", "checkout", "main"], pop_stash_on_fail=True)
     run_or_exit(["git", "pull", "--ff-only", "origin", "main"], pop_stash_on_fail=True)
@@ -279,7 +362,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     run_or_exit(["git", "checkout", "-b", branch], pop_stash_on_fail=True)
     run_or_exit(["git", "stash", "pop"])
-    run_or_exit(["git", "add", *intended_paths])
+    run_or_exit(["git", "add", *sorted(intended_paths)])
     run_or_exit(["git", "commit", "-m", title])
     run_or_exit(["git", "push", "-u", "origin", branch])
     pr_proc = subprocess.run(

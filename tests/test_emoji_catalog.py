@@ -37,7 +37,7 @@ CANONICAL_ANIMATIONS = frozenset({
     "neruneru", "patapata", "yurayura", "mabataki", "bakusan", "norinori",
     "mochimochi", "mozaiku", "poyoon", "yatta", "tatemoya", "nami", "yokomoya",
     "zairu", "zanzo", "chirichiri", "disco", "psycho", "kage_kaiten",
-    "kage_bokashi", "kage_neon",
+    "kage_bokashi", "kage_neon", "darker_zairu", "lighter_zairu",
 })
 CANONICAL_FONTS = frozenset({
     "maru-bold", "gothic-bold", "noto", "dela", "akzk", "zero", "kurobara",
@@ -91,7 +91,7 @@ def test_variants_use_canonical_values(emoji, variants):
     assert 1 <= len(variants) <= 4, f"{emoji}: variant count {len(variants)} outside 1-4"
     for i, v in enumerate(variants):
         assert v["animation"] in CANONICAL_ANIMATIONS, (
-            f"{emoji}#{i}: animation {v['animation']!r} not in canonical 34"
+            f"{emoji}#{i}: animation {v['animation']!r} not in canonical 36"
         )
         assert v["font"] in CANONICAL_FONTS, (
             f"{emoji}#{i}: font {v['font']!r} not in canonical 16"

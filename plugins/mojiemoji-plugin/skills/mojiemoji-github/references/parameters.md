@@ -121,10 +121,11 @@ tate_scroll, yoko_scroll, ekken, tate_ekken, bane, gatagata, bure,
 chuuou_zoom, kirari, kira, tenmetsu, shuchusen, kaiten, neruneru,
 patapata, yurayura, mabataki, bakusan, norinori, mochimochi, mozaiku,
 poyoon, yatta, tatemoya, nami, yokomoya, zairu, zanzo, chirichiri,
-disco, psycho, kage_kaiten, kage_bokashi, kage_neon
+disco, psycho, kage_kaiten, kage_bokashi, kage_neon, darker_zairu,
+lighter_zairu
 ```
 
-合計 34 種類 — 過去の 16 種から大きく増えた。下の多様性ルールは
+合計 36 種類 — 過去の 16 種から大きく増えた。下の多様性ルールは
 この幅広さを活かす。
 
 避けるべきよくある不正値: `rotate`、`bounce`、`shake`、`hooo`(過去
@@ -165,7 +166,7 @@ letterform を覆ってしまう。`bakusan` は block モード専用に
 ### animation の多様性(単調さ防止)
 
 **animation 選択は正準リスト全体に広く散らす。** 20 スタンプ全部が
-`bane` の本文は単調 — ユーザーが繰り返しフラグした失敗モード。34 種の
+`bane` の本文は単調 — ユーザーが繰り返しフラグした失敗モード。36 種の
 animation がある以上、過去の「8 種 distinct を下限」は緩すぎる。
 **body-class surface あたり 12 種以上の distinct な animation** を
 目指し、**1 つの animation が distinct な語にまたがって 2 回以上
@@ -180,7 +181,7 @@ animation がある以上、過去の「8 種 distinct を下限」は緩すぎ�
 ```
 ekken, tate_ekken, neruneru, patapata, mabataki, mozaiku, tatemoya,
 yokomoya, zairu, zanzo, chirichiri, kage_kaiten, kage_bokashi,
-kage_neon, kirari, yatta, kaiten, psycho
+kage_neon, darker_zairu, lighter_zairu, kirari, yatta, kaiten, psycho
 ```
 
 おおまかなムード→ animation マッピング(あくまで出発点のパレット、
@@ -196,18 +197,19 @@ kage_neon, kirari, yatta, kaiten, psycho
 | ソフト / 穏やか / ステータス | `yurayura`, `poyoon`, `mochimochi`, `nami`, `neruneru`, `chirichiri`, `patapata` | — |
 | エネルギー / 勢い | `norinori`, `bane`, `yatta`, `patapata`, `disco` | `bakusan` |
 | ムードピボット / ポップ | `poyoon`, `kira`, `kirari`, `kage_neon` | `psycho` (激しめ) |
-| エフェクト / テクスチャ | `mozaiku`, `tatemoya`, `yokomoya`, `zairu`, `kage_kaiten`, `kage_bokashi` | `psycho`, `mozaiku` |
+| エフェクト / テクスチャ | `mozaiku`, `tatemoya`, `yokomoya`, `zairu`, `darker_zairu`, `lighter_zairu`, `kage_kaiten`, `kage_bokashi` | `psycho`, `mozaiku` |
 | スクロール / 連続 | `tate_scroll`, `yoko_scroll`, `ekken`, `tate_ekken`, `kaiten` | — |
 
 `mojiemoji-selector` に委譲するときは、明示的な制約を渡すこと:
 
 ```
 - Animation diversity: across the full PHRASES list, use at least 12
-  distinct values from the canonical 34. No animation should appear
+  distinct values from the canonical 36. No animation should appear
   more than 2× across distinct terms. Include at least 3 picks from
   the underused tier (ekken, tate_ekken, neruneru, patapata, mabataki,
   mozaiku, tatemoya, yokomoya, zairu, zanzo, chirichiri, kage_kaiten,
-  kage_bokashi, kage_neon, kirari, yatta, kaiten, psycho). Avoid
+  kage_bokashi, kage_neon, darker_zairu, lighter_zairu, kirari, yatta,
+  kaiten, psycho). Avoid
   reusing the same "safe defaults" (bane, nami, mochimochi, bure)
   more than once each per body. Same-term recurrences (e.g., 仕様 × 5)
   count as one term and may keep a stable animation for visual

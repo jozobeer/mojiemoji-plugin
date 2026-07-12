@@ -21,7 +21,14 @@ import re
 from pathlib import Path
 from typing import Optional
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError as exc:
+    raise SystemExit(
+        "PyYAML is required to read mojiemoji catalogs. Install it with "
+        "`python3 -m pip install --user 'pyyaml>=6.0'`, or run from the "
+        "repository with `uv run ...`."
+    ) from exc
 
 from prestamp.boundaries import (
     ASCII_KEY_RE,
