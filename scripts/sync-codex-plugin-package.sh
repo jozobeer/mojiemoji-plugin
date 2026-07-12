@@ -16,6 +16,13 @@ remove_codex_excluded_skills() {
   done
 }
 
+remove_ignored_payload() {
+  local target="$1"
+
+  find "$target" -type d -name __pycache__ -prune -exec rm -rf {} +
+  find "$target" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+}
+
 copy_package_payload() {
   local target="$1"
 
@@ -24,6 +31,7 @@ copy_package_payload() {
   cp -R "$ROOT_DIR/.codex-plugin" "$target/.codex-plugin"
   cp -R "$ROOT_DIR/skills" "$target/skills"
   remove_codex_excluded_skills "$target/skills"
+  remove_ignored_payload "$target"
 }
 
 assert_no_symlinks() {
