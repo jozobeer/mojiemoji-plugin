@@ -15,6 +15,11 @@ from urllib.parse import quote, urlencode
 from lib.forbidden_colors import normalize_color_value as _normalize_color_value
 
 
+PRESTAMP_IMG_RE = re.compile(
+    r'<img src="[^"]+/emoji/[^"]+" alt="[^"]*" height="20" align="absmiddle">'
+)
+
+
 def _build_url(base_url: str, text: str, flavor: dict, defaults: dict) -> str:
     merged = {**defaults, **flavor}
     params = [
@@ -57,6 +62,7 @@ def _shields_badge_url(url: str) -> bool:
 
 
 __all__ = [
+    "PRESTAMP_IMG_RE",
     "_build_url",
     "_render_img",
     "_render_variant",

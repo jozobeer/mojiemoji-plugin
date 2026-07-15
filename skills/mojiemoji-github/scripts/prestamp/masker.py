@@ -26,18 +26,31 @@ LINK_TARGET = r"(?:[^()\s]|\([^()]*\))+"
 class _Masker:
     """Replace spans of text with opaque tokens, restorable in reverse order."""
 
-    def __init__(self) -> None:
+    def __init__(self, token_prefix: str = "__MOJIEMOJI_MASK_") -> None:
+        self._token_prefix = token_prefix
         self._tokens: list[str] = []
 
     def mask(self, text: str) -> str:
-        token = f"__MOJIEMOJI_MASK_{len(self._tokens)}__"
+        token = f"{self._token_prefix}{len(self._tokens)}__"
         self._tokens.append(text)
         return token
 
     def restore(self, text: str) -> str:
         for idx in range(len(self._tokens) - 1, -1, -1):
-            text = text.replace(f"__MOJIEMOJI_MASK_{idx}__", self._tokens[idx])
+            text = text.replace(f"{self._token_prefix}{idx}__", self._tokens[idx])
         return text
+
+    def matching_tokens(self, pattern: re.Pattern[str]) -> frozenset[str]:
+        """Return mask tokens whose original spans fully match ``pattern``."""
+        return frozenset(
+            f"{self._token_prefix}{idx}__"
+            for idx, original in enumerate(self._tokens)
+            if pattern.fullmatch(original)
+        )
+
+    def is_token(self, text: str) -> bool:
+        """Return whether ``text`` starts with this masker's token prefix."""
+        return text.startswith(self._token_prefix)
 
 
 def _mask_safe_zones(text: str, masker: _Masker) -> str:
@@ -66,7 +79,7 @@ def _mask_safe_zones(text: str, masker: _Masker) -> str:
 
     def _md_link(m: re.Match) -> str:
         target = m.group(2)
-        if target.startswith("__MOJIEMOJI_MASK_"):
+        if masker.is_token(target):
             return m.group(0)
         return f"{m.group(1)}{masker.mask(target)}{m.group(3)}"
 

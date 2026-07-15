@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Optional
@@ -30,9 +31,35 @@ from prestamp.catalog import (
     load_emoji_catalog,
 )
 from prestamp.emoji_pass import _emoji_transform_line
+from prestamp.incremental import processed_sentences_masked
 from prestamp.lines import _observe_summary_tags, _walk_lines_outside_fences_with_reason
+from prestamp.masker import _Masker
 from prestamp.text_pass import _transform_line
 from prestamp.unstamped_report import report_unstamped
+
+
+INTENSITY_SENTINEL_LINE_RE = re.compile(
+    r"^<!-- mojiemoji-intensity:(normal|minimal) -->\r?\n?$",
+)
+
+
+def intensity_metadata(text: str) -> tuple[str, str | None]:
+    """Remove generated intensity lines and return the last declared mode."""
+    state = {"in_summary": False}
+    output: list[str] = []
+    intensity = None
+
+    for line, is_prose, reason in _walk_lines_outside_fences_with_reason(text):
+        in_summary = state["in_summary"]
+        if is_prose or reason == "disabled":
+            _observe_summary_tags(line, state)
+        match = INTENSITY_SENTINEL_LINE_RE.match(line) if is_prose and not in_summary else None
+        if match is not None:
+            intensity = match.group(1)
+            continue
+        output.append(line)
+
+    return "".join(output), intensity
 
 
 def transform(
@@ -43,6 +70,7 @@ def transform(
     base_url: str = DEFAULT_BASE_URL,
     seed: str = "0",
     intensity: str = "aggressive",
+    preserve_processed_sentences: bool = False,
 ) -> str:
     """Transform markdown text by replacing catalog hits with mojiemoji stamps.
 
@@ -61,6 +89,10 @@ def transform(
     missing — callers may pass ``emoji_catalog_path=None`` (default
     location) or set it to an explicit override path.
     """
+    processed = _Masker("__MOJIEMOJI_PROCESSED_")
+    if preserve_processed_sentences:
+        text = processed_sentences_masked(text, processed)
+
     defaults, terms = load_catalog(catalog_path or DEFAULT_CATALOG_PATH)
     term_re = build_term_re(terms)
     base_url = base_url.rstrip("/")
@@ -92,7 +124,7 @@ def transform(
             pass1.append(line)
 
     if emoji_re is None:
-        return "".join(pass1)
+        return processed.restore("".join(pass1))
 
     # Pass 2 — emoji catalog. Walks the pass-1 output with the same
     # fence semantics so emoji inside ```fenced code``` is left alone.
@@ -113,7 +145,7 @@ def transform(
             if reason == "disabled":
                 _observe_summary_tags(line, state)
             pass2.append(line)
-    return "".join(pass2)
+    return processed.restore("".join(pass2))
 
 
 # Alias matching the name in the #102 spec's "import 経路は
@@ -188,18 +220,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     resolved_intensity = args.intensity or _get_config_intensity() or "aggressive"
 
     text = sys.stdin.read()
+    body_without_metadata, previous_intensity = intensity_metadata(text)
     skip = args.surface == "pr-body" and should_skip_pr_body()
 
     # Always transform — the unstamped report is a catalog-gap analysis of
     # the body's Japanese and is surface-independent, so a pr-body skip must
     # not suppress it. Only the markdown stdout output respects `skip`.
     output = transform(
-        text,
+        body_without_metadata,
         catalog_path=args.catalog,
         emoji_catalog_path=args.emoji_catalog,
         base_url=args.base_url,
         seed=args.seed,
         intensity=resolved_intensity,
+        preserve_processed_sentences=previous_intensity == resolved_intensity,
     )
 
     if args.report_unstamped:
@@ -219,6 +253,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 0
 
     if resolved_intensity in ("normal", "minimal"):
+        if output and not output.endswith(("\n", "\r")):
+            output += "\n"
         output += f"<!-- mojiemoji-intensity:{resolved_intensity} -->\n"
 
     sys.stdout.write(output)
