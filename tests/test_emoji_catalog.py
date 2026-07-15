@@ -91,10 +91,12 @@ def test_variants_use_canonical_values(emoji, variants):
     assert 1 <= len(variants) <= 4, f"{emoji}: variant count {len(variants)} outside 1-4"
     for i, v in enumerate(variants):
         assert v["animation"] in CANONICAL_ANIMATIONS, (
-            f"{emoji}#{i}: animation {v['animation']!r} not in canonical 36"
+            f"{emoji}#{i}: animation {v['animation']!r} not in canonical "
+            f"{len(CANONICAL_ANIMATIONS)}"
         )
         assert v["font"] in CANONICAL_FONTS, (
-            f"{emoji}#{i}: font {v['font']!r} not in canonical 16"
+            f"{emoji}#{i}: font {v['font']!r} not in canonical "
+            f"{len(CANONICAL_FONTS)}"
         )
         color = v["color"].lower()
         assert HEX6_RE.match(color), f"{emoji}#{i}: color {color!r} not 6-hex"

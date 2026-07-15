@@ -5,6 +5,7 @@ description: >-
   ~/.config/mojiemoji/config.json.
 allowed-tools:
   - Bash(python3 */mojiemoji-config/scripts/mojiemoji_config.py *)
+  - Bash(python3 "*/mojiemoji-config/scripts/mojiemoji_config.py" *)
   - Bash(cat ~/.config/mojiemoji/config.json*)
   - Bash(cat */mojiemoji/config.json*)
   - Read

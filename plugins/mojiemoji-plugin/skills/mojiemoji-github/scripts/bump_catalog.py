@@ -107,6 +107,23 @@ def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, **kwargs)
 
 
+def package_mutation_paths(package_dir: Path | None, git_repo_root: Path) -> list[str]:
+    """Return package roots that the sync step may legitimately mutate."""
+    if package_dir is None or not package_dir.exists():
+        return []
+
+    return [
+        str(path.resolve().relative_to(git_repo_root))
+        for path in (package_dir / ".codex-plugin", package_dir / "skills")
+        if path.exists()
+    ]
+
+
+def intended_path(path: str, intended_paths: set[str]) -> bool:
+    """Return whether a git path is an intended file or lies below one."""
+    return any(path == intended or path.startswith(f"{intended}/") for intended in intended_paths)
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     source_root = canonical_repo_root()
     default_catalog = (
@@ -297,17 +314,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             relativize(codex_plugin_json_path),
         ) if codex_plugin_json_path is not None and codex_plugin_json_path.is_file() else ()),
     }
-    package_paths: list[str] = []
-    if package_dir is not None and package_dir.exists():
-        package_paths.extend([
-            relativize(package_dir / ".codex-plugin"),
-            relativize(package_dir / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"),
-        ])
-    intended_prefixes = tuple(f"{path}/" for path in package_paths if (git_repo_root / path).is_dir())
-    intended_paths.update(path for path in package_paths if (git_repo_root / path).exists())
-
-    def intended(path: str) -> bool:
-        return path in intended_paths or path.startswith(intended_prefixes)
+    intended_paths.update(package_mutation_paths(package_dir, git_repo_root))
 
     # Verify clean tree (excluding our intended paths).
     status_proc = subprocess.run(
@@ -321,7 +328,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         path = line[3:].strip()
         if " -> " in path:
             path = path.split(" -> ")[-1].strip()
-        if not intended(path):
+        if not intended_path(path, intended_paths):
             dirty.append(line)
     if dirty:
         print(
