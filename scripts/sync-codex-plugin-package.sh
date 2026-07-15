@@ -45,9 +45,12 @@ assert_no_symlinks() {
 
 if [ "${1:-}" = "--check" ]; then
   expected="$(mktemp -d)"
-  trap 'rm -rf "$expected"' EXIT
+  actual="$(mktemp -d)"
+  trap 'rm -rf "$expected" "$actual"' EXIT
   copy_package_payload "$expected"
-  diff -ru "$expected/skills" "$PACKAGE_DIR/skills"
+  cp -R "$PACKAGE_DIR/skills" "$actual/skills"
+  remove_ignored_payload "$actual"
+  diff -ru "$expected/skills" "$actual/skills"
   assert_no_symlinks
   exit 0
 fi

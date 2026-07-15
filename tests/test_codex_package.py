@@ -83,10 +83,22 @@ def test_packaged_config_runs_from_an_unrelated_directory(tmp_path: Path) -> Non
 
 
 def test_codex_package_sync_check_matches_filtered_payload() -> None:
-    proc = subprocess.run(
-        [str(REPO_ROOT / "scripts" / "sync-codex-plugin-package.sh"), "--check"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
+    cache_dir = PACKAGE_SKILLS / "mojiemoji-github" / "scripts" / "__pycache__"
+    cache_file = cache_dir / "codex_package_sync_test.pyc"
+    cache_dir.mkdir(exist_ok=True)
+    cache_file.write_bytes(b"runtime cache")
+
+    try:
+        proc = subprocess.run(
+            [str(REPO_ROOT / "scripts" / "sync-codex-plugin-package.sh"), "--check"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+    finally:
+        cache_file.unlink(missing_ok=True)
+        try:
+            cache_dir.rmdir()
+        except OSError:
+            pass
