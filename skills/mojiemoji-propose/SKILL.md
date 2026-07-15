@@ -1,6 +1,8 @@
 ---
 name: mojiemoji-propose
-description: "prestamp が拾えなかった 2-8 字日本語連続 (Kanji / Katakana) を抽出し、`mojiemoji-selector` subagent に flavor を選ばせて usage cache に<img src="https://mojiemoji.jozo.beer/emoji/%E8%BF%BD%E8%A8%98?font=akzk&amp;color=c084fc&amp;animation=chirichiri&amp;background=transparent&amp;outline=fcc084&amp;outline_width=2" alt="追記" height="24" align="absmiddle">する。catalog 育成パイプライン (#46) の<img src="https://mojiemoji.jozo.beer/emoji/%E5%85%A5%E5%8A%9B?font=mincho&amp;color=ef4444&amp;animation=bane&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="入力" height="24" align="absmiddle">枯渇 (#92) を解決する Phase 1 (#93)。ユーザーが draft markdown ファイルを指定して呼ぶ。"
+description: >-
+  Extract unstamped Japanese terms from prestamp output, ask the
+  mojiemoji-selector agent for flavor choices, and record them in usage cache.
 allowed-tools:
   - Bash(python3 skills/mojiemoji-github/scripts/prestamp.py*)
   - Bash(python3 */skills/mojiemoji-github/scripts/prestamp.py*)

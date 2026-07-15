@@ -1,6 +1,8 @@
 ---
 name: bump-catalog
-description: "ローカル mojiemoji usage cache (`~/.local/share/mojiemoji-plugin/usage.jsonl`) から閾値を満たした variant を `prestamp-catalog.yml` に昇格させ、<img src="https://mojiemoji.jozo.beer/emoji/%E8%87%AA%E5%8B%95?font=chikara&amp;color=fdba74&amp;animation=norinori&amp;background=transparent&amp;outline=74fdba&amp;outline_width=2" alt="自動" height="24" align="absmiddle"> <img src="https://mojiemoji.jozo.beer/emoji/PR?font=hachimaru&amp;color=ef4444&amp;animation=bure&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="PR" height="24" align="absmiddle"> を作る。selector が catalog miss 時に記録した flavor を、複利型 catalog 育成の入口にする。LLM <img src="https://mojiemoji.jozo.beer/emoji/%E4%B8%8D%E8%A6%81?font=hachimaru&amp;color=3b82f6&amp;animation=tatemoya&amp;background=transparent&amp;outline=f63b82&amp;outline_width=2" alt="不要" height="24" align="absmiddle">・全部 Ruby script で<img src="https://mojiemoji.jozo.beer/emoji/%E6%B1%BA%E5%AE%9A?font=noto&amp;color=fb923c&amp;animation=zairu&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="決定" height="24" align="absmiddle">論的。"
+description: >-
+  Promote frequently used mojiemoji variants from the local usage cache into
+  prestamp-catalog.yml and open a deterministic catalog update pull request.
 allowed-tools:
   # bump_catalog.py 本体。`--dry-run` / `--apply` / `--pr` <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%A2%E3%83%BC%E3%83%89?font=hachimaru&amp;color=4ade80&amp;animation=bane&amp;background=transparent&amp;outline=4a16a3&amp;outline_width=2" alt="モード" height="24" align="absmiddle">全てで使用。
   # `--pr` <img src="https://mojiemoji.jozo.beer/emoji/%E3%83%A2%E3%83%BC%E3%83%89?font=noto&amp;color=22c55e&amp;animation=kage_neon&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="モード" height="24" align="absmiddle">では内部から `git` / `gh pr create` を `system()` で呼ぶが、
