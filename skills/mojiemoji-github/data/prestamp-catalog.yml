@@ -3715,6 +3715,12 @@ terms:
       outline: "99ec48"
       animation: zanzo
 
+    - font: dela
+      color: "fb923c"
+      outline: "3cfb92"
+      outline_width: "2"
+      animation: yatta
+      speed: normal
   排除:
     - font: hachimaru
       color: "06b6d4"
@@ -4768,6 +4774,18 @@ terms:
       outline_width: "0"
       animation: disco
 
+    - font: gothic-bold
+      color: "22c55e"
+      outline: triadic
+      outline_width: "2"
+      animation: mochimochi
+      speed: slow
+    - font: gothic-bold
+      color: "4ade80"
+      outline: triadic
+      outline_width: "2"
+      animation: yatta
+      speed: slow
   対応:
     - font: maru
       color: "fdba74"
