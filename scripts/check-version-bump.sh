@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fail the CI if a PR modifies plugin source paths
-# (.claude-plugin/, skills/, hooks/, agents/, commands/) without bumping
+# (.agents/, .claude-plugin/, plugins/, skills/, hooks/, agents/, commands/) without bumping
 # `.claude-plugin/plugin.json` version. Claude Code's marketplace caches
 # plugin contents by `<plugin>/<version>/...`, so changes shipped without
 # a version bump never reach users via `/plugin update`.
@@ -14,7 +14,9 @@ BASE_SHA="${BASE_SHA:-origin/main}"
 HEAD_SHA="${HEAD_SHA:-HEAD}"
 
 SOURCE_PATHS=(
+    ".agents/"
     ".claude-plugin/"
+    "plugins/"
     "skills/"
     "hooks/"
     "agents/"
