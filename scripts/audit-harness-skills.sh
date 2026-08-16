@@ -39,6 +39,7 @@ HARNESSES=(
   "opencode"
   "copilot-cli"
   "gemini"
+  "agy"
   "cursor"
   "windsurf"
 )
@@ -171,7 +172,7 @@ main() {
       fi
     fi
 
-    # rules/mojiemoji-github.md (Gemini uses this in addition to / instead of skill)
+    # rules/mojiemoji-github.md (Gemini/agy uses this in addition to / instead of skill)
     if [ -f "$rule_path" ]; then
       checked=$((checked + 1))
       if ! audit_skill_file "$rule_path" "$harness (rule)"; then
@@ -180,8 +181,25 @@ main() {
     fi
   done
 
+  # agy ~/.gemini skill and rule paths
+  local agy_extra_paths=(
+    "$HOME/.gemini/config/skills/mojiemoji-github/SKILL.md:agy (global skill)"
+    "$HOME/.gemini/skills/mojiemoji-github/SKILL.md:agy (skill)"
+    "$HOME/.gemini/config/rules/mojiemoji-github.md:agy (rule)"
+  )
+  for entry in "${agy_extra_paths[@]}"; do
+    local path="${entry%%:*}"
+    local label="${entry#*:}"
+    if [ -f "$path" ]; then
+      checked=$((checked + 1))
+      if ! audit_skill_file "$path" "$label"; then
+        failed=$((failed + 1))
+      fi
+    fi
+  done
+
   if [ "$checked" -eq 0 ]; then
-    echo "No harness skill files found under \$HOME/.config/{${HARNESSES[*]}}/{skills,rules}/mojiemoji-github/" >&2
+    echo "No harness skill files found under \$HOME/.config/{${HARNESSES[*]}}/{skills,rules}/mojiemoji-github/ or \$HOME/.gemini/" >&2
     exit 2
   fi
 
