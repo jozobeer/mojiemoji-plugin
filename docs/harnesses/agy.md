@@ -62,9 +62,24 @@ parameters `font`, `color`, `animation`, `background`, `outline`, and
 conflicts with their changing colors, and the core strips those parameters
 for them.
 
+Skip decoration entirely when the body is English-only, the surface is not
+GitHub, or the content is an apology, a security advisory, legal or
+compliance text, or standalone acceptance criteria — `prestamp.py` cannot
+detect these semantic categories, so apply this exception before running
+it. When unsure, decorate.
+
+On body-class surfaces (issue body, PR body, release note), a shields.io
+badge row must be the first element of the body. `prestamp.py` preserves
+existing badges but never creates one — add the badge row to the draft
+yourself before decorating.
+
+Show the decorated draft to the user once and wait for an explicit yes/no
+before posting; on a change request, re-decorate and show again. Never
+post GitHub content that the user has not approved in this form.
+
 Before any GitHub write call, verify that Japanese prose has already been
-decorated or is intentionally inside `<!-- mojiemoji:off -->` /
-`<!-- mojiemoji:on -->`.
+decorated, falls under a skip category above, or is intentionally inside
+`<!-- mojiemoji:off -->` / `<!-- mojiemoji:on -->`.
 ```
 
 Keep the `mojiemoji-schema-version` marker in sync with the canonical
