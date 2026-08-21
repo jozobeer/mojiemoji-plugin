@@ -59,7 +59,11 @@ unchanged. After running it, decorate the important Japanese phrases the
 catalog missed yourself, following the canonical parameter rules, and
 verify the assembled body before treating it as decorated — prestamp
 output alone is not a finished decoration for prose the catalog does not
-cover.
+cover. Exception: when `--surface pr-body` hits the repository-policy
+skip described above, `prestamp.py` returns the body unchanged by
+design — do not decorate that body manually either. The undecorated PR
+body is the intended final state there, and it passes the pre-write
+check below as a skip.
 
 The same preprocessing applies to local Markdown edits: after editing
 Japanese prose in `README.md`, `CHANGELOG.md`, `docs/**/*.md`,
