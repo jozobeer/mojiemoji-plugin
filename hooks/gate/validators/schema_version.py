@@ -1,7 +1,7 @@
 """Schema-version drift detector across harness-local SKILL.md copies.
 
 The host SKILL.md carries a `<!-- mojiemoji-schema-version: X.Y.Z -->`
-marker. Each AI harness (claude / codex / opencode / gemini /
+marker. Each AI harness (claude / codex / opencode / gemini / agy /
 copilot-cli) usually keeps a local copy of SKILL.md; when those copies
 fall behind the host, the harness keeps using stale rules.
 
@@ -40,6 +40,11 @@ def _harness_skill_paths() -> tuple[tuple[str, Path], ...]:
         ("copilot-cli", home / ".config" / "copilot-cli" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("gemini", home / ".config" / "gemini" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("gemini (rule)", home / ".config" / "gemini" / "rules" / "mojiemoji-github.md"),
+        ("agy (global skill)", home / ".gemini" / "config" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("agy (skill)", home / ".gemini" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("agy (config skill)", home / ".config" / "agy" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("agy (rule)", home / ".gemini" / "config" / "rules" / "mojiemoji-github.md"),
+        ("agy (config rule)", home / ".config" / "agy" / "rules" / "mojiemoji-github.md"),
     )
 
 

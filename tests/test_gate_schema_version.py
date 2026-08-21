@@ -151,3 +151,34 @@ class TestSchemaVersionDrift:
         captured = capsys.readouterr()
         assert rc == 0
         assert captured.err == ""
+
+    def test_default_harness_paths_include_agy(self, monkeypatch, tmp_path):
+        mod = self._import_schema_version_mod()
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path / "home")
+        paths = mod._harness_skill_paths()
+        labels = [label for label, _ in paths]
+        assert "agy (global skill)" in labels
+        assert "agy (skill)" in labels
+        assert "agy (config skill)" in labels
+        assert "agy (rule)" in labels
+        assert "agy (config rule)" in labels
+
+    def test_agy_mismatch_warns(self, tmp_path, monkeypatch, capsys):
+        mod = self._import_schema_version_mod()
+        monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
+        monkeypatch.setattr(mod, "_canonical_version_cache", object())
+        self._write_skill(tmp_path / "host.md", "2.0.0")
+        stale = tmp_path / "agy" / "SKILL.md"
+        self._write_skill(stale, "1.0.0")
+        monkeypatch.setattr(
+            mod, "_harness_skill_paths", lambda: (("agy (global skill)", stale),)
+        )
+
+        rc = mod.validate_schema_version("ダミー")
+
+        captured = capsys.readouterr()
+        assert rc == 0
+        assert "expected: 2.0.0" in captured.err
+        assert "found:    1.0.0" in captured.err
+        assert "agy (global skill)" in captured.err
+
