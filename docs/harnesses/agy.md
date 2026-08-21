@@ -42,15 +42,25 @@ description: agy adapter for decorating Japanese GitHub Markdown with the shared
 
 When preparing Japanese GitHub Markdown for an issue, PR, review, comment,
 or release note, run the text through the shared mojiemoji core before
-posting:
+posting, passing the surface being decorated:
 
     python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
-      < body.md > decorated.md
+      --surface issue-body < body.md > decorated.md
+
+Match `--surface` to the target (`issue-body`, `pr-body`, `review-body`,
+`comment-body`, `release-note`). The default is `issue-body`, so PR bodies
+in particular must pass `--surface pr-body`: that surface runs a
+repository-policy check that intentionally skips decoration when the
+repository's squash or merge commits embed the PR body, and the default
+surface would bypass it.
 
 Rendered stamps must use `/emoji/<encoded-text>` and include the required
 parameters `font`, `color`, `animation`, `background`, `outline`, and
 `outline_width`. Inline stamps should use `background=transparent` and
-`outline_width=2`.
+`outline_width=2`. Exception: the color-shifting animations `disco`,
+`psycho`, and `kira` omit `outline` and `outline_width` — a fixed halo
+conflicts with their changing colors, and the core strips those parameters
+for them.
 
 Before any GitHub write call, verify that Japanese prose has already been
 decorated or is intentionally inside `<!-- mojiemoji:off -->` /
@@ -83,11 +93,12 @@ Two mechanisms keep agy copies from silently going stale:
 
 - `scripts/audit-harness-skills.sh` audits every deployed copy against five
   contracts (endpoint shape, required parameters, forbidden animations,
-  forbidden colors, schema-version marker). Run it after updating the
-  canonical skill.
-- On the Claude Code side, the host gate's schema-version validator reads
-  the marker in each agy copy and warns when it is behind the canonical
-  `skills/mojiemoji-github/SKILL.md`.
+  forbidden colors, and a `prestamp.py` reference). Run it after updating
+  the canonical skill. Note the audit does not compare schema-version
+  markers — a copy without one still passes.
+- Schema-version drift is caught by the host gate instead: on the Claude
+  Code side, its validator reads the marker in each agy copy and warns when
+  it is behind the canonical `skills/mojiemoji-github/SKILL.md`.
 
 ## Current Limits
 
