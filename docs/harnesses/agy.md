@@ -54,6 +54,20 @@ repository-policy check that intentionally skips decoration when the
 repository's squash or merge commits embed the PR body, and the default
 surface would bypass it.
 
+`prestamp.py` replaces catalog hits only and leaves every other phrase
+unchanged. After running it, decorate the important Japanese phrases the
+catalog missed yourself, following the canonical parameter rules, and
+verify the assembled body before treating it as decorated — prestamp
+output alone is not a finished decoration for prose the catalog does not
+cover.
+
+The same preprocessing applies to local Markdown edits: after editing
+Japanese prose in `README.md`, `CHANGELOG.md`, `docs/**/*.md`,
+`agents/**/*.md`, or `skills/**/SKILL.md`, run the file through
+`prestamp.py` too — repository CI fails a PR whose changed documentation
+is not prestamp-clean. Wrap intentional raw regions in
+`<!-- mojiemoji:off -->` / `<!-- mojiemoji:on -->`.
+
 Rendered stamps must use `/emoji/<encoded-text>` and include the required
 parameters `font`, `color`, `animation`, `background`, `outline`, and
 `outline_width`. Inline stamps should use `background=transparent` and
@@ -80,6 +94,10 @@ post GitHub content that the user has not approved in this form.
 Before any GitHub write call, verify that Japanese prose has already been
 decorated, falls under a skip category above, or is intentionally inside
 `<!-- mojiemoji:off -->` / `<!-- mojiemoji:on -->`.
+
+For anything this adapter does not cover, the canonical
+`skills/mojiemoji-github/SKILL.md` in the mojiemoji-plugin repository is
+the authoritative workflow reference.
 ```
 
 Keep the `mojiemoji-schema-version` marker in sync with the canonical
