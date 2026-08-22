@@ -19,6 +19,8 @@ from pathlib import Path
 
 from lib.term_boundaries import count_occurrences
 
+from lib.plugin_root import plugin_root
+
 CATALOG_PATH = (
     Path(__file__).resolve().parent.parent.parent.parent
     / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
@@ -107,7 +109,7 @@ def validate_catalog_leftovers(text: str) -> int:
         f"🚧 prestamp.py 未通過: catalog 登録済の 2+ 字語が plain で {total} 個残存{intensity_note}\n\n"
         f"残存語 (top 20): {top}{rest}\n\n"
         f"対応: body を投稿する前に prestamp.py で機械的下処理を通してください\n"
-        f"  $ python3 \"${{CLAUDE_PLUGIN_ROOT}}/skills/mojiemoji-github/scripts/prestamp.py\" \\\n"
+        f"  $ python3 \"{plugin_root()}/skills/mojiemoji-github/scripts/prestamp.py\" \\\n"
         f"      < body.md > body-pre.md\n"
         f"  (または pipe: prestamp.py < draft.md | gh pr create --body-file -)\n\n"
         f"なぜ: catalog hit は機械的置換 (AI トークン 0) で済む箇所です。AI が\n"
