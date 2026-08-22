@@ -27,6 +27,8 @@ uvx mojiemoji < body.md > decorated.md
 Repository fallback while the core package is still being carved out:
 
 ```bash
+# --surface MUST match the posting target:
+#   issue-body | pr-body | review-body | comment-body | release-note
 python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
   --surface issue-body < body.md > decorated.md
 ```
@@ -86,7 +88,9 @@ Each adapter must preserve these contracts:
 - Gemini CLI skill:
   `harnesses/gemini/.gemini/skills/mojiemoji-github/SKILL.md`
 - Cursor project rule:
-  `harnesses/cursor/.cursor/rules/mojiemoji-github/RULE.md`
+  `harnesses/cursor/.cursor/rules/mojiemoji-github.mdc`
+  (Cursor only discovers `.mdc` files under `.cursor/rules`; plain `.md`
+  files are ignored)
 - Windsurf workspace rule:
   `harnesses/windsurf/.windsurf/rules/mojiemoji-github.md`
 - agy: no checked-in adapter yet — deploy per the setup guide in

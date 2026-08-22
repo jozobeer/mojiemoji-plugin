@@ -20,6 +20,8 @@ uvx mojiemoji < body.md > decorated.md
 Fallback from this repository:
 
 ```bash
+# --surface MUST match the posting target:
+#   issue-body | pr-body | review-body | comment-body | release-note
 python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
   --surface issue-body < body.md > decorated.md
 ```

@@ -27,6 +27,8 @@ Grok の Bash ツールを使って必ず prestamp を最初に通す:
 uvx mojiemoji < body.md > decorated.md
 
 # core 公開前 / checkout からの fallback
+# --surface は投稿先 surface に必ず合わせる:
+#   issue-body | pr-body | review-body | comment-body | release-note
 python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
   --surface issue-body < body.md > decorated.md
 ```

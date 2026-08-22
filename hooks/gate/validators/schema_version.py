@@ -2,8 +2,9 @@
 
 The host SKILL.md carries a `<!-- mojiemoji-schema-version: X.Y.Z -->`
 marker. Each AI harness (claude / codex / opencode / gemini / agy /
-copilot-cli) usually keeps a local copy of SKILL.md; when those copies
-fall behind the host, the harness keeps using stale rules.
+copilot-cli / grok / cursor / windsurf) usually keeps a local copy of
+the skill or rule file; when those copies fall behind the host, the
+harness keeps using stale rules.
 
 This stage warns the agent that drift is present, naming each stale
 file and its version delta. Default behaviour is warning-only (rc=0)
@@ -45,6 +46,10 @@ def _harness_skill_paths() -> tuple[tuple[str, Path], ...]:
         ("agy (config skill)", home / ".config" / "agy" / "skills" / "mojiemoji-github" / "SKILL.md"),
         ("agy (rule)", home / ".gemini" / "config" / "rules" / "mojiemoji-github.md"),
         ("agy (config rule)", home / ".config" / "agy" / "rules" / "mojiemoji-github.md"),
+        ("grok", home / ".config" / "grok" / "skills" / "mojiemoji-github" / "SKILL.md"),
+        ("cursor (rule)", home / ".cursor" / "rules" / "mojiemoji-github.mdc"),
+        ("windsurf (rule)", home / ".windsurf" / "rules" / "mojiemoji-github.md"),
+        ("windsurf (devin rule)", home / ".devin" / "rules" / "mojiemoji-github.md"),
     )
 
 

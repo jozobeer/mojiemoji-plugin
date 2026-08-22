@@ -5,7 +5,7 @@
 # Scans both the checked-in reference adapters under `harnesses/` and known
 # project / personal harness-local paths. Set MOJIEMOJI_AUDIT_SCOPE to
 # `repo`, `local`, or `all` (default) to restrict the scan. Reports violations
-# of any of these 5 contracts (see issue #79 / #144):
+# of any of these 6 contracts (see issue #79 / #144):
 #
 #   1. URL endpoint pattern must be `/emoji/<encoded-text>` (NOT `/stamp/text?`)
 #   2. All 6 mandatory query parameters must be documented
@@ -15,6 +15,8 @@
 #   4. Color examples must be Tailwind 300-500 only
 #      (no `dc2626`, `2563eb`, `ca8a04`, etc. — the hook rejects them)
 #   5. `prestamp.py` (the 下処理 first principle) must be referenced
+#   6. `mojiemoji-schema-version` marker must be present and match the
+#      canonical marker in skills/mojiemoji-github/SKILL.md
 #
 # Exit codes:
 #   0 — all harness skill/rule files audited are clean
@@ -92,6 +94,14 @@ MANDATORY_PARAMS=(
   "outline_width"
 )
 
+# Canonical schema version, read from the host SKILL.md marker. Empty when
+# the marker is absent (contract 6 is then skipped — fail-soft, matching
+# the Python validator's disabled-when-missing behavior).
+CANONICAL_SCHEMA_VERSION=$(
+  sed -nE 's/.*<!-- *mojiemoji-schema-version: *([0-9]+\.[0-9]+\.[0-9]+) *-->.*/\1/p' \
+    "$REPO_ROOT/skills/mojiemoji-github/SKILL.md" 2>/dev/null | head -1
+)
+
 # Lines containing any of these markers are "do-not-use" prose and
 # are excluded from bad-pattern detection. e.g.
 #   "❌ /stamp/text?text=... silently 404"
@@ -139,16 +149,20 @@ audit_skill_file() {
     fi
   done
 
-  # 3. Bad animations as recommended values (skipping do-not-use lines)
+  # 3. Bad animations as recommended values (skipping do-not-use lines).
+  #    Adapters list recommendations as bare backticked values too
+  #    (e.g. "animations such as \`bane\`"), so match that form as well
+  #    as flag / assignment syntax.
   for anim in "${BAD_ANIMATIONS[@]}"; do
-    if printf '%s\n' "$filtered" | grep -qE "(--animation $anim\b|animation=$anim\b|--animation '$anim'\b)"; then
+    if printf '%s\n' "$filtered" | grep -qE "(--animation $anim\b|animation=$anim\b|--animation '$anim'\b|\`$anim\`)"; then
       violations+=("Animation '$anim' used as recommended value (should be a canonical name)")
     fi
   done
 
-  # 4. Forbidden colors as recommended values (skipping do-not-use lines)
+  # 4. Forbidden colors as recommended values (skipping do-not-use lines).
+  #    Same backticked-list form as contract 3.
   for color in "${FORBIDDEN_COLORS[@]}"; do
-    if printf '%s\n' "$filtered" | grep -qE "(--color $color\b|color=$color\b|\"$color\")"; then
+    if printf '%s\n' "$filtered" | grep -qE "(--color $color\b|color=$color\b|\"$color\"|\`$color\`)"; then
       violations+=("Forbidden Tailwind 600+ color '$color' used as recommended value")
     fi
   done
@@ -156,6 +170,21 @@ audit_skill_file() {
   # 5. prestamp.py reference (the 下処理 first principle)
   if ! grep -qE 'prestamp\.py|prestamp first|下処理 first' "$path"; then
     violations+=("Missing reference to prestamp.py / 下処理 first principle")
+  fi
+
+  # 6. Schema-version marker must be present and match the canonical
+  #    marker, so installed copies surface drift when the schema moves.
+  if [ -n "$CANONICAL_SCHEMA_VERSION" ]; then
+    local found_version
+    found_version=$(
+      sed -nE 's/.*<!-- *mojiemoji-schema-version: *([0-9]+\.[0-9]+\.[0-9]+) *-->.*/\1/p' \
+        "$path" | head -1
+    )
+    if [ -z "$found_version" ]; then
+      violations+=("Missing mojiemoji-schema-version marker (canonical: $CANONICAL_SCHEMA_VERSION)")
+    elif [ "$found_version" != "$CANONICAL_SCHEMA_VERSION" ]; then
+      violations+=("Schema version drift: $found_version (canonical: $CANONICAL_SCHEMA_VERSION)")
+    fi
   fi
 
   if [ ${#violations[@]} -eq 0 ]; then
@@ -178,7 +207,7 @@ main() {
     local repo_candidates=(
       "$REPO_ROOT/harnesses/$harness/mojiemoji-github/SKILL.md"
       "$REPO_ROOT/harnesses/$harness/.gemini/skills/mojiemoji-github/SKILL.md"
-      "$REPO_ROOT/harnesses/$harness/.cursor/rules/mojiemoji-github/RULE.md"
+      "$REPO_ROOT/harnesses/$harness/.cursor/rules/mojiemoji-github.mdc"
       "$REPO_ROOT/harnesses/$harness/.windsurf/rules/mojiemoji-github.md"
       "$REPO_ROOT/harnesses/$harness/rules/mojiemoji-github.md"
     )
@@ -212,9 +241,11 @@ main() {
         )
         ;;
       cursor)
+        # Cursor project rules must be `.mdc` files under `.cursor/rules`
+        # (plain `.md` / nested RULE.md files are ignored by Cursor).
         local_candidates+=(
-          "$REPO_ROOT/.cursor/rules/mojiemoji-github/RULE.md"
-          "$HOME/.cursor/rules/mojiemoji-github/RULE.md"
+          "$REPO_ROOT/.cursor/rules/mojiemoji-github.mdc"
+          "$HOME/.cursor/rules/mojiemoji-github.mdc"
         )
         ;;
       windsurf)

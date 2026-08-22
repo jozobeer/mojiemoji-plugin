@@ -163,6 +163,15 @@ class TestSchemaVersionDrift:
         assert "agy (rule)" in labels
         assert "agy (config rule)" in labels
 
+    def test_default_harness_paths_include_reference_adapters(self, monkeypatch, tmp_path):
+        mod = self._import_schema_version_mod()
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path / "home")
+        paths = dict(mod._harness_skill_paths())
+        assert str(paths["grok"]).endswith("/.config/grok/skills/mojiemoji-github/SKILL.md")
+        assert str(paths["cursor (rule)"]).endswith("/.cursor/rules/mojiemoji-github.mdc")
+        assert str(paths["windsurf (rule)"]).endswith("/.windsurf/rules/mojiemoji-github.md")
+        assert str(paths["windsurf (devin rule)"]).endswith("/.devin/rules/mojiemoji-github.md")
+
     def test_agy_mismatch_warns(self, tmp_path, monkeypatch, capsys):
         mod = self._import_schema_version_mod()
         monkeypatch.setattr(mod, "HOST_SKILL_PATH", tmp_path / "host.md")
