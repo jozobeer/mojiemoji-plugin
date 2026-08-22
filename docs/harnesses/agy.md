@@ -128,14 +128,15 @@ From this repository, `uv run ...` already provides the dependency from
 
 Two mechanisms keep agy copies from silently going stale:
 
-- `scripts/audit-harness-skills.sh` audits every deployed copy against five
+- `scripts/audit-harness-skills.sh` audits every deployed copy against six
   contracts (endpoint shape, required parameters, forbidden animations,
-  forbidden colors, and a `prestamp.py` reference). Run it after updating
-  the canonical skill. Note the audit does not compare schema-version
-  markers — a copy without one still passes.
-- Schema-version drift is caught by the host gate instead: on the Claude
-  Code side, its validator reads the marker in each agy copy and warns when
-  it is behind the canonical `skills/mojiemoji-github/SKILL.md`.
+  forbidden colors, a `prestamp.py` reference, and a
+  `mojiemoji-schema-version` marker matching the canonical skill's). Run it
+  after updating the canonical skill. A copy without the marker now fails
+  the audit, so deploy the adapter with its marker line intact.
+- Schema-version drift is additionally caught by the host gate: on the
+  Claude Code side, its validator reads the marker in each agy copy and
+  warns when it is behind the canonical `skills/mojiemoji-github/SKILL.md`.
 
 ## Current Limits
 
