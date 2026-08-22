@@ -73,6 +73,11 @@ class TestRepoScopeContracts:
         result = _run_audit(tmp_path, CLEAN_ADAPTER)
         assert result.returncode == 0, result.stdout + result.stderr
 
+    def test_prohibition_wording_is_not_a_recommendation(self, tmp_path):
+        prohibition = CLEAN_ADAPTER + "\nNever use `spring`; use `poyoon` instead.\n"
+        result = _run_audit(tmp_path, prohibition)
+        assert result.returncode == 0, result.stdout + result.stderr
+
     def test_backticked_forbidden_color_fails(self, tmp_path):
         result = _run_audit(tmp_path, CLEAN_ADAPTER.replace("`a855f7`", "`dc2626`"))
         assert result.returncode == 1

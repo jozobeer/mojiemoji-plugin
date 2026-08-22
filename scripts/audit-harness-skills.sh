@@ -107,10 +107,13 @@ CANONICAL_SCHEMA_VERSION=$(
 #   "❌ /stamp/text?text=... silently 404"
 #   "renames: `spring` → `bane`"
 #   "NOT a query parameter (no `/stamp/text?text=`)"
+#   "Never use `spring`; use `bane` instead."
 #   "issue #166 (monotone failure)... animation=spring"
 # We do not want to flag these mentions; they are *correct
 # documentation* of what to avoid, or anti-pattern post-mortems.
-DO_NOT_USE_MARKERS='(❌|NOT exist|NOT a |silently|→|renames|⚠|do NOT|誤|存在しない|silent 404|failure mode|past failures|monotone|monotonic|issue #166|Hard ban|anti-pattern|下手|失敗)'
+# Matched case-insensitively (the haystack is lowercased first), so
+# keep every ASCII marker lowercase here.
+DO_NOT_USE_MARKERS='(❌|not exist|not a |silently|→|renames|⚠|do not|never |avoid|instead|誤|存在しない|禁止|使わない|silent 404|failure mode|past failures|monotone|monotonic|issue #166|hard ban|anti-pattern|下手|失敗)'
 
 audit_skill_file() {
   local path="$1"
@@ -126,7 +129,7 @@ audit_skill_file() {
   local filtered
   filtered=$(awk -v marker="$DO_NOT_USE_MARKERS" '
     {
-      has = match($0, marker)
+      has = match(tolower($0), marker)
       if (!has && !skip) print
       skip = has ? 1 : 0
     }
