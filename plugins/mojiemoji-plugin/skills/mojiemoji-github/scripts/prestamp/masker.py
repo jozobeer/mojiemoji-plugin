@@ -60,6 +60,15 @@ def _mask_safe_zones(text: str, masker: _Masker) -> str:
     must avoid touching identifiers, code, and existing `<img>` stamps
     inserted by the previous pass.
     """
+    # GitHub alert markers (`> [!NOTE]` etc.) are blockquote syntax, not
+    # prose — stamping the keyword breaks the callout rendering entirely,
+    # so mask the whole marker before any catalog term can match inside.
+    text = re.sub(
+        r"^([ \t]{0,3}>[ \t]*)(\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\])",
+        lambda m: m.group(1) + masker.mask(m.group(2)),
+        text,
+        flags=re.MULTILINE,
+    )
     # Inline code spans: try 3 → 2 → 1 backtick lengths so multi-backtick
     # spans (e.g. ``foo`` or ```foo```) are masked before the 1-backtick
     # pattern would chop them mid-fence.

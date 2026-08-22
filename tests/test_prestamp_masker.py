@@ -98,3 +98,15 @@ def test_prestamp_skips_details_summary_but_stamps_details_body() -> None:
     assert proc.returncode == 0
     assert "<summary>修正方針</summary>" in proc.stdout
     assert 'align="absmiddle"' in proc.stdout
+def test_prestamp_preserves_github_alert_markers() -> None:
+    body = """> [!NOTE]
+> この NOTE は本文です。修正をお願いします。
+
+> [!WARNING]
+> 警告の本文。
+"""
+    proc = run_py(PRESTAMP, body, "--seed", "5")
+
+    assert proc.returncode == 0
+    assert "> [!NOTE]" in proc.stdout
+    assert "> [!WARNING]" in proc.stdout
