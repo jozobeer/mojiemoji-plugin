@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Audit non-Claude AI harness skill files for mojiemoji URL/animation/color
-# drift from the canonical lists in this repo.
+# Audit non-Claude AI harness skill/rule files for mojiemoji
+# URL/animation/color drift from the canonical lists in this repo.
 #
-# Scans known harness skill paths under $HOME/.config and reports
-# violations of any of these 5 contracts (see issue #79):
+# Scans both the checked-in reference adapters under `harnesses/` and known
+# project / personal harness-local paths. Set MOJIEMOJI_AUDIT_SCOPE to
+# `repo`, `local`, or `all` (default) to restrict the scan. Reports violations
+# of any of these 5 contracts (see issue #79 / #144):
 #
 #   1. URL endpoint pattern must be `/emoji/<encoded-text>` (NOT `/stamp/text?`)
 #   2. All 6 mandatory query parameters must be documented
@@ -15,13 +17,13 @@
 #   5. `prestamp.py` (the 下処理 first principle) must be referenced
 #
 # Exit codes:
-#   0 — all harness skill files audited are clean
+#   0 — all harness skill/rule files audited are clean
 #   1 — at least one violation found
 #   2 — invocation error (e.g., no harness skill files found)
 #
-# This script is local-only — it reads $HOME and does not commit to or
-# read from any remote. Add to CI only if the runner has the relevant
-# AI harness installations mounted (unusual).
+# The `local` scope reads $HOME and does not commit to or read from any
+# remote. CI should use MOJIEMOJI_AUDIT_SCOPE=repo, which only audits the
+# checked-in adapters under harnesses/.
 #
 # Renames history (these silently fall back to defaults on the renderer):
 #   spring → bane          (springy bounce)
@@ -33,6 +35,17 @@
 
 set -euo pipefail
 
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+SCOPE=${MOJIEMOJI_AUDIT_SCOPE:-all}
+
+case "$SCOPE" in
+  repo | local | all) ;;
+  *)
+    echo "MOJIEMOJI_AUDIT_SCOPE must be one of: repo, local, all" >&2
+    exit 2
+    ;;
+esac
+
 HARNESSES=(
   "claude"
   "codex"
@@ -42,6 +55,7 @@ HARNESSES=(
   "agy"
   "cursor"
   "windsurf"
+  "grok"
 )
 
 BAD_ANIMATIONS=(
@@ -161,54 +175,94 @@ main() {
   local failed=0
 
   for harness in "${HARNESSES[@]}"; do
-    local skill_path="$HOME/.config/$harness/skills/mojiemoji-github/SKILL.md"
-    local rule_path="$HOME/.config/$harness/rules/mojiemoji-github.md"
-
-    # SKILL.md (most harnesses)
-    if [ -f "$skill_path" ]; then
-      checked=$((checked + 1))
-      if ! audit_skill_file "$skill_path" "$harness"; then
-        failed=$((failed + 1))
-      fi
+    local repo_candidates=(
+      "$REPO_ROOT/harnesses/$harness/mojiemoji-github/SKILL.md"
+      "$REPO_ROOT/harnesses/$harness/.gemini/skills/mojiemoji-github/SKILL.md"
+      "$REPO_ROOT/harnesses/$harness/.cursor/rules/mojiemoji-github/RULE.md"
+      "$REPO_ROOT/harnesses/$harness/.windsurf/rules/mojiemoji-github.md"
+      "$REPO_ROOT/harnesses/$harness/rules/mojiemoji-github.md"
+    )
+    local local_candidates=(
+      "$HOME/.config/$harness/skills/mojiemoji-github/SKILL.md"
+      "$HOME/.config/$harness/rules/mojiemoji-github.md"
+    )
+    case "$harness" in
+      copilot-cli)
+        local_candidates+=(
+          "$REPO_ROOT/.github/skills/mojiemoji-github/SKILL.md"
+          "$REPO_ROOT/.claude/skills/mojiemoji-github/SKILL.md"
+          "$REPO_ROOT/.agents/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.copilot/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.agents/skills/mojiemoji-github/SKILL.md"
+        )
+        ;;
+      gemini)
+        local_candidates+=(
+          "$REPO_ROOT/.gemini/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.gemini/skills/mojiemoji-github/SKILL.md"
+        )
+        ;;
+      agy)
+        # agy-specific ~/.gemini/config deployment paths (see
+        # docs/harnesses/agy.md); the shared ~/.gemini/skills path is
+        # audited under the gemini harness to avoid double counting.
+        local_candidates+=(
+          "$HOME/.gemini/config/skills/mojiemoji-github/SKILL.md"
+          "$HOME/.gemini/config/rules/mojiemoji-github.md"
+        )
+        ;;
+      cursor)
+        local_candidates+=(
+          "$REPO_ROOT/.cursor/rules/mojiemoji-github/RULE.md"
+          "$HOME/.cursor/rules/mojiemoji-github/RULE.md"
+        )
+        ;;
+      windsurf)
+        local_candidates+=(
+          "$REPO_ROOT/.windsurf/rules/mojiemoji-github.md"
+          "$REPO_ROOT/.devin/rules/mojiemoji-github.md"
+          "$HOME/.windsurf/rules/mojiemoji-github.md"
+          "$HOME/.devin/rules/mojiemoji-github.md"
+        )
+        ;;
+    esac
+    local candidates=()
+    if [ "$SCOPE" = "repo" ] || [ "$SCOPE" = "all" ]; then
+      candidates+=("${repo_candidates[@]}")
+    fi
+    if [ "$SCOPE" = "local" ] || [ "$SCOPE" = "all" ]; then
+      candidates+=("${local_candidates[@]}")
     fi
 
-    # rules/mojiemoji-github.md (Gemini/agy uses this in addition to / instead of skill)
-    if [ -f "$rule_path" ]; then
-      checked=$((checked + 1))
-      if ! audit_skill_file "$rule_path" "$harness (rule)"; then
-        failed=$((failed + 1))
+    for path in "${candidates[@]}"; do
+      if [ -f "$path" ]; then
+        local label="$harness"
+        case "$path" in
+          "$REPO_ROOT"/harnesses/*) label="$harness (repo)" ;;
+          "$REPO_ROOT"/*) label="$harness (project)" ;;
+          "$HOME"/.config/*) label="$harness (local)" ;;
+          "$HOME"/*) label="$harness (personal)" ;;
+        esac
+        checked=$((checked + 1))
+        if ! audit_skill_file "$path" "$label"; then
+          failed=$((failed + 1))
+        fi
       fi
-    fi
-  done
-
-  # agy ~/.gemini skill and rule paths
-  local agy_extra_paths=(
-    "$HOME/.gemini/config/skills/mojiemoji-github/SKILL.md:agy (global skill)"
-    "$HOME/.gemini/skills/mojiemoji-github/SKILL.md:agy (skill)"
-    "$HOME/.gemini/config/rules/mojiemoji-github.md:agy (rule)"
-  )
-  for entry in "${agy_extra_paths[@]}"; do
-    local path="${entry%%:*}"
-    local label="${entry#*:}"
-    if [ -f "$path" ]; then
-      checked=$((checked + 1))
-      if ! audit_skill_file "$path" "$label"; then
-        failed=$((failed + 1))
-      fi
-    fi
+    done
   done
 
   if [ "$checked" -eq 0 ]; then
-    echo "No harness skill files found under \$HOME/.config/{${HARNESSES[*]}}/{skills,rules}/mojiemoji-github/ or \$HOME/.gemini/" >&2
+    echo "No harness skill/rule files found for scope '$SCOPE' under checked-in adapters or" >&2
+    echo "known project / personal harness paths." >&2
     exit 2
   fi
 
   echo
   if [ "$failed" -eq 0 ]; then
-    echo "OK: $checked harness skill files audited, no violations."
+    echo "OK: $checked harness skill/rule files audited, no violations."
     exit 0
   fi
-  echo "FAIL: $failed of $checked harness skill files have violations." >&2
+  echo "FAIL: $failed of $checked harness skill/rule files have violations." >&2
   echo "Run scripts/audit-harness-skills.sh after fixing to re-verify." >&2
   exit 1
 }
