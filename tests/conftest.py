@@ -120,6 +120,11 @@ def stamp_img(**kwargs) -> str:
 def assert_skill_agent_guidance(stderr: str) -> None:
     assert "`Skill(mojiemoji-github)`" in stderr
     assert "`Agent` ツール" in stderr
-    assert 'subagent_type: "mojiemoji-selector"' in stderr
-    assert "`mojiemoji-github:mojiemoji-selector`" in stderr
+    # #147: recommend the fully-qualified subagent type; note bare as an
+    # environment-dependent fallback.
+    assert 'subagent_type: "mojiemoji-github:mojiemoji-selector"' in stderr
+    assert "bare `mojiemoji-selector`" in stderr
     assert "Skill ツールには渡せない" in stderr
+    # #147: remediation must embed a resolved absolute path — the literal
+    # variable is empty in the Bash tool environment.
+    assert "${CLAUDE_PLUGIN_ROOT}" not in stderr

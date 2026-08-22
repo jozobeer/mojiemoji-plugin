@@ -25,6 +25,8 @@ from lib.constants import (
     ROTATIONAL_ANIMATIONS,
 )
 
+from lib.plugin_root import plugin_root
+
 # Rotational animations spin the letterform around its center. At the
 # service default speed (effectively `fast`), and at explicit `normal`
 # / `fast`, the spin completes faster than the eye can resolve the
@@ -161,6 +163,7 @@ def validate_canonical_values(urls) -> int:
         preview_lines.append(f"  - {short}\n    invalid: {bad_str}")
     preview = "\n".join(preview_lines)
     more = f"\n  …他 {len(invalid) - 5} 件" if len(invalid) > 5 else ""
+    root = plugin_root()
     sys.stderr.write(
         "🚧 mojiemoji URL に存在しない font/animation/color 値が指定されています\n"
         "\n"
@@ -186,9 +189,9 @@ def validate_canonical_values(urls) -> int:
         "\n"
         "## 対応\n"
         "1. skill access があるなら `Skill(mojiemoji-github)` を引数なしで起動して render し直す\n"
-        "2. subagent に任せるなら `Agent` ツールで `subagent_type: \"mojiemoji-selector\"` を指定\n"
-        "   (※ `mojiemoji-github:mojiemoji-selector` は agent list の表示形 — Skill ツールには渡せない)\n"
-        "3. tool 隔離時は `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py` ヘルパー経由で render し直す\n"
+        "2. subagent に任せるなら `Agent` ツールで `subagent_type: \"mojiemoji-github:mojiemoji-selector\"` を指定\n"
+        "   (※ 環境により bare `mojiemoji-selector` のみ解決する場合がある — エラー時はもう一方の形を試す。どちらも Skill ツールには渡せない)\n"
+        f"3. tool 隔離時は `{root}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py` ヘルパー経由で render し直す\n"
         "4. URL を手で書き換える場合は上記 allowlist から選ぶ\n"
         "5. typo の典型: `poyon` → `poyoon`, `funwari` (存在しない) →\n"
         "   `yurayura` / `mochimochi`, `fude` (存在しない) → `mincho`\n"
@@ -205,7 +208,7 @@ def validate_canonical_values(urls) -> int:
         "   `/emoji/<text>` の text 部分は **漢字 2 字以下の単独 stamp** —\n"
         "   `致命傷` のような 3 漢字単独は `致命` + `傷` の 2 stamp に分割\n"
         "   (selector subagent と verification.md spotcheck #16 と同じ規約)\n"
-        "6. 詳細: `${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/references/parameters.md`\n"
+        f"6. 詳細: `{root}/skills/mojiemoji-github/references/parameters.md`\n"
         "\n"
         "緊急bypass: Bash command先頭 / MCP body 内に `MOJIEMOJI_HOOK_DISABLED=1` を含める\n"
     )

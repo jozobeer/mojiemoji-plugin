@@ -58,6 +58,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 from gate.extract import JP_RE, LATIN_RE, MOJI_URL_RE, extract_inspect_text  # noqa: E402
 from gate.extract import forces_pr_body, is_pr_body_submission, pr_body_target_repo  # noqa: E402
+from lib.plugin_root import plugin_root  # noqa: E402
 from gate.validators import (  # noqa: E402
     PIPELINE,
     validate_catalog_leftovers,
@@ -80,7 +81,7 @@ _PR_BODY_LEAK_REMINDER = (
     "   - MCP: body 内に `MOJIEMOJI_FORCE_PR_BODY=1` を含める\n"
     "\n"
     "issue / review / comment など他の surface は通常どおり装飾して構いません。\n"
-    "詳細: ${CLAUDE_PLUGIN_ROOT}/skills/mojiemoji-github/SKILL.md\n"
+    f"詳細: {plugin_root()}/skills/mojiemoji-github/SKILL.md\n"
 )
 
 

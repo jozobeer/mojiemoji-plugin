@@ -10,6 +10,7 @@ allowed-tools:
   - Bash(python3 */skills/mojiemoji-github/scripts/cache_record.py*)
   - Read
   - Agent(mojiemoji-selector)
+  - Agent(mojiemoji-github:mojiemoji-selector)
 ---
 
 # Mojiemoji Propose
