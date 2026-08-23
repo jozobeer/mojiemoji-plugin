@@ -45,6 +45,7 @@ PyPI / npm の空き状況を確認済み（2026-06-01 時点）:
 - ライブラリ: `from mojiemoji import transform, render, load_catalog, report_unstamped`
 - CLI: `mojiemoji`（stdin → stdout）
 - 現リポ `mojiemoji-plugin` は **Claude Code プラグイン**として継続し、`mojiemoji` を依存に取る
+  （配布された plugin での実際の解決経路は § core の解決経路（追加決定）を参照）
 
 ## トポロジ（同リポ uv workspace）
 
@@ -152,12 +153,20 @@ skip なら core を通さない）。
 
 既存パイプラインを壊さないため、以下の互換層を残す:
 
-- `skills/mojiemoji-github/scripts/prestamp.py` shim は core の `main` を re-export し、
-  `python3 prestamp.py < in.md > out.md` の文書化済みエントリを維持する。
-  → CI drift check / `mojiemoji_md_edit_warn` hook / coverage がパス変更なしで動く。
+- `skills/mojiemoji-github/scripts/prestamp.py` shim は **core の `main` の素の re-export ではなく、
+  plugin 側の薄いラッパ**として残す。`--surface` を含む CLI 表面は shim が保持し、
+  `--surface pr-body` のときだけ `should_skip_pr_body()` を評価して、skip なら入力をそのまま返し、
+  そうでなければ純粋変換を core へ委譲する（リファクタ 2 の政策切断と整合させるため）。
+  素の re-export にすると `--surface` が受からないか、受かっても政策ゲートが効かないまま
+  PR body を装飾してしまう。`python3 prestamp.py < in.md > out.md` の文書化済みエントリは維持する。
+  → CI drift check / `mojiemoji_md_edit_warn` hook / coverage / `harnesses/` アダプタが
+  パス変更なしで動き、`--surface pr-body` の政策も落ちない。
 - hooks の `from lib.constants import ...`（#101）を `from mojiemoji...` へ移行する。
 - catalog 育成は `data/*.yml` が同リポ内に残るため、`bump_catalog.py` / `generate_catalog.py` の
-  対象パス更新のみで #46 / #92 / #93 の自動 PR 経路を温存する。
+  対象パス更新で #46 / #92 / #93 の自動 PR 経路を温存する。ただし **パス更新だけでは足りない**:
+  `generate_catalog.py:26-36` は `lib.constants` / `lib.forbidden_colors` / `lib.japanese_ranges` を
+  直 import しており、いずれも core へ移るモジュールである。import を `mojiemoji.*` へ書き換えるか
+  `lib/` 側に再エクスポート shim を置かない限り、data パスを直す以前に import 時点で落ちる。
 
 ### 実装時に洗い出す移行影響（writing-plans フェーズで並列に確定）
 
@@ -167,10 +176,26 @@ skip なら core を通さない）。
 - `generate_catalog.py` / `verify-lists-vs-service.sh` の data パス
 - #101 の hook `from lib.constants` 直 import の core 切り出し後の成立性
 - `--surface pr-body` の全呼び出し元（政策切断に伴う移送先）
+- `scripts/prepare-release-notes.sh` のタグ生成 — `tag="v$version"` と
+  `git tag --merged ... --list 'v[0-9]*'` が prefix を決め打ちしており、`.github/workflows/release.yml`
+  がこれをそのまま呼んでいる。タグ規約を `plugin-vX.Y.Z` にする決定と噛み合っていないので、
+  prefix を可変にし previous-tag 検索も新 prefix を拾うようにする。放置すると決定で禁じた
+  無 prefix タグを作り続け、prefix 移行後は previous-tag 選択も壊れる
+- `scripts/bump_catalog.py --pr` の version bump 対象 — 現状は Claude / Codex の plugin manifest だけを
+  patch bump する（`bump_catalog.py:275-291`）。catalog が core の package data になると、
+  catalog 追加 PR がマージされても core は publish されず、PyPI / `uvx mojiemoji` 利用者だけが
+  古い同梱 catalog に取り残される。core の version bump と publish を同パイプラインに載せるか、
+  catalog 追加を core release の trigger にするかを決める（plugin manifest bump を残すかは別途判断）
 
 ## テスト方針
 
 - core テストを `packages/mojiemoji-core/tests/` へ分離する。
+- **分離と同時に root `pyproject.toml` の `[tool.pytest.ini_options] testpaths` を更新する。**
+  現状は `testpaths = ["tests"]` 固定なので、移設した core テストを pytest が discovery しない。
+  PR job は `python -m pytest` を叩くだけなので、放置すると公開対象の変換パイプラインを触った PR が
+  そのテストを一度も走らせずにマージできてしまう。`testpaths` に `packages/mojiemoji-core/tests` を
+  足すか、core 専用の pytest job を CI に足すかは実装時に決める。coverage source root の分割は
+  この問題を解決しない（計測範囲の話であって discovery の話ではない）。
 - plugin テスト（hooks / bump_catalog / repo_policy 政策）は現リポに残す。
 - coverage の source root を core / plugin で分割する。
 - `coverage.py`（密度メトリクス）は plugin 側に残置し、core が吐いた装飾済みテキストを後段で計測する。
@@ -243,6 +268,29 @@ decision 後に `scripts/prestamp.py` への参照経路が大きく増えた。
   検出パターンを更新する必要がある
 - **`hooks/gate/validators/catalog_leftovers.py`** の remediation メッセージが
   `{plugin_root()}/skills/mojiemoji-github/scripts/prestamp.py` を案内（#147）
+
+### core の解決経路（追加決定）
+
+plugin が `mojiemoji` を依存に取る、と決めたが、**Claude Code プラグインにも Codex パッケージにも
+Python の install ステップは存在しない**。どちらもソースペイロードを配置するだけで、
+文書化済みエントリは `python3 skills/mojiemoji-github/scripts/prestamp.py` のままである。
+この経路が `sys.path` に載せるのは scripts ディレクトリだけなので、
+`packages/mojiemoji-core/src/` の src-layout パッケージは素では import できない。
+uv workspace の依存宣言が効くのはローカル開発だけで、配布された plugin では効かない。
+つまり shim を素直に書くと、利用者が別途 PyPI 版を入れていない限り `ModuleNotFoundError` になる。
+
+**決定: shim が core を自前で解決する。** まず `import mojiemoji` を試み、失敗したらリポジトリ同梱の
+`packages/mojiemoji-core/src` を `sys.path` に足して再試行する。PyPI / `uv` でインストール済みなら
+そちらが優先され、素の `python3 prestamp.py` でも動く。plugin 側に install ステップを要求しないので、
+既存の利用者体験を変えずに済む。
+
+- **Codex パッケージへの影響**: `scripts/sync-codex-plugin-package.sh` は現状 `skills/` しか
+  `plugins/mojiemoji-plugin/` へコピーしない。この fallback を成立させるには core のソースも
+  同期対象に含める必要がある。`tests/test_codex_package.py` の version parity 契約も追随する。
+- 代替案（不採用）: core を plugin ペイロードへ vendoring する — 同リポ workspace なのにソースが
+  二重化し、catalog 育成の自動 PR がどちらを正とするか曖昧になる。
+- 代替案（不採用）: plugin install 時に `uv sync` / `pip install` を要求する —
+  Claude Code / Codex のどちらにもそのフックがなく、ユーザーに手作業を強いる。
 
 ### 段階的移行の方針（追加決定）
 
