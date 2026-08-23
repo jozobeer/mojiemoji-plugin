@@ -1,8 +1,10 @@
+<!-- mojiemoji:off -->
+
 # mojiemoji core 切り出し設計 — uv workspace + PyPI 配布
 
 - 関連 issue: [#141](https://github.com/jozobeer/mojiemoji-plugin/issues/141)（discuss）
 - ステータス: **decision**（方向性合意済み）→ 次は writing-plans で実装計画
-- 日付: 2026-06-01
+- 日付: 2026-06-01（decision）/ 2026-08-23（main へ着地、§ 決定後の差分反映 を追記）
 
 > このドキュメントはレビューしやすさを優先して prestamp 装飾を施していない（plain）。
 > GitHub に投稿する #141 decision コメント側は dogfood gate に従い prestamp 装飾する。
@@ -69,7 +71,7 @@ PyPI に publish するのは `mojiemoji`（core）のみで、plugin は publis
 
 | → core（`mojiemoji`, PyPI 公開） | → plugin（現リポに残す） |
 |---|---|
-| prestamp pipeline: `boundaries` / `catalog` / `render` / `emoji_pass` / `text_pass` / `lines` / `masker` / `unstamped_report` | `hooks/`（PreToolUse gate, PostToolUse warn） |
+| prestamp pipeline: `boundaries` / `catalog` / `render` / `emoji_pass` / `text_pass` / `lines` / `masker` / `unstamped_report` / `incremental` | `hooks/`（PreToolUse gate, PostToolUse warn） |
 | `mojiemoji_markdown.py`（単発 URL 生成） | `agents/mojiemoji-selector`（cache 育成） |
 | lib core subset: `term_boundaries` / `japanese_ranges` / `sentence` / `forbidden_colors` / `constants` | `skills/mojiemoji-github/SKILL.md` |
 | `lib/config.py`（intensity 既定 = core CLI のユーザー設定） | `scripts/bump_catalog.py` / `cache_record.py` / `cache_stats.py` / `generate_catalog.py` |
@@ -188,3 +190,64 @@ throwaway sandbox（`HOME` / `XDG_*` を /tmp に隔離、live config 非接触�
 2. `importlib.resources.files("mojiemoji.data")` がインストール済み wheel で YAML を解決
 3. `uvx --from <wheel> mojiemoji --selftest` が `[project.scripts]` console entry を実行
 4. `printf '...' | uvx --from <wheel> mojiemoji` の stdin → stdout 変換が成立
+
+## 決定後の差分反映（2026-08-23 追記）
+
+decision（2026-06-01）から main 着地までの間に入った変更のうち、切り出しの前提・影響範囲に
+関わるものを反映する。**上の決定内容は変更していない** — 影響範囲の棚卸しの追記のみ。
+
+### 技術的前提の再確認
+
+決定当時に引用した現状コードは、いずれも現在の main と一致していることを確認済み:
+
+- `prestamp/catalog.py:45` の `__file__` 相対パッケージ外パス解決（→ リファクタ 1 の対象）
+- `prestamp/cli.py:22` の `from lib.repo_policy import should_skip_pr_body` と
+  `cli.py:224` の `skip = args.surface == "pr-body" and should_skip_pr_body()`（→ リファクタ 2 の対象）
+
+政策結合は実質この 2 行だけで、core 候補の lib モジュール
+（`term_boundaries` / `japanese_ranges` / `constants` / `sentence` / `forbidden_colors`）は
+いずれも stdlib のみに依存する純粋モジュールである。境界は設計どおり素直に切れる。
+
+`packages/` ディレクトリはまだ存在せず、実装は未着手。
+
+### 境界表に載っていなかったファイルの分類
+
+| ファイル | 分類 | 根拠 |
+|---|---|---|
+| `prestamp/incremental.py` | **core** | prestamp pipeline の一部（`lib.sentence` 依存）。境界表に個別列挙が漏れていたため上表に追記した |
+| `lib/plugin_root.py` | plugin | `CLAUDE_PLUGIN_ROOT` を解決する Claude Code 固有ロジック（#147）。`prestamp/*` からは未 import |
+| `lib/yaml_helpers.py` | plugin | catalog 整形ヘルパー。`cache_stats.py` / `bump_catalog.py` のみが使用 |
+| `lib/flavor.py` | plugin | catalog 育成系スクリプトの YAML シリアライズ |
+| `cache_stats.py` | plugin | `lib.cache_path` / `lib.flavor` / `lib.yaml_helpers` 依存 |
+| `lint_rendered_body.py` | plugin | mojiemoji サービスへの HTTP 検証（stdlib のみだが plugin 運用ツール） |
+| `normalize_catalog_colors.py` | plugin | catalog メンテナンス（`lib.forbidden_colors` を core から import する形になる） |
+| `verify-lists-vs-service.sh` | plugin | data パスの追随が必要（既出） |
+
+### 追加された移行影響（実装時に洗い出す対象へ追加）
+
+decision 後に `scripts/prestamp.py` への参照経路が大きく増えた。パス変更・shim 維持の判断は
+これら全経路を通す必要がある:
+
+- **`harnesses/` リファレンスアダプタ 7 種**（#150 / #157）— grok / codex / opencode /
+  copilot-cli / gemini / cursor / windsurf のすべてが
+  `python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py --surface ...`
+  を fallback 経路として記載。core publish 後は `uvx mojiemoji` へ切り替える主対象
+- **`harnesses/README.md` / `docs/harnesses/agy.md` / `docs/harnesses/codex.md`**
+- **`README.md` の「他 AI ハーネスでの利用」節**（#158）— `uvx mojiemoji` を「core 公開後の推奨経路」と
+  明記済みなので、publish 時にここを実体化する
+- **Codex パッケージ**（#151 / #152）— `plugins/mojiemoji-plugin/` へ `skills/` を丸ごとコピーする
+  `scripts/sync-codex-plugin-package.sh` があり、core 切り出しでコピー対象が変わる。
+  `tests/test_codex_package.py` の version parity 契約も追随が必要
+- **`scripts/audit-harness-skills.sh` の契約 5**（`prestamp.py` 参照の必須化）と
+  **契約 6**（schema マーカー一致）— 呼び出し経路が `uvx mojiemoji` に変わると契約 5 の
+  検出パターンを更新する必要がある
+- **`hooks/gate/validators/catalog_leftovers.py`** の remediation メッセージが
+  `{plugin_root()}/skills/mojiemoji-github/scripts/prestamp.py` を案内（#147）
+
+### 段階的移行の方針（追加決定）
+
+上記の参照経路が 20 箇所超に増えたため、**互換 shim（`scripts/prestamp.py`）の維持は
+publish 後もしばらく継続する**。アダプタ / docs の推奨経路を `uvx mojiemoji` に切り替える作業は
+core が PyPI に出てから別 PR で行い、切り出し PR 自体はパス互換を壊さないことを条件とする。
+
+<!-- mojiemoji:on -->
