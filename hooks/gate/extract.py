@@ -19,6 +19,8 @@ import json
 import os
 import re
 
+from mojiemoji.lib.constants import stamp_url_re
+
 JP_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # Basic Latin (English/i18n) detection for opt-in gate and future bilingual paths (#148).
 # Requires at least a 3-letter-ish word start to avoid matching single letters or codes.
@@ -36,12 +38,13 @@ REPO_FLAG_RE = re.compile(r"(?:-R|--repo)(?:\s+|=)(['\"]?)([^'\"\s]+)\1")
 GH_API_RE = re.compile(
     r"gh\s+api\b[^\n]*?/(?:reviews|comments|issues|pulls/\d+/(?:reviews|comments)|releases)\b"
 )
-STAMP_MARKER = "mojiemoji.jozo.beer"
 BYPASS_MARKER = "MOJIEMOJI_HOOK_DISABLED=1"
 FORCE_MARKER = "MOJIEMOJI_FORCE_PR_BODY=1"
 # Match every mojiemoji URL up to the first URL/HTML delimiter so we can
-# verify per-URL query parameters. Delimiters: whitespace, `"`, `<`, `>`, `)`.
-MOJI_URL_RE = re.compile(r"https?://mojiemoji\.jozo\.beer/[^\s\"<>)]+")
+# verify per-URL query parameters. Built from the same configuration the
+# renderers stamp against, so a body decorated for a self-hosted instance
+# (`MOJIEMOJI_BASE_URL`) is recognized instead of being read as zero stamps.
+MOJI_URL_RE = stamp_url_re()
 # File-based body sources: `gh ... --body-file PATH`, `gh api ... --input
 # PATH`, `gh api ... -F body=@PATH`. Capture the path so we can also inspect
 # the file's contents — otherwise file-routed posts trivially bypass the URL

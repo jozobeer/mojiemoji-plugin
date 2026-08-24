@@ -188,13 +188,13 @@ def main(
         "--catalog",
         default=None,
         type=Path,
-        help="Override the catalog path (default: <skill>/data/prestamp-catalog.yml)",
+        help="Override the catalog path (default: the packaged prestamp-catalog.yml)",
     )
     parser.add_argument(
         "--emoji-catalog",
         default=None,
         type=Path,
-        help="Override the emoji catalog path (default: <skill>/data/emoji-catalog.yml)",
+        help="Override the emoji catalog path (default: the packaged emoji-catalog.yml)",
     )
     parser.add_argument(
         "--report-unstamped",

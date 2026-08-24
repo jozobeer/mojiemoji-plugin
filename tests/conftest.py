@@ -92,6 +92,7 @@ def stamp_url(
     outline: str | None = "darker",
     outline_width: str | None = "2",
     speed: str | None = None,
+    base_url: str = "https://mojiemoji.jozo.beer",
 ) -> str:
     from urllib.parse import quote
 
@@ -110,7 +111,7 @@ def stamp_url(
     if speed is not None:
         parts.append(f"speed={speed}")
     query = "&".join(parts)
-    return f"https://mojiemoji.jozo.beer/emoji/{encoded}?{query}"
+    return f"{base_url.rstrip('/')}/emoji/{encoded}?{query}"
 
 
 # A complete, hook-passing inline `<img>` snippet for fixture bodies.

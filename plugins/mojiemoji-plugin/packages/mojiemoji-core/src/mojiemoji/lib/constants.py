@@ -15,6 +15,7 @@ caught by that repository's `scripts/verify-lists-vs-docs.sh`.
 from __future__ import annotations
 
 import os
+import re
 
 
 DEFAULT_BASE_URL = "https://mojiemoji.jozo.beer"
@@ -32,6 +33,29 @@ def default_base_url() -> str:
     import time so a caller can set the variable and still be heard.
     """
     return os.environ.get(BASE_URL_ENV, "").strip() or DEFAULT_BASE_URL
+
+
+def stamp_url_pattern() -> str:
+    """Regex source matching one rendered stamp URL, up to its delimiter.
+
+    Derived from the same configuration the renderers build against, so
+    a body decorated for a self-hosted instance is still recognized by
+    the tools that read stamps back. The hosted default is accepted
+    alongside the configured one, so a body written on another machine
+    does not become unreadable here. Delimiters: whitespace, `"`, `<`,
+    `>`, `)` — the first characters that can end a URL in markdown or
+    HTML, so per-URL query parameters stay inspectable.
+    """
+    origins = dict.fromkeys(
+        re.escape(base.split("://", 1)[-1].rstrip("/"))
+        for base in (default_base_url(), DEFAULT_BASE_URL)
+    )
+    return r"https?://(?:%s)/[^\s\"<>)]+" % "|".join(origins)
+
+
+def stamp_url_re() -> "re.Pattern[str]":
+    """Compiled `stamp_url_pattern`, resolved per call like `default_base_url`."""
+    return re.compile(stamp_url_pattern())
 
 
 CANONICAL_FONTS: tuple[str, ...] = (

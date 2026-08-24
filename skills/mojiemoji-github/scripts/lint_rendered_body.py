@@ -15,7 +15,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
-MOJI_URL_RE = re.compile(r"https?://mojiemoji\.jozo\.beer/[^\s\"<>)]+")
+# `lib/` sits next to this file. Running the script puts that directory
+# on `sys.path` automatically, but a caller that loads this module *by
+# path* (the linter's own tests do) does not get it — splice it in so
+# the core bootstrap resolves either way.
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+
+from lib.core_path import ensure_core_importable  # noqa: E402
+
+ensure_core_importable()
+
+from mojiemoji.lib.constants import stamp_url_re  # noqa: E402
+
+# Recognize stamps from the configured instance as well as the hosted
+# default, so linting a body rendered against `MOJIEMOJI_BASE_URL`
+# does not silently report zero URLs.
+MOJI_URL_RE = stamp_url_re()
 HEX6_RE = re.compile(r"\A#?[0-9a-fA-F]{6}\Z")
 StatusChecker = Callable[[str], int]
 

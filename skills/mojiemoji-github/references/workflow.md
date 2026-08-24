@@ -148,7 +148,7 @@ CONSTRAINTS:
 - Color: dark-mode-safe (Tailwind 300–500 range), bias toward 300–400
 - background=transparent in every URL
 - outline=darker outline_width=2 in every URL (auto-relative dark halo per stamp; never use outline=ffffff — white blends with light Tailwind 300–400 fills)
-- Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use an emoji — prefer mojiemoji-rendered if the emoji is in skills/mojiemoji-github/data/emoji-catalog.yml (162 supported, includes 🎉 🔥 ✨ 💯 ⚠ ❤ 😂 🎊 🚨 🤖 etc.), fall back to plain Unicode for unsupported codepoints (e.g. 🚀 = U+1F680, 🪐 = U+1FA90).
+- Inline only. Do NOT generate own-line "→ <stamps>" section punch-line decoration or "---" + closing flair stamps. For trailing flair at sentence/heading end, use an emoji — prefer mojiemoji-rendered if the emoji is in the packaged emoji catalog (`mojiemoji.prestamp.load_emoji_catalog()`; 162 supported, includes 🎉 🔥 ✨ 💯 ⚠ ❤ 😂 🎊 🚨 🤖 etc.), fall back to plain Unicode for unsupported codepoints (e.g. 🚀 = U+1F680, 🪐 = U+1FA90).
 ```
 
 ## 直接スクリプト(単一フレーズのファスト<img src="https://mojiemoji.jozo.beer/emoji/%E3%83%91%E3%82%B9?font=chikara&amp;color=facc15&amp;animation=patapata&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="パス" height="24" align="absmiddle">)

@@ -116,6 +116,53 @@ class TestEnglishOptIn:
         assert "mojiemoji" in result.stderr.lower()
 
 
+class TestSelfHostedInstance:
+    """`MOJIEMOJI_BASE_URL` repoints the renderers; the gate must follow.
+
+    The URL recognizer is derived from the same configuration the
+    renderers stamp against. Were it pinned to the hosted host, a body
+    decorated for a self-hosted instance would reach the gate with zero
+    recognized stamps and be blocked by the very configuration the
+    plugin advertises.
+    """
+
+    SELF_HOSTED = "https://moji.example.internal"
+
+    def test_self_hosted_stamp_is_recognized(self, run_hook, monkeypatch):
+        monkeypatch.setenv("MOJIEMOJI_BASE_URL", self.SELF_HOSTED)
+        body = f"{JP_PARAGRAPH} {stamp_img(base_url=self.SELF_HOSTED)}"
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh issue create --title "x" --body "{body}"'},
+            }
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_hosted_default_stays_recognized(self, run_hook, monkeypatch):
+        """A body carried over from another machine must not become unreadable."""
+        monkeypatch.setenv("MOJIEMOJI_BASE_URL", self.SELF_HOSTED)
+        body = f"{JP_PARAGRAPH} {stamp_img()}"
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh issue create --title "x" --body "{body}"'},
+            }
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_zero_stamp_message_names_the_configured_instance(self, run_hook, monkeypatch):
+        monkeypatch.setenv("MOJIEMOJI_BASE_URL", self.SELF_HOSTED)
+        result = run_hook(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f'gh issue create --title "x" --body "{JP_BODY}"'},
+            }
+        )
+        assert result.returncode == 2
+        assert "moji.example.internal" in result.stderr
+
+
 class TestLgtmStamp:
     """LGTM mojiemoji is not treated specially by the hook. Both inline
     `<img>` and `![alt](url)` markdown block-image forms are allowed
