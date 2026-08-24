@@ -8,6 +8,8 @@
 
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 mode="${RELEASE_MODE:-dry-run}"
 output_file="${OUTPUT_FILE:-release-notes.md}"
 version_file="${VERSION_FILE:-${PLUGIN_JSON:-.claude-plugin/plugin.json}}"
@@ -70,25 +72,7 @@ if [ -z "$repo" ]; then
     repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 fi
 
-version="$(
-    python3 - "$version_file" <<'PY'
-import json
-import sys
-
-path = sys.argv[1]
-if path.endswith(".toml"):
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # Python 3.10
-        import tomli as tomllib
-
-    with open(path, "rb") as f:
-        print(tomllib.load(f)["project"]["version"])
-else:
-    with open(path, encoding="utf-8") as f:
-        print(json.load(f)["version"])
-PY
-)"
+version="$("$script_dir/read-version.py" "$version_file")"
 tag="${tag_prefix}${version}"
 # Default the label off the tag prefix so a new component gets a sensible
 # name without having to remember a second flag.

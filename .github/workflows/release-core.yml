@@ -16,6 +16,9 @@ on:
         options:
           - dry-run
           - publish
+  # Any edit to this file re-runs the workflow, including edits that change
+  # dependencies or classifiers and leave the version alone. The `gate` job
+  # below is what turns a run into a release, not the path filter.
   push:
     branches: [main]
     paths: ['packages/mojiemoji-core/pyproject.toml']
@@ -27,10 +30,45 @@ concurrency:
   group: release-core-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  CORE_DIR: packages/mojiemoji-core
-
 jobs:
+  reject-publish-ref:
+    name: Reject publish outside main
+    # Fail loudly rather than letting the publish condition silently skip:
+    # a green run that published nothing reads as a successful release.
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::publish mode must run from main (got ${{ github.ref }})"
+          exit 1
+
+  gate:
+    name: Decide whether this run is a release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      should_publish: ${{ steps.decide.outputs.should_publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compare the declared version against released tags
+        id: decide
+        run: |
+          version="$(scripts/read-version.py packages/mojiemoji-core/pyproject.toml)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # The tag is the record of what has been released. Testing it
+          # covers every way a run can reach here without a new version:
+          # a dependency-only edit, a re-run, a manual dispatch.
+          if git rev-parse -q --verify "refs/tags/core-v$version" >/dev/null; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "core-v$version is already released; this run builds and validates only."
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "core-v$version is unreleased; this run is a release."
+          fi
+
   build:
     name: Build distributions
     runs-on: ubuntu-latest
@@ -59,10 +97,13 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [gate, build]
     if: |
-      github.event_name == 'push'
-      || (inputs.mode == 'publish' && github.ref == 'refs/heads/main')
+      needs.gate.outputs.should_publish == 'true'
+      && (
+        github.event_name == 'push'
+        || (inputs.mode == 'publish' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -82,7 +123,7 @@ jobs:
 
   github-release:
     name: Tag and release
-    needs: publish
+    needs: [gate, publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -126,4 +167,24 @@ jobs:
             if [ -n "$RELEASE_URL" ]; then
               echo "- release: $RELEASE_URL"
             fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  no-release:
+    name: Not a release
+    needs: gate
+    if: needs.gate.outputs.should_publish != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why nothing was published
+        env:
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          {
+            echo "## Core release skipped"
+            echo
+            echo "\`core-v$VERSION\` is already released, so this run built and"
+            echo "validated the distributions without publishing."
+            echo
+            echo "Bump \`[project].version\` in \`packages/mojiemoji-core/pyproject.toml\`"
+            echo "to cut a new release."
           } >> "$GITHUB_STEP_SUMMARY"

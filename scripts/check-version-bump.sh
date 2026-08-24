@@ -6,6 +6,12 @@
 # plugin contents by `<plugin>/<version>/...`, so changes shipped without
 # a version bump never reach users via `/plugin update`.
 #
+# The published `mojiemoji` core needs the same guarantee for a different
+# reason: its release workflow triggers on its own version changing, so a
+# core edit merged without one is never published at all — plugin users get
+# the vendored copy while every PyPI user stays on the old release,
+# indefinitely and silently. Hence a second, independent check below.
+#
 # Usage (CI): set BASE_SHA and HEAD_SHA env vars; uses git ranges between
 # them. Usage (local): runs with defaults `origin/main` and `HEAD`.
 
@@ -13,6 +19,14 @@ set -euo pipefail
 
 BASE_SHA="${BASE_SHA:-origin/main}"
 HEAD_SHA="${HEAD_SHA:-HEAD}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+read_version() { "$script_dir/read-version.py" "$@"; }
+
+CORE_VERSION_FILE="packages/mojiemoji-core/pyproject.toml"
+# Everything the wheel carries. Tests live in the same directory but ship
+# only in the sdist's test payload, so editing them is not a release.
+CORE_PUBLISHABLE_PREFIX="packages/mojiemoji-core/"
+CORE_EXEMPT_PREFIX="packages/mojiemoji-core/tests/"
 
 SOURCE_PATHS=(
     ".agents/"
@@ -52,8 +66,23 @@ if [ "$source_changed" -eq 0 ]; then
     exit 0
 fi
 
-base_version=$(git show "$merge_base:.claude-plugin/plugin.json" | python3 -c "import sys, json; print(json.load(sys.stdin)['version'])")
-head_version=$(git show "$HEAD_SHA:.claude-plugin/plugin.json" | python3 -c "import sys, json; print(json.load(sys.stdin)['version'])")
+# Strict SemVer 2.0.0 validation — rejects leading zeros (`01.2.3`) and
+# malformed prerelease identifiers (`-..`) that a loose regex would let through.
+assert_semver() {
+    local version="$1" label="$2"
+    if ! python3 -c "
+import re, sys
+v = sys.argv[1]
+pat = r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?\$'
+sys.exit(0 if re.match(pat, v) else 1)
+" "$version"; then
+        echo "::error::$label version '$version' is not valid SemVer 2.0.0 (X.Y.Z[-prerelease][+build], no leading zeros)."
+        return 1
+    fi
+}
+
+base_version=$(read_version .claude-plugin/plugin.json --ref "$merge_base")
+head_version=$(read_version .claude-plugin/plugin.json --ref "$HEAD_SHA")
 
 if [ "$base_version" = "$head_version" ]; then
     echo "::error::Plugin source changed but .claude-plugin/plugin.json version not bumped (base=$base_version, head=$head_version)."
@@ -61,16 +90,39 @@ if [ "$base_version" = "$head_version" ]; then
     exit 1
 fi
 
-# Strict SemVer 2.0.0 validation — rejects leading zeros (`01.2.3`) and
-# malformed prerelease identifiers (`-..`) that a loose regex would let through.
-if ! python3 -c "
-import re, sys
-v = sys.argv[1]
-pat = r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?\$'
-sys.exit(0 if re.match(pat, v) else 1)
-" "$head_version"; then
-    echo "::error::head version '$head_version' is not valid SemVer 2.0.0 (X.Y.Z[-prerelease][+build], no leading zeros)."
+assert_semver "$head_version" "head" || exit 1
+
+echo "✓ Plugin version bumped: $base_version → $head_version"
+
+# --- Core distribution -----------------------------------------------------
+core_changed=0
+while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    if [[ "$file" == "$CORE_PUBLISHABLE_PREFIX"* && "$file" != "$CORE_EXEMPT_PREFIX"* ]]; then
+        core_changed=1
+        break
+    fi
+done <<< "$changed_files"
+
+if [ "$core_changed" -eq 0 ]; then
+    echo "✓ No publishable core files changed; core version bump not required."
+    exit 0
+fi
+
+# Absent at the merge base means the core is new on this branch, so there is
+# no previous version to compare against and nothing to demand.
+if ! core_base_version=$(read_version "$CORE_VERSION_FILE" --ref "$merge_base"); then
+    echo "✓ Core added on this branch; no previous version to compare."
+    exit 0
+fi
+core_head_version=$(read_version "$CORE_VERSION_FILE" --ref "$HEAD_SHA")
+
+if [ "$core_base_version" = "$core_head_version" ]; then
+    echo "::error::Publishable core files changed but $CORE_VERSION_FILE version not bumped (base=$core_base_version, head=$core_head_version)."
+    echo "Bump [project].version before merging — the core publish workflow triggers on that value, so an unbumped core is never released to PyPI."
     exit 1
 fi
 
-echo "✓ Plugin version bumped: $base_version → $head_version"
+assert_semver "$core_head_version" "core head" || exit 1
+
+echo "✓ Core version bumped: $core_base_version → $core_head_version"
