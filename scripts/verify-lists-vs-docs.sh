@@ -31,8 +31,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PARAMS="$REPO_ROOT/skills/mojiemoji-github/references/parameters.md"
 EXTRACT="$REPO_ROOT/scripts/extract_hook_set.py"
 GENERATOR="$REPO_ROOT/skills/mojiemoji-github/scripts/generate_catalog.py"
-LIB_CONSTANTS="$REPO_ROOT/skills/mojiemoji-github/scripts/lib/constants.py"
-LIB_FORBIDDEN_COLORS="$REPO_ROOT/skills/mojiemoji-github/scripts/lib/forbidden_colors.py"
+LIB_CONSTANTS="$REPO_ROOT/packages/mojiemoji-core/src/mojiemoji/lib/constants.py"
+LIB_FORBIDDEN_COLORS="$REPO_ROOT/packages/mojiemoji-core/src/mojiemoji/lib/forbidden_colors.py"
 
 python3 - "$PARAMS" "$EXTRACT" "$GENERATOR" "$LIB_CONSTANTS" "$LIB_FORBIDDEN_COLORS" <<'PY'
 import ast

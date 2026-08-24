@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 root_with_constants() {
     local root="$1"
-    [[ -n "$root" && -f "$root/skills/mojiemoji-github/scripts/lib/constants.py" ]]
+    [[ -n "$root" && -f "$root/packages/mojiemoji-core/src/mojiemoji/lib/constants.py" ]]
 }
 
 find_plugin_root() {
@@ -55,7 +55,7 @@ REPO_ROOT="$(find_plugin_root)" || {
 }
 # `LIB_CONSTANTS_PATH` is the SSOT for canonical sets after #101.
 # `HOOK_PATH` is kept as a fallback for callers that still set it.
-LIB_CONSTANTS_PATH="${LIB_CONSTANTS_PATH:-${HOOK_PATH:-$REPO_ROOT/skills/mojiemoji-github/scripts/lib/constants.py}}"
+LIB_CONSTANTS_PATH="${LIB_CONSTANTS_PATH:-${HOOK_PATH:-$REPO_ROOT/packages/mojiemoji-core/src/mojiemoji/lib/constants.py}}"
 
 if [[ ! -f "$LIB_CONSTANTS_PATH" ]]; then
     printf 'lib/constants.py not found: %s\n' "$LIB_CONSTANTS_PATH" >&2

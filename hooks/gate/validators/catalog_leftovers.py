@@ -15,16 +15,13 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
 
-from lib.term_boundaries import count_occurrences
+from mojiemoji.lib.term_boundaries import count_occurrences
+from mojiemoji.prestamp.catalog import DEFAULT_CATALOG_PATH, load_catalog
 
 from lib.plugin_root import plugin_root
 
-CATALOG_PATH = (
-    Path(__file__).resolve().parent.parent.parent.parent
-    / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
-)
+CATALOG_PATH = DEFAULT_CATALOG_PATH
 CATALOG_LEFTOVER_BLOCK_THRESHOLD = 10
 
 _INTENSITY_SENTINEL_RE = re.compile(r"<!--\s*mojiemoji-intensity:(normal|minimal)\s*-->")
@@ -42,10 +39,10 @@ def _load_catalog_terms() -> frozenset:
     if _catalog_terms_cache is not None:
         return _catalog_terms_cache
     try:
-        import yaml  # type: ignore[import-untyped]
-        with open(CATALOG_PATH, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        terms = data.get("terms", {}) if isinstance(data, dict) else {}
+        # Read it through the core loader so the catalog resolves the same
+        # way prestamp resolves it — a checkout today, an installed wheel
+        # once the core is upgraded independently of this plugin.
+        _, terms = load_catalog(CATALOG_PATH)
         # Only check 2+ char terms — single-char entries (e.g. 後, 前, 月)
         # need boundary-aware matching (handled by prestamp.py) and would
         # false-positive everywhere here (先月, 以後, etc.).

@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import sys
 
-from lib.constants import COLOR_SHIFTING_ANIMATIONS
+from mojiemoji.lib.constants import COLOR_SHIFTING_ANIMATIONS
 
 from lib.plugin_root import plugin_root
 

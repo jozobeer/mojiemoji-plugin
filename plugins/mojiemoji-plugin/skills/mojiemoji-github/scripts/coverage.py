@@ -28,8 +28,12 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from lib.core_path import ensure_core_importable
+
+ensure_core_importable()
+
 from lib.repo_policy import should_skip_pr_body
-from lib.sentence import SENTENCE_SEP_RE
+from mojiemoji.lib.sentence import SENTENCE_SEP_RE
 
 
 class _SurfaceThresholdsDict(dict):

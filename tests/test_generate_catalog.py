@@ -15,7 +15,7 @@ import sys
 import pytest
 import yaml
 
-from conftest import GENERATE, REPO_ROOT, run_py
+from conftest import CATALOG_DIR, GENERATE, run_py
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -136,14 +136,14 @@ def test_catalog_loads_with_string_keys_for_digits() -> None:
     # End-to-end: after regeneration, the live catalog's digit entries
     # must be loadable as String keys by prestamp.py (no Integer keys
     # silently breaking lookups).
-    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+    catalog_path = CATALOG_DIR / "prestamp-catalog.yml"
     data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
     int_keys = [k for k in data["terms"].keys() if isinstance(k, int)]
     assert int_keys == [], f"integer keys leaked into catalog: {int_keys}"
 
 
 def test_live_prestamp_catalog_has_no_duplicate_term_keys() -> None:
-    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+    catalog_path = CATALOG_DIR / "prestamp-catalog.yml"
     keys = re.findall(r"(?m)^  ([^\s:\n][^:\n]*):$", catalog_path.read_text(encoding="utf-8"))
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
 
@@ -151,7 +151,7 @@ def test_live_prestamp_catalog_has_no_duplicate_term_keys() -> None:
 
 
 def test_advertised_english_terms_exist_in_runtime_catalog() -> None:
-    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
+    catalog_path = CATALOG_DIR / "prestamp-catalog.yml"
     data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
 
     for term in ["PUSH", "PULL", "FIX", "OPEN"]:
@@ -169,7 +169,7 @@ def test_generate_catalog_han_range_excludes_hangul_yi_pua() -> None:
 
 def test_generate_catalog_palette_excludes_forbidden_replacement_keys() -> None:
     generate_catalog = _load_generate_catalog_module()
-    from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+    from mojiemoji.lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
 
     forbidden = set(FORBIDDEN_COLOR_REPLACEMENTS)
     assert not (set(generate_catalog.TAILWIND_PALETTE) & forbidden)

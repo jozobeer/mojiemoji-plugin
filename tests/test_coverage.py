@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import COVERAGE, REPO_ROOT, run_py
+from conftest import CATALOG_DIR, COVERAGE, REPO_ROOT, run_py
 
 
 def test_coverage_counts_japanese_characters_and_warn_mode() -> None:
@@ -48,7 +48,7 @@ def test_no_warning_on_catalog_hit_unicode_emoji(tmp_path: Path) -> None:
     # the old "uses Unicode X but mojiemoji variant exists in catalog"
     # warning is obsolete.
     import yaml as _yaml
-    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml"
+    catalog_path = CATALOG_DIR / "emoji-catalog.yml"
     if not catalog_path.exists():
         pytest.skip("emoji-catalog.yml not found")
     with open(catalog_path, encoding="utf-8") as f:

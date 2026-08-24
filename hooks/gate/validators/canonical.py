@@ -17,7 +17,7 @@ import re
 import sys
 import urllib.parse
 
-from lib.constants import (
+from mojiemoji.lib.constants import (
     CANONICAL_ANIMATIONS,
     CANONICAL_FONTS,
     COLOR_SHIFTING_ANIMATIONS,

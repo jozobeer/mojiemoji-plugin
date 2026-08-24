@@ -23,8 +23,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from lib.core_path import ensure_core_importable
+
+ensure_core_importable()
+
 from lib.cache_path import default_cache_file
-from lib.constants import COLOR_SHIFTING_ANIMATIONS
+from mojiemoji.lib.constants import COLOR_SHIFTING_ANIMATIONS
 
 
 def build_parser() -> argparse.ArgumentParser:

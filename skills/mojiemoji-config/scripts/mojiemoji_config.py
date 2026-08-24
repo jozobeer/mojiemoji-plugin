@@ -12,7 +12,11 @@ from typing import Callable
 GITHUB_SCRIPTS = Path(__file__).resolve().parents[2] / "mojiemoji-github" / "scripts"
 sys.path.insert(0, str(GITHUB_SCRIPTS))
 
-from lib.config import (  # noqa: E402
+from lib.core_path import ensure_core_importable  # noqa: E402
+
+ensure_core_importable()
+
+from mojiemoji.lib.config import (  # noqa: E402
     get_config_path,
     get_intensity,
     set_intensity,

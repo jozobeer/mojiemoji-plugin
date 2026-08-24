@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-from lib.japanese_ranges import HAN_RANGE, HIRAGANA_RANGE, KATAKANA_RANGE
+from mojiemoji.lib.japanese_ranges import HAN_RANGE, HIRAGANA_RANGE, KATAKANA_RANGE
 
 
 _IDENT_RE = re.compile(r"\A[a-zA-Z][a-zA-Z0-9_]*\Z")

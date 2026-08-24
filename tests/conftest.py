@@ -12,6 +12,9 @@ from typing import Any
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# The catalogs are package data of the core distribution now, not skill
+# assets. One definition here so a future move is a one-line change.
+CATALOG_DIR = REPO_ROOT / "packages" / "mojiemoji-core" / "src" / "mojiemoji" / "data"
 HOOK = REPO_ROOT / "hooks" / "mojiemoji_japanese_gate.py"
 PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.py"
 COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.py"

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import PRESTAMP, REPO_ROOT, run_py
+from conftest import CATALOG_DIR, PRESTAMP, run_py
 
 
 def test_prestamp_replaces_catalog_emoji_with_img() -> None:
@@ -91,7 +91,7 @@ def test_prestamp_preserves_vs16_on_uncatalogued_emoji() -> None:
     # round-trip — stripping it would silently change emoji-presentation
     # to text-presentation. Regression for codex P1 / Copilot on #90.
     import yaml as _yaml
-    catalog_path = REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml"
+    catalog_path = CATALOG_DIR / "emoji-catalog.yml"
     with open(catalog_path, encoding="utf-8") as f:
         catalog = (_yaml.safe_load(f) or {}).get("emojis") or {}
     candidates = ["❤", "☀", "🏗", "🛡", "⚙"]

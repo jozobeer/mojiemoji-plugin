@@ -266,15 +266,29 @@ Claude Code の `/plugin` メニューで disable するか、`hooks/hooks.json`
 
 ## 🚢 リリース運用
 
-GitHub Actions の `Release` workflow は、`.claude-plugin/plugin.json` の `version` から tag 名を <img src="https://mojiemoji.jozo.beer/emoji/%E6%B1%BA%E5%AE%9A?font=maru-bold&color=60a5fa&animation=yurayura&background=transparent&outline=darker&outline_width=2" alt="決定" height="24" align="absmiddle"> し、<img src="https://mojiemoji.jozo.beer/emoji/%E5%89%8D?font=maru&amp;color=8b5cf6&amp;animation=yokomoya&amp;background=transparent&amp;outline=f68b5c&amp;outline_width=2" alt="前" height="24" align="absmiddle">回 tag 以降の GitHub generated notes を badge first な release notes に <img src="https://mojiemoji.jozo.beer/emoji/%E7%94%9F%E6%88%90?font=maru-bold&color=38bdf8&animation=kirari&background=transparent&outline=darker&outline_width=2" alt="生成" height="24" align="absmiddle"> します。
+このリポジトリは独立にバージョニングされる 2 つのものを出荷します。plugin 本体と、PyPI に公開される core パッケージ `mojiemoji` です。tag も workflow も別々で、互いのリリースを巻き込みません。
 
-まず `workflow_dispatch` の `dry-run` で notes artifact を<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=gothic-bold&amp;color=d946ef&amp;animation=zairu&amp;background=transparent&amp;outline=efd946&amp;outline_width=2" alt="確認" height="24" align="absmiddle">し、<img src="https://mojiemoji.jozo.beer/emoji/%E5%95%8F%E9%A1%8C?font=akzk&amp;color=ef4444&amp;animation=nami&amp;background=transparent&amp;outline=44ef44&amp;outline_width=2" alt="問題" height="24" align="absmiddle">なければ `publish` を main branch から実行します。既に<img src="https://mojiemoji.jozo.beer/emoji/%E5%90%8C%E3%81%98?font=hachimaru&amp;color=f472b6&amp;animation=yurayura&amp;background=transparent&amp;outline=b6f472&amp;outline_width=2" alt="同じ" height="24" align="absmiddle"> tag の GitHub Release がある場合、workflow は二重作成せず <img src="https://mojiemoji.jozo.beer/emoji/%E7%9C%81%E7%95%A5?font=maru-bold&color=f59e0b&animation=patapata&background=transparent&outline=darker&outline_width=2" alt="省略" height="24" align="absmiddle"> します。
+| <img src="https://mojiemoji.jozo.beer/emoji/%E5%AF%BE%E8%B1%A1?font=akzk&amp;color=facc15&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="対象" height="20" align="absmiddle"> | version の出どころ | tag | workflow |
+|---|---|---|---|
+| plugin | `.claude-plugin/plugin.json` | `plugin-vX.Y.Z` | `Release` |
+| core (`mojiemoji`) | `packages/mojiemoji-core/pyproject.toml` | `core-vX.Y.Z` | `Release core` |
 
-ローカルで本文だけ<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=gothic-bold&amp;color=d946ef&amp;animation=zairu&amp;background=transparent&amp;outline=efd946&amp;outline_width=2" alt="確認" height="24" align="absmiddle">する場合:
+どちらの workflow も、まず `workflow_dispatch` の `dry-run` で<img src="https://mojiemoji.jozo.beer/emoji/%E6%88%90%E6%9E%9C?font=pixel&amp;color=d946ef&amp;animation=tate_ekken&amp;background=transparent&amp;outline=efd946&amp;outline_width=2" alt="成果" height="20" align="absmiddle">物を<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=toge&amp;color=f59e0b&amp;animation=zanzo&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="確認" height="20" align="absmiddle">し、<img src="https://mojiemoji.jozo.beer/emoji/%E5%95%8F%E9%A1%8C?font=mincho&amp;color=facc15&amp;animation=zairu&amp;background=transparent&amp;outline=04ca8a&amp;outline_width=2" alt="問題" height="20" align="absmiddle">なければ main branch から `publish` を実行します。<img src="https://mojiemoji.jozo.beer/emoji/%E5%90%8C%E3%81%98?font=hachimaru&amp;color=f472b6&amp;animation=yurayura&amp;background=transparent&amp;outline=b6f472&amp;outline_width=2" alt="同じ" height="20" align="absmiddle"> tag の GitHub Release が既にある場合は二重作成せず省略します。
+
+core の publish は PyPI の Trusted Publishing (OIDC) で認証するため、リポジトリに <img src="https://mojiemoji.jozo.beer/emoji/API?font=tamanegi&amp;color=f472b6&amp;animation=disco&amp;background=transparent&amp;outline_width=0" alt="API" height="20" align="absmiddle"> token を置きません。wheel は一度上げると<img src="https://mojiemoji.jozo.beer/emoji/%E5%90%8C%E3%81%98?font=mincho&amp;color=a78bfa&amp;animation=yatta&amp;background=transparent&amp;outline=ed7c3a&amp;outline_width=2" alt="同じ" height="20" align="absmiddle"> version で<img src="https://mojiemoji.jozo.beer/emoji/%E5%B7%AE%E3%81%97%E6%9B%BF%E3%81%88?font=maru&amp;color=c084fc&amp;animation=kage_neon&amp;background=transparent&amp;outline=fcc084&amp;outline_width=2" alt="差し替え" height="20" align="absmiddle">られないので、`Release core` は `packages/mojiemoji-core/pyproject.toml` の version <img src="https://mojiemoji.jozo.beer/emoji/%E5%A4%89%E6%9B%B4?font=hachimaru&amp;color=eab308&amp;animation=yokomoya&amp;background=transparent&amp;outline=08eab3&amp;outline_width=2" alt="変更" height="20" align="absmiddle">だけを trigger にし、build した wheel の entry point が実際にスタンプを描画することを<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=toge&amp;color=f59e0b&amp;animation=zanzo&amp;background=transparent&amp;outline=0bf59e&amp;outline_width=2" alt="確認" height="20" align="absmiddle">してから publish します。
+
+catalog を育てる `bump_catalog.py --pr` は plugin manifest と core の version を同時に patch bump します。catalog は core の package data なので、plugin だけを上げると `uvx mojiemoji` 利用者が古い catalog に取り残されるためです。
+
+ローカルで本文だけ<img src="https://mojiemoji.jozo.beer/emoji/%E7%A2%BA%E8%AA%8D?font=gothic-bold&amp;color=d946ef&amp;animation=zairu&amp;background=transparent&amp;outline=efd946&amp;outline_width=2" alt="確認" height="20" align="absmiddle">する場合:
 
 ```bash
 OUTPUT_FILE=/tmp/mojiemoji-release-notes.md \
   bash scripts/prepare-release-notes.sh --mode dry-run
+
+OUTPUT_FILE=/tmp/mojiemoji-core-release-notes.md \
+  bash scripts/prepare-release-notes.sh --mode dry-run \
+    --version-file packages/mojiemoji-core/pyproject.toml \
+    --tag-prefix core-v --component core
 ```
 
 ---

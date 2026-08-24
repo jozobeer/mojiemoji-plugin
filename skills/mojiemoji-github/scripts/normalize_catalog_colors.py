@@ -5,7 +5,7 @@ Reads each catalog file as text (not via PyYAML — round-tripping
 through a YAML emitter would reflow whitespace and rewrite comment
 blocks the catalog relies on for human readability), then applies a
 regex substitution over every quoted hex on `color:` / `outline:`
-lines using the SSOT map in `lib/forbidden_colors.py`.
+lines using the SSOT map in `mojiemoji.lib.forbidden_colors`.
 
 Defaults to dry-run. Pass `--apply` to write back. The script is
 idempotent — running it on an already-clean catalog produces no
@@ -24,13 +24,17 @@ import re
 import sys
 from pathlib import Path
 
-from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+from lib.core_path import bundled_data_dir, ensure_core_importable
+
+ensure_core_importable()
+
+from mojiemoji.lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+DATA_DIR = bundled_data_dir()
 DEFAULT_CATALOGS = (
-    REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml",
-    REPO_ROOT / "skills" / "mojiemoji-github" / "data" / "emoji-catalog.yml",
+    DATA_DIR / "prestamp-catalog.yml",
+    DATA_DIR / "emoji-catalog.yml",
 )
 
 

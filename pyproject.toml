@@ -4,6 +4,7 @@ version = "0.12.0"
 description = "GitHub Markdown 向け mojiemoji 画像スタンプ — Python 化 skill scripts + PreToolUse hook"
 requires-python = ">=3.10"
 dependencies = [
+    "mojiemoji",
     "pyyaml>=6.0",
 ]
 
@@ -13,8 +14,19 @@ dev = [
     "pytest-cov>=5.0",
 ]
 
+# The plugin and the published core live in one checkout: `uv run` resolves
+# `mojiemoji` from `packages/`, so local development always tests the sources
+# a release would ship rather than whatever version is on the index.
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+mojiemoji = { workspace = true }
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# Collect both suites — otherwise a change to the published transform could
+# merge without its tests ever running.
+testpaths = ["tests", "packages/mojiemoji-core/tests"]
 python_files = ["test_*.py"]
 addopts = "--tb=short"
 
@@ -25,11 +37,16 @@ relative_files = true
 source = [
     "${MOJIEMOJI_COVERAGE_HOOKS-hooks}",
     "${MOJIEMOJI_COVERAGE_SCRIPTS-skills/mojiemoji-github/scripts}",
+    "${MOJIEMOJI_COVERAGE_CORE-packages/mojiemoji-core/src/mojiemoji}",
 ]
-omit = ["tests/*", "**/__pycache__/*"]
+omit = ["tests/*", "packages/*/tests/*", "**/__pycache__/*"]
 
 [tool.coverage.report]
-include = ["hooks/*", "skills/mojiemoji-github/scripts/*"]
+include = [
+    "hooks/*",
+    "skills/mojiemoji-github/scripts/*",
+    "packages/mojiemoji-core/src/mojiemoji/*",
+]
 show_missing = true
 skip_covered = false
 exclude_lines = [

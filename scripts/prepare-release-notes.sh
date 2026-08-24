@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Prepare GitHub Release notes from the plugin version.
+# Prepare GitHub Release notes from a component's version file.
+#
+# The repository ships two independently versioned things — the plugin
+# (`.claude-plugin/plugin.json`) and the `mojiemoji` core distribution
+# (`packages/mojiemoji-core/pyproject.toml`) — so both the version source
+# and the tag prefix are parameters rather than constants.
 
 set -euo pipefail
 
 mode="${RELEASE_MODE:-dry-run}"
 output_file="${OUTPUT_FILE:-release-notes.md}"
-plugin_json="${PLUGIN_JSON:-.claude-plugin/plugin.json}"
+version_file="${VERSION_FILE:-${PLUGIN_JSON:-.claude-plugin/plugin.json}}"
+tag_prefix="${TAG_PREFIX:-plugin-v}"
+component="${COMPONENT:-}"
 repo="${GITHUB_REPOSITORY:-}"
 target_ref="${GITHUB_SHA:-HEAD}"
 
@@ -19,8 +26,16 @@ while [ "$#" -gt 0 ]; do
             output_file="${2:?missing value for --output}"
             shift 2
             ;;
-        --plugin-json)
-            plugin_json="${2:?missing value for --plugin-json}"
+        --version-file | --plugin-json)
+            version_file="${2:?missing value for $1}"
+            shift 2
+            ;;
+        --tag-prefix)
+            tag_prefix="${2:?missing value for --tag-prefix}"
+            shift 2
+            ;;
+        --component)
+            component="${2:?missing value for --component}"
             shift 2
             ;;
         --repo)
@@ -56,20 +71,42 @@ if [ -z "$repo" ]; then
 fi
 
 version="$(
-    python3 - "$plugin_json" <<'PY'
+    python3 - "$version_file" <<'PY'
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as f:
-    print(json.load(f)["version"])
+path = sys.argv[1]
+if path.endswith(".toml"):
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        import tomli as tomllib
+
+    with open(path, "rb") as f:
+        print(tomllib.load(f)["project"]["version"])
+else:
+    with open(path, encoding="utf-8") as f:
+        print(json.load(f)["version"])
 PY
 )"
-tag="v$version"
+tag="${tag_prefix}${version}"
+# Default the label off the tag prefix so a new component gets a sensible
+# name without having to remember a second flag.
+: "${component:=${tag_prefix%%-v}}"
 target_sha="$(git rev-parse "$target_ref")"
+# Prefer this component's own tags; fall back to the legacy un-prefixed
+# `vX.Y.Z` series so the first release after the prefix change still gets a
+# diff base instead of silently regenerating notes from the whole history.
 previous_tag="$(
-    git tag --merged "$target_sha" --list 'v[0-9]*' --sort=-v:refname |
+    git tag --merged "$target_sha" --list "${tag_prefix}[0-9]*" --sort=-v:refname |
         awk -v current="$tag" '$0 != current { print; exit }'
 )"
+if [ -z "$previous_tag" ] && [ "$tag_prefix" != "v" ]; then
+    previous_tag="$(
+        git tag --merged "$target_sha" --list 'v[0-9]*' --sort=-v:refname |
+            awk 'NR == 1 { print }'
+    )"
+fi
 
 tag_exists=0
 if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
@@ -118,10 +155,10 @@ PY
 mkdir -p "$(dirname "$output_file")"
 {
     printf '![release](https://img.shields.io/badge/release-%s-a855f7) ' "$tag"
-    printf '![source](https://img.shields.io/badge/source-plugin_json-60a5fa) '
+    printf '![source](https://img.shields.io/badge/source-%s-60a5fa) ' "$(basename "$version_file" | tr '.-' '__')"
     printf '![mode](https://img.shields.io/badge/mode-%s-22c55e)\n\n' "$mode"
     printf '## 概要\n\n'
-    printf 'この release は plugin version %s の変更を ' "\`$tag\`"
+    printf 'この release は %s version %s の変更を ' "$component" "\`$tag\`"
     printf '<img src="https://mojiemoji.jozo.beer/emoji/%%E8%%87%%AA%%E5%%8B%%95?font=maru-bold&color=a78bfa&animation=bane&background=transparent&outline=darker&outline_width=2" alt="自動" height="24" align="absmiddle"> '
     printf 'でまとめたものです。'
     if [ -n "$previous_tag" ]; then
