@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Fail the CI if a PR modifies plugin source paths
-# (.agents/, .claude-plugin/, packages/, plugins/, skills/, hooks/, agents/,
-# commands/) without bumping
+# Fail the CI if a PR modifies plugin source paths (see SOURCE_PATHS) without
+# bumping
 # `.claude-plugin/plugin.json` version. Claude Code's marketplace caches
 # plugin contents by `<plugin>/<version>/...`, so changes shipped without
 # a version bump never reach users via `/plugin update`.
@@ -21,6 +20,7 @@ BASE_SHA="${BASE_SHA:-origin/main}"
 HEAD_SHA="${HEAD_SHA:-HEAD}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 read_version() { "$script_dir/read-version.py" "$@"; }
+semver() { "$script_dir/semver.py" "$@"; }
 
 CORE_VERSION_FILE="packages/mojiemoji-core/pyproject.toml"
 # Everything the wheel carries. Tests live in the same directory but ship
@@ -31,9 +31,12 @@ CORE_EXEMPT_PREFIX="packages/mojiemoji-core/tests/"
 SOURCE_PATHS=(
     ".agents/"
     ".claude-plugin/"
-    # The core is vendored into the Codex payload, so its sources reach
-    # users through the plugin just like `skills/` does.
-    "packages/"
+    # Only the core's `src` is vendored into the Codex payload, so only it
+    # reaches users through the plugin the way `skills/` does. The core's
+    # tests, README and pyproject are versioned independently — matching the
+    # whole `packages/` tree here forced a fake plugin release for changes
+    # the plugin never ships.
+    "packages/mojiemoji-core/src/"
     "plugins/"
     "skills/"
     "hooks/"
@@ -66,17 +69,24 @@ if [ "$source_changed" -eq 0 ]; then
     exit 0
 fi
 
-# Strict SemVer 2.0.0 validation — rejects leading zeros (`01.2.3`) and
-# malformed prerelease identifiers (`-..`) that a loose regex would let through.
 assert_semver() {
     local version="$1" label="$2"
-    if ! python3 -c "
-import re, sys
-v = sys.argv[1]
-pat = r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?\$'
-sys.exit(0 if re.match(pat, v) else 1)
-" "$version"; then
+    if ! semver validate "$version"; then
         echo "::error::$label version '$version' is not valid SemVer 2.0.0 (X.Y.Z[-prerelease][+build], no leading zeros)."
+        return 1
+    fi
+}
+
+# "Different from the base" is not the same as "released after it": a
+# downgrade also differs. A lower version either re-uses an existing tag —
+# so the release gate reads the merge as already published and the code
+# never ships — or lands out of order on PyPI, where an upgrade will not
+# select it over the higher release already there.
+assert_version_increased() {
+    local base="$1" head="$2" label="$3" hint="$4"
+    if [ "$(semver compare "$head" "$base")" != "1" ]; then
+        echo "::error::$label version did not increase (base=$base, head=$head)."
+        echo "$hint"
         return 1
     fi
 }
@@ -84,13 +94,16 @@ sys.exit(0 if re.match(pat, v) else 1)
 base_version=$(read_version .claude-plugin/plugin.json --ref "$merge_base")
 head_version=$(read_version .claude-plugin/plugin.json --ref "$HEAD_SHA")
 
+assert_semver "$head_version" "head" || exit 1
+
 if [ "$base_version" = "$head_version" ]; then
     echo "::error::Plugin source changed but .claude-plugin/plugin.json version not bumped (base=$base_version, head=$head_version)."
     echo "Bump the version field before merging — Claude Code caches by version, so unbumped releases never reach users via /plugin update."
     exit 1
 fi
 
-assert_semver "$head_version" "head" || exit 1
+assert_version_increased "$base_version" "$head_version" "Plugin" \
+    "Set .claude-plugin/plugin.json to a version above the base — Claude Code caches by version, so a lower one re-serves a release users already have." || exit 1
 
 echo "✓ Plugin version bumped: $base_version → $head_version"
 
@@ -117,12 +130,15 @@ if ! core_base_version=$(read_version "$CORE_VERSION_FILE" --ref "$merge_base");
 fi
 core_head_version=$(read_version "$CORE_VERSION_FILE" --ref "$HEAD_SHA")
 
+assert_semver "$core_head_version" "core head" || exit 1
+
 if [ "$core_base_version" = "$core_head_version" ]; then
     echo "::error::Publishable core files changed but $CORE_VERSION_FILE version not bumped (base=$core_base_version, head=$core_head_version)."
     echo "Bump [project].version before merging — the core publish workflow triggers on that value, so an unbumped core is never released to PyPI."
     exit 1
 fi
 
-assert_semver "$core_head_version" "core head" || exit 1
+assert_version_increased "$core_base_version" "$core_head_version" "Core" \
+    "Set [project].version above the base — a lower one either re-uses an existing core tag (so this code never publishes) or lands out of order on PyPI." || exit 1
 
 echo "✓ Core version bumped: $core_base_version → $core_head_version"

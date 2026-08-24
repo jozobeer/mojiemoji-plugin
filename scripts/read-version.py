@@ -17,18 +17,43 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 
 
+TOML_VERSION_RE = re.compile(r'version\s*=\s*"([^"]*)"')
+
+
+def toml_project_version(text: str) -> str:
+    """Read `[project] version` without a TOML parser.
+
+    `tomllib` arrived in 3.11 and the package supports 3.10, but reaching
+    for `tomli` there would need a dependency the guards cannot rely on:
+    CI runs this script straight from the checkout with nothing
+    installed, so the fallback import would fail exactly where the check
+    is supposed to run. The file is hand-maintained and `bump_catalog.py`
+    already rewrites this same line by regex, so reader and writer agree
+    on its shape. Scanning per table keeps a `version` under some other
+    table from being mistaken for the project's.
+    """
+    section = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped.strip("[]").strip()
+            continue
+        if section != "project":
+            continue
+        match = TOML_VERSION_RE.match(stripped)
+        if match is not None:
+            return match.group(1)
+    raise ValueError("no [project] version found")
+
+
 def parse_version(path: str, data: bytes) -> str:
     if path.endswith(".toml"):
-        try:
-            import tomllib
-        except ModuleNotFoundError:  # Python 3.10
-            import tomli as tomllib
-
-        return tomllib.loads(data.decode("utf-8"))["project"]["version"]
+        return toml_project_version(data.decode("utf-8"))
     return json.loads(data.decode("utf-8"))["version"]
 
 
@@ -59,7 +84,12 @@ def main(argv: list[str] | None = None) -> int:
     data = read_bytes(args.path, args.ref)
     if data is None:
         return 3
-    print(parse_version(args.path, data))
+    try:
+        version = parse_version(args.path, data)
+    except (ValueError, KeyError) as exc:
+        print(f"{args.path}: {exc}", file=sys.stderr)
+        return 2
+    print(version)
     return 0
 
 

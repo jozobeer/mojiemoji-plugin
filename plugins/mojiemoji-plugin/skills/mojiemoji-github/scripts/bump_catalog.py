@@ -81,11 +81,9 @@ def json_version_bumped(path: Path) -> tuple[str, str] | None:
 
     plugin = json.loads(path.read_text(encoding="utf-8"))
     version = plugin.get("version", "0.0.0")
-    parts = [int(p) if p.isdigit() else 0 for p in version.split(".")]
-    while len(parts) < 3:
-        parts.append(0)
-    parts[2] += 1
-    bumped = ".".join(str(p) for p in parts)
+    bumped = patch_bump(version)
+    if bumped is None:
+        return None
     plugin["version"] = bumped
     path.write_text(
         json.dumps(plugin, indent=2, ensure_ascii=False) + "\n",
@@ -110,11 +108,9 @@ def toml_version_bumped(path: Path) -> tuple[str, str] | None:
         return None
 
     version = match.group(1)
-    parts = [int(p) if p.isdigit() else 0 for p in version.split(".")]
-    while len(parts) < 3:
-        parts.append(0)
-    parts[2] += 1
-    bumped = ".".join(str(p) for p in parts)
+    bumped = patch_bump(version)
+    if bumped is None:
+        return None
     path.write_text(
         text[: match.start(1)] + bumped + text[match.end(1) :],
         encoding="utf-8",
@@ -142,14 +138,49 @@ def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, **kwargs)
 
 
-def package_mutation_paths(package_dir: Path | None, git_repo_root: Path) -> list[str]:
-    """Return package roots that the sync step may legitimately mutate."""
+def patch_bump(version: str) -> Optional[str]:
+    """Increment the patch component, leaving prerelease/build intact.
+
+    Splitting on every dot would read `0.2.0-rc.1` as four components and
+    emit `0.2.1.1`, which is not SemVer at all — the version guard then
+    rejects the very PR this script opened. Only `X.Y.Z` is numeric; the
+    `-prerelease` and `+build` suffixes are carried through untouched.
+    """
+    match = re.match(
+        r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((?:[-+].*)?)$", version
+    )
+    if match is None:
+        return None
+    major, minor, patch, suffix = match.groups()
+    return f"{major}.{minor}.{int(patch) + 1}{suffix}"
+
+
+def package_mutation_paths(
+    package_dir: Path | None,
+    git_repo_root: Path,
+    sync_script: Path | None,
+) -> list[str]:
+    """Return package roots that the sync step may legitimately mutate.
+
+    Asked of the sync script rather than restated here: the payload grew
+    a vendored core, and a second copy of the list would have refused
+    every catalog PR the moment the two lists drifted. No script means no
+    sync ran, so there is nothing to allow.
+    """
     if package_dir is None or not package_dir.exists():
         return []
+    if sync_script is None or not sync_script.is_file():
+        return []
+
+    proc = subprocess.run(
+        [str(sync_script), "--payload-paths"],
+        capture_output=True, text=True, check=True,
+    )
+    payload = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
     return [
         str(path.resolve().relative_to(git_repo_root))
-        for path in (package_dir / ".codex-plugin", package_dir / "skills")
+        for path in (package_dir / rel for rel in payload)
         if path.exists()
     ]
 
@@ -361,7 +392,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             relativize(core_pyproject),
         ) if core_pyproject is not None and core_pyproject.is_file() else ()),
     }
-    intended_paths.update(package_mutation_paths(package_dir, git_repo_root))
+    intended_paths.update(
+        package_mutation_paths(package_dir, git_repo_root, sync_script)
+    )
 
     # Verify clean tree (excluding our intended paths).
     status_proc = subprocess.run(

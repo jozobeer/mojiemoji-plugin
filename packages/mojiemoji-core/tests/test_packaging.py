@@ -104,3 +104,48 @@ def test_cli_rejects_host_policy_flags() -> None:
     )
     assert proc.returncode != 0
     assert "--surface" in proc.stderr
+
+
+# The posting gate imports `mojiemoji.lib.constants` for the service URL,
+# and that pulls in the package initializer — which re-exports the catalog
+# loaders. A hard PyYAML requirement at import time therefore took down
+# every hook invocation on a bare system Python, including the ones that
+# never read a catalog.
+_BLOCK_YAML = """
+import sys
+
+
+class _NoYaml:
+    def find_spec(self, name, path=None, target=None):
+        if name == "yaml":
+            raise ModuleNotFoundError(f"No module named {name!r}", name=name)
+        return None
+
+
+sys.meta_path.insert(0, _NoYaml())
+"""
+
+
+def _run_without_yaml(body: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-c", _BLOCK_YAML + body],
+        capture_output=True, text=True, timeout=30,
+    )
+
+
+def test_importing_the_package_does_not_require_pyyaml() -> None:
+    proc = _run_without_yaml(
+        "from mojiemoji.lib.constants import default_base_url\n"
+        "print(default_base_url())\n"
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip()
+
+
+def test_reading_a_catalog_still_reports_the_missing_dependency() -> None:
+    proc = _run_without_yaml(
+        "from mojiemoji import load_catalog\n"
+        "load_catalog()\n"
+    )
+    assert proc.returncode != 0
+    assert "PyYAML is required" in proc.stderr

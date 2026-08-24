@@ -64,6 +64,14 @@ assert_no_symlinks() {
   fi
 }
 
+# Paths under the package root that a sync may legitimately create or
+# modify. `bump_catalog.py --pr` allowlists exactly these before its
+# dirty-tree check, so the list stays declared once, here.
+if [ "${1:-}" = "--payload-paths" ]; then
+    printf '%s\n' ".codex-plugin" "${PAYLOAD_PATHS[@]}"
+    exit 0
+fi
+
 if [ "${1:-}" = "--check" ]; then
   expected="$(mktemp -d)"
   actual="$(mktemp -d)"

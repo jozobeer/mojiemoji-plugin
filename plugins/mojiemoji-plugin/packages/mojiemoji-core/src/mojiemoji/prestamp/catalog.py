@@ -22,15 +22,6 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Optional
 
-try:
-    import yaml
-except ModuleNotFoundError as exc:
-    raise SystemExit(
-        "PyYAML is required to read mojiemoji catalogs. Install it with "
-        "`python3 -m pip install --user 'pyyaml>=6.0'`, or run from the "
-        "repository with `uv run ...`."
-    ) from exc
-
 from mojiemoji.prestamp.boundaries import (
     ASCII_KEY_RE,
     ASCII_LEFT_GUARD,
@@ -48,6 +39,28 @@ from mojiemoji.prestamp.boundaries import (
 _DATA = files("mojiemoji.data")
 DEFAULT_CATALOG_PATH = _DATA / "prestamp-catalog.yml"
 DEFAULT_EMOJI_CATALOG_PATH = _DATA / "emoji-catalog.yml"
+
+
+def _yaml():
+    """Import PyYAML on first catalog read rather than at import time.
+
+    The package initializer re-exports the catalog loaders, so importing
+    anything from ``mojiemoji`` — including the lightweight
+    ``lib.constants`` the posting gate needs for the service URL — used to
+    execute this module and abort the whole process when PyYAML was
+    missing. On a bare system Python that took down every hook
+    invocation, including the ones that never read a catalog. Failing
+    here instead keeps the cost on the caller that actually needs YAML.
+    """
+    try:
+        import yaml
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "PyYAML is required to read mojiemoji catalogs. Install it with "
+            "`python3 -m pip install --user 'pyyaml>=6.0'`, or run from the "
+            "repository with `uv run ...`."
+        ) from exc
+    return yaml
 
 
 def _open_text(path):
@@ -84,7 +97,7 @@ MAX_EMOJI_RUN = 2
 def load_catalog(path: Path = DEFAULT_CATALOG_PATH) -> tuple[dict, dict]:
     """Return (defaults, terms) from a prestamp-catalog YAML file."""
     with _open_text(path) as f:
-        data = yaml.safe_load(f) or {}
+        data = _yaml().safe_load(f) or {}
     defaults = data.get("defaults") or {}
     terms = {}
     for key, variants in (data.get("terms") or {}).items():
@@ -150,7 +163,7 @@ def load_emoji_catalog(path: Path = DEFAULT_EMOJI_CATALOG_PATH) -> tuple[dict, d
     speed) as text catalog variants.
     """
     with _open_text(path) as f:
-        data = yaml.safe_load(f) or {}
+        data = _yaml().safe_load(f) or {}
     defaults = data.get("defaults") or {}
     emojis = {}
     for key, variants in (data.get("emojis") or {}).items():
