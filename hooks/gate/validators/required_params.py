@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import sys
 
-from lib.constants import COLOR_SHIFTING_ANIMATIONS
+from mojiemoji.lib.constants import COLOR_SHIFTING_ANIMATIONS, default_base_url
 
 from lib.plugin_root import plugin_root
 
@@ -93,7 +93,7 @@ def validate_required_params(urls) -> int:
         "   (※ 環境により bare `mojiemoji-selector` のみ解決する場合がある — エラー時はもう一方の形を試す。どちらも Skill ツールには渡せない)\n"
         f"3. tool 隔離時は `{root}/skills/mojiemoji-github/scripts/mojiemoji_markdown.py` 経由で全パラメータ付きでレンダー\n"
         "4. 既存 URL を直すなら参考形 (triadic outline 自動算出):\n"
-        "   https://mojiemoji.jozo.beer/emoji/<text>?font=gothic-bold\n"
+        f"   {default_base_url()}/emoji/<text>?font=gothic-bold\n"
         "     &color=3b82f6&animation=bane&speed=normal\n"
         "     &background=transparent&outline=triadic&outline_width=2\n"
         "5. font / color / animation のリストは\n"

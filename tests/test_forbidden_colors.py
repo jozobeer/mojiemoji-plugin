@@ -2,8 +2,9 @@
 
 Covers three layers:
 
-  1. `lib/forbidden_colors.normalize_color_value` — the small helper
-     used both by `prestamp.py` (safety net) and the cleanup script.
+  1. `mojiemoji.lib.forbidden_colors.normalize_color_value` — the small
+     helper used both by the prestamp passes (safety net) and the
+     cleanup script.
   2. `scripts/normalize_catalog_colors.py` — the one-shot rewriter,
      verifying dry-run vs --apply and idempotency.
   3. The shipped catalogs — pin that no forbidden hex survives in
@@ -21,9 +22,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+from conftest import CATALOG_DIR
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts"
-CATALOG_DIR = REPO_ROOT / "skills" / "mojiemoji-github" / "data"
 NORMALIZER = SCRIPTS_DIR / "normalize_catalog_colors.py"
 
 
@@ -52,7 +54,7 @@ def _add_scripts_to_path() -> None:
     ],
 )
 def test_normalize_color_value(value: str | None, expected: str | None) -> None:
-    from lib.forbidden_colors import normalize_color_value
+    from mojiemoji.lib.forbidden_colors import normalize_color_value
 
     assert normalize_color_value(value) == expected
 
@@ -61,7 +63,7 @@ def test_forbidden_map_covers_all_tailwind_600() -> None:
     """Every key must map to a value that itself is NOT forbidden — the
     replacement chain should converge in one step, not require a
     second pass."""
-    from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+    from mojiemoji.lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
 
     for key, replacement in FORBIDDEN_COLOR_REPLACEMENTS.items():
         assert key.lower() == key, f"keys must be lowercase: {key!r}"
@@ -77,7 +79,7 @@ def test_shipped_catalogs_have_no_forbidden_colors() -> None:
     This is the dogfood guarantee — fails if anyone re-introduces a
     Tailwind 600+ color into the catalog without running the
     normalizer."""
-    from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+    from mojiemoji.lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
 
     def color_entries(value: object):
         if isinstance(value, dict):

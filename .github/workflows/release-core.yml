@@ -1,0 +1,190 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Release core
+
+# The `mojiemoji` core is published to PyPI on its own cadence: a wheel is
+# immutable once uploaded, so the trigger is a deliberate version change in
+# the package's own pyproject.toml, never a plugin release or a catalog edit
+# that left the version alone.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run builds and validates; publish uploads to PyPI"
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - publish
+  # Any edit to this file re-runs the workflow, including edits that change
+  # dependencies or classifiers and leave the version alone. The `gate` job
+  # below is what turns a run into a release, not the path filter.
+  push:
+    branches: [main]
+    paths: ['packages/mojiemoji-core/pyproject.toml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-core-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reject-publish-ref:
+    name: Reject publish outside main
+    # Fail loudly rather than letting the publish condition silently skip:
+    # a green run that published nothing reads as a successful release.
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::publish mode must run from main (got ${{ github.ref }})"
+          exit 1
+
+  gate:
+    name: Decide whether this run is a release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      should_publish: ${{ steps.decide.outputs.should_publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compare the declared version against released tags
+        id: decide
+        run: |
+          version="$(scripts/read-version.py packages/mojiemoji-core/pyproject.toml)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # The tag is the record of what has been released. Testing it
+          # covers every way a run can reach here without a new version:
+          # a dependency-only edit, a re-run, a manual dispatch.
+          if git rev-parse -q --verify "refs/tags/core-v$version" >/dev/null; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "core-v$version is already released; this run builds and validates only."
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "core-v$version is unreleased; this run is a release."
+          fi
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Build sdist and wheel
+        run: uv build --package mojiemoji --out-dir dist
+
+      # Proving the wheel works matters more here than anywhere else: a
+      # broken data file or entry point cannot be fixed by re-uploading the
+      # same version, only by burning a new one.
+      - name: Smoke-test the built wheel
+        run: |
+          wheel="$(ls dist/*.whl)"
+          printf '対応を進める。' |
+            uvx --from "$wheel" mojiemoji --seed 0 |
+            grep -q '<img'
+          echo "wheel entry point renders stamps: $wheel"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: [gate, build]
+    if: |
+      needs.gate.outputs.should_publish == 'true'
+      && (
+        github.event_name == 'push'
+        || (inputs.mode == 'publish' && github.ref == 'refs/heads/main')
+      )
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      # Trusted Publishing: PyPI verifies this workflow's OIDC identity, so
+      # the repository holds no API token to leak or rotate.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: core-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # A re-run after a partially failed release must not hard-fail on
+          # the version that already landed.
+          skip-existing: true
+
+  github-release:
+    name: Tag and release
+    needs: [gate, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: core-dist
+          path: dist/
+      - name: Prepare release notes
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          OUTPUT_FILE: ${{ runner.temp }}/release-notes.md
+          RELEASE_MODE: publish
+          VERSION_FILE: packages/mojiemoji-core/pyproject.toml
+          TAG_PREFIX: core-v
+          COMPONENT: core
+        run: bash scripts/prepare-release-notes.sh
+      - name: Attach distributions to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: gh release upload "$TAG" dist/* --clobber
+      - name: Write job summary
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.release.outputs.previous_tag }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
+        run: |
+          {
+            echo "## Core release"
+            echo
+            echo "- tag: $TAG"
+            echo "- previous tag: ${PREVIOUS_TAG:-<none>}"
+            echo "- pypi: https://pypi.org/project/mojiemoji/"
+            if [ -n "$RELEASE_URL" ]; then
+              echo "- release: $RELEASE_URL"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  no-release:
+    name: Not a release
+    needs: gate
+    if: needs.gate.outputs.should_publish != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why nothing was published
+        env:
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          {
+            echo "## Core release skipped"
+            echo
+            echo "\`core-v$VERSION\` is already released, so this run built and"
+            echo "validated the distributions without publishing."
+            echo
+            echo "Bump \`[project].version\` in \`packages/mojiemoji-core/pyproject.toml\`"
+            echo "to cut a new release."
+          } >> "$GITHUB_STEP_SUMMARY"

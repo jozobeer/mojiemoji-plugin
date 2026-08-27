@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip pytest pytest-cov pyyaml
+      # Editable, so the catalogs the tests read and the ones the
+      # maintenance scripts rewrite are the same files.
+      - run: python -m pip install -e packages/mojiemoji-core
       - run: python -m pytest --cov --cov-report=xml --cov-report=term-missing
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -76,6 +79,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip pyyaml
+      - run: python -m pip install -e packages/mojiemoji-core
       - name: Verify catalog has no Tailwind 600+ / dim 500-band colors
         # Dry-run mode exits 1 when any forbidden color is still in the
         # catalogs. Run with --apply locally to fix:

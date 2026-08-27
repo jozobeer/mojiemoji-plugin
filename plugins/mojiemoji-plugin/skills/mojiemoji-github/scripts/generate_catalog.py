@@ -23,7 +23,11 @@ import re
 import sys
 from typing import Iterable, Optional
 
-from lib.constants import (
+from lib.core_path import ensure_core_importable
+
+ensure_core_importable()
+
+from mojiemoji.lib.constants import (
     CANONICAL_ANIMATIONS,
     CANONICAL_FONTS,
     COLOR_SHIFTING_ANIMATIONS,
@@ -31,9 +35,10 @@ from lib.constants import (
     INLINE_PROBLEMATIC_ANIMATIONS,
     ROTATIONAL_ANIMATIONS,
 )
+from mojiemoji.lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
+from mojiemoji.lib.japanese_ranges import HAN_RANGE, HIRAGANA_RANGE, KATAKANA_RANGE
+
 from lib.flavor import Flavor
-from lib.forbidden_colors import FORBIDDEN_COLOR_REPLACEMENTS
-from lib.japanese_ranges import HAN_RANGE, HIRAGANA_RANGE, KATAKANA_RANGE
 
 
 # Tailwind palette used for variant generation. Curated to exclude

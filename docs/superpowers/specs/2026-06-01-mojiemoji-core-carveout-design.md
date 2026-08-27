@@ -279,10 +279,14 @@ Python の install ステップは存在しない**。どちらもソースペ�
 uv workspace の依存宣言が効くのはローカル開発だけで、配布された plugin では効かない。
 つまり shim を素直に書くと、利用者が別途 PyPI 版を入れていない限り `ModuleNotFoundError` になる。
 
-**決定: shim が core を自前で解決する。** まず `import mojiemoji` を試み、失敗したらリポジトリ同梱の
-`packages/mojiemoji-core/src` を `sys.path` に足して再試行する。PyPI / `uv` でインストール済みなら
-そちらが優先され、素の `python3 prestamp.py` でも動く。plugin 側に install ステップを要求しないので、
-既存の利用者体験を変えずに済む。
+**決定: shim が core を自前で解決する。** 同梱の `packages/mojiemoji-core/src` があればそれを
+`sys.path` の先頭に置き、無ければインストール済み配布に委ねる。plugin 側に install ステップを
+要求しないので、既存の利用者体験を変えずに済む。
+
+> **改訂 (#161 レビュー)**: 当初は「インストール済み配布を優先」としていたが、古い global install が
+> 同梱 core を隠すと、plugin が同梱バージョン前提で import している API が消える。bare な plugin
+> 配布はその install を制約も更新もできないため、同梱優先に反転した。新しい core を使いたい利用者は
+> `uvx mojiemoji` / インストール済み CLI を直接叩く経路が残る。
 
 - **Codex パッケージへの影響**: `scripts/sync-codex-plugin-package.sh` は現状 `skills/` しか
   `plugins/mojiemoji-plugin/` へコピーしない。この fallback を成立させるには core のソースも

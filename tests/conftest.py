@@ -12,6 +12,9 @@ from typing import Any
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# The catalogs are package data of the core distribution now, not skill
+# assets. One definition here so a future move is a one-line change.
+CATALOG_DIR = REPO_ROOT / "packages" / "mojiemoji-core" / "src" / "mojiemoji" / "data"
 HOOK = REPO_ROOT / "hooks" / "mojiemoji_japanese_gate.py"
 PRESTAMP = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "prestamp.py"
 COVERAGE = REPO_ROOT / "skills" / "mojiemoji-github" / "scripts" / "coverage.py"
@@ -89,6 +92,7 @@ def stamp_url(
     outline: str | None = "darker",
     outline_width: str | None = "2",
     speed: str | None = None,
+    base_url: str = "https://mojiemoji.jozo.beer",
 ) -> str:
     from urllib.parse import quote
 
@@ -107,7 +111,7 @@ def stamp_url(
     if speed is not None:
         parts.append(f"speed={speed}")
     query = "&".join(parts)
-    return f"https://mojiemoji.jozo.beer/emoji/{encoded}?{query}"
+    return f"{base_url.rstrip('/')}/emoji/{encoded}?{query}"
 
 
 # A complete, hook-passing inline `<img>` snippet for fixture bodies.

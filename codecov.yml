@@ -20,7 +20,7 @@ ignore:
   - "scripts/**"
   - ".github/**"
   - "skills/mojiemoji-github/SKILL.md"
-  - "skills/mojiemoji-github/data/**"
+  - "packages/mojiemoji-core/src/mojiemoji/data/**"
   - "skills/mojiemoji-github/references/**"
   - "agents/**"
   - "assets/**"

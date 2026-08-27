@@ -44,6 +44,13 @@ from lib.yaml_helpers import emit_term_key
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 CACHE_STATS_SCRIPT = SCRIPTS_DIR / "cache_stats.py"
+# Relative to the checkout root: the catalog as a committed source, which
+# is what a bump has to rewrite — never an installed copy of the core.
+CORE_PYPROJECT_RELPATH = Path("packages") / "mojiemoji-core" / "pyproject.toml"
+CATALOG_RELPATH = (
+    Path("packages") / "mojiemoji-core" / "src" / "mojiemoji"
+    / "data" / "prestamp-catalog.yml"
+)
 
 
 def canonical_repo_root(start: Path = SCRIPTS_DIR) -> Path | None:
@@ -51,7 +58,7 @@ def canonical_repo_root(start: Path = SCRIPTS_DIR) -> Path | None:
     for candidate in (start, *start.parents):
         if (
             (candidate / ".claude-plugin" / "plugin.json").is_file()
-            and (candidate / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml").is_file()
+            and (candidate / CATALOG_RELPATH).is_file()
         ):
             return candidate
     return None
@@ -74,14 +81,38 @@ def json_version_bumped(path: Path) -> tuple[str, str] | None:
 
     plugin = json.loads(path.read_text(encoding="utf-8"))
     version = plugin.get("version", "0.0.0")
-    parts = [int(p) if p.isdigit() else 0 for p in version.split(".")]
-    while len(parts) < 3:
-        parts.append(0)
-    parts[2] += 1
-    bumped = ".".join(str(p) for p in parts)
+    bumped = patch_bump(version)
+    if bumped is None:
+        return None
     plugin["version"] = bumped
     path.write_text(
         json.dumps(plugin, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return version, bumped
+
+
+def toml_version_bumped(path: Path) -> tuple[str, str] | None:
+    """Patch-bump `[project] version` in a pyproject, preserving formatting.
+
+    Rewritten by regex rather than a TOML round-trip: the file is
+    hand-maintained, and an emitter would reflow comments and quoting that
+    reviewers rely on.
+    """
+    if not path.is_file():
+        return None
+
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"$', text, flags=re.MULTILINE)
+    if match is None:
+        return None
+
+    version = match.group(1)
+    bumped = patch_bump(version)
+    if bumped is None:
+        return None
+    path.write_text(
+        text[: match.start(1)] + bumped + text[match.end(1) :],
         encoding="utf-8",
     )
     return version, bumped
@@ -107,14 +138,49 @@ def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, **kwargs)
 
 
-def package_mutation_paths(package_dir: Path | None, git_repo_root: Path) -> list[str]:
-    """Return package roots that the sync step may legitimately mutate."""
+def patch_bump(version: str) -> Optional[str]:
+    """Increment the patch component, leaving prerelease/build intact.
+
+    Splitting on every dot would read `0.2.0-rc.1` as four components and
+    emit `0.2.1.1`, which is not SemVer at all — the version guard then
+    rejects the very PR this script opened. Only `X.Y.Z` is numeric; the
+    `-prerelease` and `+build` suffixes are carried through untouched.
+    """
+    match = re.match(
+        r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)((?:[-+].*)?)$", version
+    )
+    if match is None:
+        return None
+    major, minor, patch, suffix = match.groups()
+    return f"{major}.{minor}.{int(patch) + 1}{suffix}"
+
+
+def package_mutation_paths(
+    package_dir: Path | None,
+    git_repo_root: Path,
+    sync_script: Path | None,
+) -> list[str]:
+    """Return package roots that the sync step may legitimately mutate.
+
+    Asked of the sync script rather than restated here: the payload grew
+    a vendored core, and a second copy of the list would have refused
+    every catalog PR the moment the two lists drifted. No script means no
+    sync ran, so there is nothing to allow.
+    """
     if package_dir is None or not package_dir.exists():
         return []
+    if sync_script is None or not sync_script.is_file():
+        return []
+
+    proc = subprocess.run(
+        [str(sync_script), "--payload-paths"],
+        capture_output=True, text=True, check=True,
+    )
+    payload = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
     return [
         str(path.resolve().relative_to(git_repo_root))
-        for path in (package_dir / ".codex-plugin", package_dir / "skills")
+        for path in (package_dir / rel for rel in payload)
         if path.exists()
     ]
 
@@ -127,10 +193,10 @@ def intended_path(path: str, intended_paths: set[str]) -> bool:
 def main(argv: Optional[list[str]] = None) -> int:
     source_root = canonical_repo_root()
     default_catalog = (
-        source_root / "skills" / "mojiemoji-github" / "data" / "prestamp-catalog.yml"
-        if source_root else None
+        source_root / CATALOG_RELPATH if source_root else None
     )
     default_plugin_json = source_root / ".claude-plugin" / "plugin.json" if source_root else None
+    core_pyproject = source_root / CORE_PYPROJECT_RELPATH if source_root else None
     package_dir = source_root / "plugins" / "mojiemoji-plugin" if source_root else None
     default_codex_plugin_json = (
         package_dir / ".codex-plugin" / "plugin.json" if package_dir else None
@@ -290,6 +356,15 @@ def main(argv: Optional[list[str]] = None) -> int:
             version, next_version = codex_bumped
             print(f"bump-catalog: codex plugin.json {version} -> {next_version}")
 
+    # The catalog ships as core package data, so a catalog-only PR that
+    # bumped just the plugin manifests would leave every `uvx mojiemoji`
+    # user on the previous catalog indefinitely.
+    if core_pyproject is not None:
+        core_bumped = toml_version_bumped(core_pyproject)
+        if core_bumped is not None:
+            version, next_version = core_bumped
+            print(f"bump-catalog: core pyproject.toml {version} -> {next_version}")
+
     if sync_script is not None and sync_script.is_file():
         sync_proc = subprocess.run([str(sync_script)])
         if sync_proc.returncode != 0:
@@ -313,8 +388,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         *((
             relativize(codex_plugin_json_path),
         ) if codex_plugin_json_path is not None and codex_plugin_json_path.is_file() else ()),
+        *((
+            relativize(core_pyproject),
+        ) if core_pyproject is not None and core_pyproject.is_file() else ()),
     }
-    intended_paths.update(package_mutation_paths(package_dir, git_repo_root))
+    intended_paths.update(
+        package_mutation_paths(package_dir, git_repo_root, sync_script)
+    )
 
     # Verify clean tree (excluding our intended paths).
     status_proc = subprocess.run(

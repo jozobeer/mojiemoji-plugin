@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import sys
 
+from mojiemoji.lib.constants import default_base_url
+
 from lib.plugin_root import plugin_root
 
 
@@ -16,10 +18,11 @@ def validate_url_presence(urls) -> int:
     if urls:
         return 0
     root = plugin_root()
+    host = default_base_url().split("://", 1)[-1].rstrip("/")
     sys.stderr.write(
         "🚧 mojiemoji-github skill未適用のまま日本語GitHub bodyを送ろうとしています\n"
         "\n"
-        "検出: 日本語 GitHub body に `mojiemoji.jozo.beer` の stamp が 0 個。\n"
+        f"検出: 日本語 GitHub body に `{host}` の stamp が 0 個。\n"
         "autonomous実行 / subagent内 / skill chain漏れの典型パターン。\n"
         "\n"
         "## 推奨経路 (skill access があるなら)\n"
