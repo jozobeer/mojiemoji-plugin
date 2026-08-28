@@ -18,25 +18,30 @@ fork the catalog, animation list, color list, or URL rules.
 
 ## Core Invocation
 
-Preferred path after the core package is published:
+Run the published core before posting:
 
 ```bash
 uvx mojiemoji < body.md > decorated.md
 ```
 
-Repository fallback while the core package is still being carved out:
+`uvx` resolves the `mojiemoji` distribution from PyPI on first use, so no
+repository checkout and no manual install are involved. Every harness adapter
+should apply the same rule: run this preprocessing step before posting
+Japanese GitHub bodies. Do not hand-build stamp URLs when the core can render
+them.
+
+PR bodies need one check the core does not perform: GitHub can copy the PR
+body into squash / merge commit messages, and stamps must not leak into
+commit history. Before decorating a PR body, run
 
 ```bash
-# --surface MUST match the posting target:
-#   issue-body | pr-body | review-body | comment-body | release-note
-python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
-  --surface issue-body < body.md > decorated.md
+gh api 'repos/{owner}/{repo}' --jq '(.allow_squash_merge and .squash_merge_commit_message == "PR_BODY") or (.allow_merge_commit and .merge_commit_message == "PR_BODY")'
 ```
 
-Pass the surface that matches the posting target (`issue-body`, `pr-body`,
-`review-body`, `comment-body`, `release-note`). Every harness adapter should
-apply the same rule: run this preprocessing step before posting Japanese
-GitHub bodies.
+from inside the target repository, and when it prints `true`, post the PR
+body undecorated — only an explicit user request overrides this. Every other
+surface (issue body, review body, comment, release note) is decorated
+unconditionally.
 
 ## Update Strategy
 
@@ -65,8 +70,8 @@ Each adapter must preserve these contracts:
   `f59e0b`, `06b6d4`, and `f472b6`.
 - Use canonical animation names such as `bane`, `bure`, `kirari`,
   `yoko_scroll`, and `zairu`.
-- Run `prestamp.py` or `uvx mojiemoji` before GitHub submission, with the
-  `--surface` flag matching the posting target.
+- Run `uvx mojiemoji` before GitHub submission and apply the PR-body policy
+  check.
 - Keep gate behavior harness-local: Claude PreToolUse hooks do not exist
   in every harness, so Codex/Gemini/Cursor/Windsurf/etc. should reproduce
   the safety rule through their own skill, rule, terminal hook, MCP wrapper,

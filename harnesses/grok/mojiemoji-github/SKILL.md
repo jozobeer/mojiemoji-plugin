@@ -5,7 +5,7 @@ description: >
   core を呼び出す Grok スキル。日本語本文のインライン強調が主用途。
 ---
 
-<!-- mojiemoji-schema-version: 2.1.0 -->
+<!-- mojiemoji-schema-version: 2.2.0 -->
 
 # mojiemoji-github (Grok)
 
@@ -13,27 +13,33 @@ Grok ユーザー向け mojiemoji 装飾スキル。
 
 ## 使い方
 
-1. core 公開後は `uvx mojiemoji` を利用。
+1. 公開済み core を `uvx mojiemoji` で呼び出す。
 2. Grok の `~/.config/grok/skills/mojiemoji-github/SKILL.md` として
    配置 (本ファイルまたは port-policy で最適化したもの)。
 3. 日本語の GitHub body を作成する際 ( /make-issue, /make-pr, edit など ) や `.md` 編集時に自動または明示的に発火。
 
 ## 下処理 first (中心原則)
 
-Grok の Bash ツールを使って必ず prestamp を最初に通す:
+Grok の Bash ツールを使って必ず公開済み core を最初に通す:
 
 ```bash
-# 推奨
 uvx mojiemoji < body.md > decorated.md
-
-# core 公開前 / checkout からの fallback
-# --surface は投稿先 surface に必ず合わせる:
-#   issue-body | pr-body | review-body | comment-body | release-note
-python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
-  --surface issue-body < body.md > decorated.md
 ```
 
-出力のスニペットを本文に埋め込んでユーザーに提示 → 確認 → 投稿。
+`uvx` は初回利用時に PyPI から `mojiemoji` ディストリビューションを解決するため、
+repository checkout も手動 install も不要。出力のスニペットを本文に埋め込んで
+ユーザーに提示 → 確認 → 投稿。core がレンダリングできる stamp URL を手組みしない。
+
+PR body だけは core が行わないチェックが1つ必要: GitHub は squash / merge commit
+message に PR body をコピーすることがあり、stamp をコミット履歴に残してはならない。
+PR body を装飾する前に、対象リポジトリ内で次を実行する:
+
+```bash
+gh api 'repos/{owner}/{repo}' --jq '(.allow_squash_merge and .squash_merge_commit_message == "PR_BODY") or (.allow_merge_commit and .merge_commit_message == "PR_BODY")'
+```
+
+`true` が出力されたら、PR body はユーザーの明示的な要求がない限り無装飾のまま投稿する。
+それ以外の surface (issue body / review body / comment / release note) は無条件で装飾する。
 
 ## URL 契約
 
@@ -67,11 +73,6 @@ Tailwind 300-500 帯を使う。animation は `bane` / `bure` / `kirari` /
 
 canonical skill と同じ扱いをこの harness でも手動で適用する:
 
-- 投稿先 surface に合わせて `--surface issue-body` / `pr-body` /
-  `review-body` / `comment-body` / `release-note` を渡す。`--surface
-  pr-body` は、対象リポジトリが PR body を merge commit message に転記する
-  設定のとき、意図的に入力をそのまま出力する (skip)。skip が発火したら
-  手動でも PR body を装飾しない。
 - 色循環 animation (`kira` / `disco` / `psycho`) では `outline` と
   `outline_width` を付けない。それ以外の animation は 6 パラメータ全部を
   維持する。
