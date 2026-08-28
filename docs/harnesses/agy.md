@@ -42,28 +42,33 @@ description: agy adapter for decorating Japanese GitHub Markdown with the shared
 
 When preparing Japanese GitHub Markdown for an issue, PR, review, comment,
 or release note, run the text through the shared mojiemoji core before
-posting, passing the surface being decorated:
+posting:
 
-    python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
-      --surface issue-body < body.md > decorated.md
+    uvx mojiemoji < body.md > decorated.md
 
-Match `--surface` to the target (`issue-body`, `pr-body`, `review-body`,
-`comment-body`, `release-note`). The default is `issue-body`, so PR bodies
-in particular must pass `--surface pr-body`: that surface runs a
-repository-policy check that intentionally skips decoration when the
-repository's squash or merge commits embed the PR body, and the default
-surface would bypass it.
+`uvx` resolves the `mojiemoji` distribution from PyPI on first use, so no
+repository checkout and no manual install are involved.
+
+PR bodies need one check the core does not perform: GitHub can copy the PR
+body into squash / merge commit messages, and stamps must not leak into
+commit history. Before decorating a PR body, run
+
+    gh api 'repos/{owner}/{repo}' --jq '(.allow_squash_merge and .squash_merge_commit_message == "PR_BODY") or (.allow_merge_commit and .merge_commit_message == "PR_BODY")'
+
+from inside the target repository, and when it prints `true`, post the PR
+body undecorated — only an explicit user request overrides this. Every
+other surface (issue body, review body, comment, release note) is
+decorated unconditionally.
 
 `prestamp.py` replaces catalog hits only and leaves every other phrase
 unchanged. After running it, decorate the important Japanese phrases the
 catalog missed yourself, following the canonical parameter rules, and
 verify the assembled body before treating it as decorated — prestamp
 output alone is not a finished decoration for prose the catalog does not
-cover. Exception: when `--surface pr-body` hits the repository-policy
-skip described above, `prestamp.py` returns the body unchanged by
-design — do not decorate that body manually either. The undecorated PR
-body is the intended final state there, and it passes the pre-write
-check below as a skip.
+cover. Exception: when the repository-policy check above prints `true`,
+leave the PR body unchanged — do not decorate it manually either. The
+undecorated PR body is the intended final state there, and it passes the
+pre-write check below as a skip.
 
 The same preprocessing applies to local Markdown edits: after editing
 Japanese prose in `README.md`, `CHANGELOG.md`, `docs/**/*.md`,
@@ -108,29 +113,13 @@ Keep the `mojiemoji-schema-version` marker in sync with the canonical
 `skills/mojiemoji-github/SKILL.md` — it is how the drift tooling knows
 whether the copy is current.
 
-Once the core package is published (#141), the preferred invocation becomes
-`uvx mojiemoji < body.md > decorated.md` and the adapter no longer needs a
-repository checkout.
-
-## Python Runtime
-
-The prestamp scripts read YAML catalogs, so the Python environment that
-runs them needs PyYAML:
-
-```bash
-python3 -m pip install --user "pyyaml>=6.0"
-```
-
-From this repository, `uv run ...` already provides the dependency from
-`pyproject.toml`.
-
 ## Drift Detection
 
 Two mechanisms keep agy copies from silently going stale:
 
 - `scripts/audit-harness-skills.sh` audits every deployed copy against six
   contracts (endpoint shape, required parameters, forbidden animations,
-  forbidden colors, a `prestamp.py` reference, and a
+  forbidden colors, a `uvx mojiemoji` reference, and a
   `mojiemoji-schema-version` marker matching the canonical skill's). Run it
   after updating the canonical skill. A copy without the marker now fails
   the audit, so deploy the adapter with its marker line intact.
@@ -142,8 +131,7 @@ Two mechanisms keep agy copies from silently going stale:
 
 - agy sees only the adapter file; there is no equivalent of the Claude Code
   PreToolUse hook gate, so enforcement relies on the adapter's instructions.
-- No installable package or marketplace entry yet — the adapter references
-  scripts from a local checkout of this repository until the core carve-out
-  (#141) publishes a standalone `mojiemoji` package.
+- No installable package or marketplace entry yet for the adapter itself —
+  deploy the adapter file by hand at one of the paths above.
 - Hook parity is a separate phase because each harness exposes command/tool
   interception differently.

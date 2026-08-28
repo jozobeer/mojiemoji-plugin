@@ -12,23 +12,28 @@ pull requests, comments, reviews, or release notes.
 
 ## Core First
 
-Preferred command:
+Run the published core before posting:
 
 ```bash
 uvx mojiemoji < body.md > decorated.md
 ```
 
-Repository fallback:
+`uvx` resolves the `mojiemoji` distribution from PyPI on first use, so no
+repository checkout and no manual install are involved. The decorated output
+should be passed to `gh` with `--body-file`, stdin, or the equivalent GitHub
+API body field. Do not hand-build stamp URLs when the core can render them.
+
+PR bodies need one check the core does not perform: GitHub can copy the PR body
+into squash / merge commit messages, and stamps must not leak into commit
+history. Before decorating a PR body, run
 
 ```bash
-# --surface MUST match the posting target:
-#   issue-body | pr-body | review-body | comment-body | release-note
-python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
-  --surface issue-body < body.md > decorated.md
+gh api 'repos/{owner}/{repo}' --jq '(.allow_squash_merge and .squash_merge_commit_message == "PR_BODY") or (.allow_merge_commit and .merge_commit_message == "PR_BODY")'
 ```
 
-The decorated output should be passed to `gh` with `--body-file`, stdin, or
-the equivalent GitHub API body field.
+from inside the target repository, and when it prints `true`, post the PR body
+undecorated — only an explicit user request overrides this. Every other surface
+(issue body, review body, comment, release note) is decorated unconditionally.
 
 ## Required Stamp Shape
 
@@ -55,12 +60,6 @@ explicit opt-out regions wrapped with `<!-- mojiemoji:off -->` and
 These policies mirror the canonical skill and are not automated in this
 harness, so apply them by hand:
 
-- Pass the surface that matches the posting target: `--surface issue-body`,
-  `pr-body`, `review-body`, `comment-body`, or `release-note`. With
-  `--surface pr-body`, prestamp intentionally outputs the input unchanged
-  when the target repository copies PR body HTML into merge commit
-  messages; when that skip fires, do not decorate the PR body manually
-  either.
 - Color-shifting animations (`kira` / `disco` / `psycho`) must omit
   `outline` and `outline_width`; a fixed-color outline fights the hue
   cycle. All other animations keep the full six-parameter set.

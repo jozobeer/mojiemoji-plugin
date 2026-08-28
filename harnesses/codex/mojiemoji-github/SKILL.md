@@ -12,25 +12,28 @@ issue, PR, review, review reply, issue comment, or release note.
 
 ## Core First
 
-Run the shared core before posting:
+Run the published core before posting:
 
 ```bash
 uvx mojiemoji < body.md > decorated.md
 ```
 
-Until the core package is published, use the repository fallback:
+`uvx` resolves the `mojiemoji` distribution from PyPI on first use, so no
+repository checkout and no manual install are involved. Paste or pipe the
+decorated output into the GitHub command. Do not hand-build stamp URLs when the
+core can render them.
+
+PR bodies need one check the core does not perform: GitHub can copy the PR body
+into squash / merge commit messages, and stamps must not leak into commit
+history. Before decorating a PR body, run
 
 ```bash
-# --surface MUST match the posting target:
-#   issue-body | pr-body | review-body | comment-body | release-note
-python3 /path/to/mojiemoji-plugin/skills/mojiemoji-github/scripts/prestamp.py \
-  --surface issue-body < body.md > decorated.md
+gh api 'repos/{owner}/{repo}' --jq '(.allow_squash_merge and .squash_merge_commit_message == "PR_BODY") or (.allow_merge_commit and .merge_commit_message == "PR_BODY")'
 ```
 
-Pass the surface that matches the posting target: `issue-body`, `pr-body`,
-`review-body`, `comment-body`, or `release-note`. Paste or pipe the decorated
-output into the GitHub command. Do not hand-build stamp URLs when the core
-can render them.
+from inside the target repository, and when it prints `true`, post the PR body
+undecorated — only an explicit user request overrides this. Every other surface
+(issue body, review body, comment, release note) is decorated unconditionally.
 
 ## Required URL Contract
 
@@ -54,11 +57,9 @@ that posts a Japanese body, verify that the body has either already been
 decorated or intentionally opts out with `<!-- mojiemoji:off -->` /
 `<!-- mojiemoji:on -->`.
 
-For PR bodies, run prestamp with `--surface pr-body`: it intentionally
-outputs the input unchanged when the target repository copies PR body HTML
-into merge commit messages. When that skip fires, do not decorate the PR
-body manually either, unless the user explicitly requests decorated PR body
-output.
+For PR bodies, run the repository-policy check from Core First above before
+posting. When it prints `true`, do not decorate the PR body manually either,
+unless the user explicitly requests decorated PR body output.
 
 ## Canonical Policies
 
