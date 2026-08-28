@@ -1,6 +1,6 @@
 {
   "name": "mojiemoji-plugin",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "description": "Codex skills for adding mojiemoji image stamps to GitHub Markdown.",
   "author": {
     "name": "jozobeer",
