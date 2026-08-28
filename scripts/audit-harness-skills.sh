@@ -14,7 +14,7 @@
 #      `buruburu`, `strobe`, `kanpai`, `scroll`, `blink`)
 #   4. Color examples must be Tailwind 300-500 only
 #      (no `dc2626`, `2563eb`, `ca8a04`, etc. — the hook rejects them)
-#   5. `prestamp.py` (the 下処理 first principle) must be referenced
+#   5. `uvx mojiemoji` (the sole core invocation) must be referenced
 #   6. `mojiemoji-schema-version` marker must be present and match the
 #      canonical marker in skills/mojiemoji-github/SKILL.md
 #
@@ -170,9 +170,9 @@ audit_skill_file() {
     fi
   done
 
-  # 5. prestamp.py reference (the 下処理 first principle)
-  if ! grep -qE 'prestamp\.py|prestamp first|下処理 first' "$path"; then
-    violations+=("Missing reference to prestamp.py / 下処理 first principle")
+  # 5. uvx mojiemoji reference (the sole core invocation)
+  if ! grep -qE 'uvx mojiemoji' "$path"; then
+    violations+=("Missing reference to uvx mojiemoji")
   fi
 
   # 6. Schema-version marker must be present and match the canonical

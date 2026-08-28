@@ -3,7 +3,7 @@ trigger: model_decision
 description: Decorate Japanese GitHub Markdown with mojiemoji before posting.
 ---
 
-<!-- mojiemoji-schema-version: 2.1.0 -->
+<!-- mojiemoji-schema-version: 2.2.0 -->
 
 # mojiemoji-github (Windsurf Rule)
 

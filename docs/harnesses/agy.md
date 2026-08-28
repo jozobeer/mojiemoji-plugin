@@ -36,7 +36,7 @@ name: mojiemoji-github
 description: agy adapter for decorating Japanese GitHub Markdown with the shared mojiemoji core.
 ---
 
-<!-- mojiemoji-schema-version: 2.1.0 -->
+<!-- mojiemoji-schema-version: 2.2.0 -->
 
 # mojiemoji-github (agy)
 

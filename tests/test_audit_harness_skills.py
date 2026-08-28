@@ -20,7 +20,7 @@ from conftest import REPO_ROOT
 
 AUDIT_SCRIPT = REPO_ROOT / "scripts" / "audit-harness-skills.sh"
 
-CANONICAL_MARKER = "<!-- mojiemoji-schema-version: 2.1.0 -->"
+CANONICAL_MARKER = "<!-- mojiemoji-schema-version: 2.2.0 -->"
 
 CLEAN_ADAPTER = f"""---
 name: mojiemoji-github
@@ -30,7 +30,7 @@ name: mojiemoji-github
 
 # mojiemoji-github (Codex)
 
-Run prestamp.py before posting.
+Run `uvx mojiemoji` before posting.
 
 Use the canonical `/emoji/<encoded-text>` endpoint with `font`, `color`,
 `animation`, `background`, `outline`, and `outline_width`.
@@ -88,8 +88,14 @@ class TestRepoScopeContracts:
         assert result.returncode == 1
         assert "spring" in result.stdout
 
+    def test_missing_uvx_mojiemoji_reference_fails(self, tmp_path):
+        no_invocation = CLEAN_ADAPTER.replace("Run `uvx mojiemoji` before posting.", "")
+        result = _run_audit(tmp_path, no_invocation)
+        assert result.returncode == 1
+        assert "uvx mojiemoji" in result.stdout
+
     def test_stale_schema_marker_fails(self, tmp_path):
-        stale = CLEAN_ADAPTER.replace("2.1.0", "1.0.0")
+        stale = CLEAN_ADAPTER.replace("2.2.0", "1.0.0")
         result = _run_audit(tmp_path, stale)
         assert result.returncode == 1
         assert "Schema version drift" in result.stdout

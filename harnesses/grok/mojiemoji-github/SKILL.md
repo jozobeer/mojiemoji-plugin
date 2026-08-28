@@ -5,7 +5,7 @@ description: >
   core を呼び出す Grok スキル。日本語本文のインライン強調が主用途。
 ---
 
-<!-- mojiemoji-schema-version: 2.1.0 -->
+<!-- mojiemoji-schema-version: 2.2.0 -->
 
 # mojiemoji-github (Grok)
 

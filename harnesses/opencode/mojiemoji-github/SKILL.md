@@ -3,7 +3,7 @@ name: mojiemoji-github
 description: OpenCode adapter for routing Japanese GitHub Markdown through the shared mojiemoji core.
 ---
 
-<!-- mojiemoji-schema-version: 2.1.0 -->
+<!-- mojiemoji-schema-version: 2.2.0 -->
 
 # mojiemoji-github (OpenCode)
 

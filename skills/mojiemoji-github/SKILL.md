@@ -240,7 +240,7 @@ selector subagent への dispatch 用の飽和<img src="https://mojiemoji.jozo.b
 - **スポットチェックは body-class surface でスタンプ数 ≥3 のとき<img src="https://mojiemoji.jozo.beer/emoji/%E5%BF%85%E9%A0%88?font=dela&amp;color=22c55e&amp;animation=patapata&amp;background=transparent&amp;outline=5e22c5&amp;outline_width=2" alt="必須" height="24" align="absmiddle">、<img src="https://mojiemoji.jozo.beer/emoji/%E4%BB%BB%E6%84%8F?font=maru-bold&amp;color=22d3ee&amp;animation=mochimochi&amp;background=transparent&amp;outline=b20891&amp;outline_width=2" alt="任意" height="24" align="absmiddle">ではない。** 貼り付け<img src="https://mojiemoji.jozo.beer/emoji/%E5%89%8D?font=chikara&amp;color=ec4899&amp;animation=poyoon&amp;background=transparent&amp;outline=99ec48&amp;outline_width=2" alt="前" height="24" align="absmiddle">に `references/verification.md` § Post-dispatch spot-check を本文<img src="https://mojiemoji.jozo.beer/emoji/%E5%85%A8%E4%BD%93?font=maru-bold&amp;color=fb923c&amp;animation=poyoon&amp;background=transparent&amp;outline=0cea58&amp;outline_width=2" alt="全体" height="24" align="absmiddle">に対して実行する。
 
 <!--
-  mojiemoji-schema-version: 2.1.0
+  mojiemoji-schema-version: 2.2.0
   The hook (hooks/mojiemoji_japanese_gate.py § validate_schema_version)
   reads this marker AND each harness-local copy under
   $HOME/.config/<harness>/skills/mojiemoji-github/SKILL.md. When a
@@ -265,4 +265,4 @@ selector subagent への dispatch 用の飽和<img src="https://mojiemoji.jozo.b
                      concern; ideally don't bump for these, but bumping
                      forces a re-pull and clears stale guidance.
 -->
-<!-- mojiemoji-schema-version: 2.1.0 -->
+<!-- mojiemoji-schema-version: 2.2.0 -->
